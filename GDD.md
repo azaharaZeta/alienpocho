@@ -147,7 +147,9 @@ Modelo tipo tanque (ver §4):
 ## 10. Contrato técnico
 
 - **HTML5 + JavaScript vanilla**, render en `<canvas>` 2D. Sin frameworks.
-- **Un único archivo `index.html`** autocontenido (HTML + CSS + JS) que funcione abriéndolo en el navegador.
+- **Dos archivos** que funcionan abriendo `index.html` en el navegador (sin build):
+  `index.html` (HTML + CSS + motor/físicas/salas/HUD) y `assets.js` (biblioteca de dibujo `AP.*`).
+  *(El plan inicial era un solo archivo; el dibujo se extrajo a `assets.js` por claridad.)*
 - **Gráficos por código** (formas/sprites dibujados con primitivas o sprites generados),
   paleta monocroma estilo Spectrum. **Sin assets con copyright.**
 - Resolución lógica fija (p. ej. 320×240 escalada con `image-rendering: pixelated`) para look retro.

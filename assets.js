@@ -184,9 +184,12 @@ const AP = (() => {
     } else if (shape === "pyramid") {
       const ap = p(x, y, z + 0.62);
       const b1 = p(x - r, y - r, z), b2 = p(x + r, y - r, z), b3 = p(x + r, y + r, z), b4 = p(x - r, y + r, z);
-      poly(ctx, [b4, b3, ap], darken(col, 0.82), BLACK);   // cara izquierda
-      poly(ctx, [b2, b3, ap], darken(col, 0.62), BLACK);   // cara derecha
-      poly(ctx, [b1, b2, ap], col, BLACK);                 // cara frontal
+      // Orden de pintado atrás→delante: las dos caras TRASERAS (-x,-y) primero y
+      // las dos FRONTALES (+x,+y, que comparten la arista delantera b3) encima.
+      poly(ctx, [b1, b2, ap], darken(col, 0.45), BLACK);   // trasera (-y)
+      poly(ctx, [b1, b4, ap], darken(col, 0.45), BLACK);   // trasera (-x)
+      poly(ctx, [b4, b3, ap], col, BLACK);                 // frontal izquierda (+y), iluminada
+      poly(ctx, [b2, b3, ap], darken(col, 0.62), BLACK);   // frontal derecha (+x)
     } else if (shape === "dome") {
       const c = p(x, y, z), rx = r * p.TW / 2, ry = r * p.TH / 2, dh = rx * 0.95;
       ctx.beginPath(); ctx.moveTo(c.x - rx, c.y);
