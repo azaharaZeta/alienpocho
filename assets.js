@@ -70,6 +70,15 @@ const AP = (() => {
     };
   }
 
+  // Línea horizontal que recorre las DOS caras frontales (+x y +y) de una caja de
+  // huella [x0,y0]-[x1,y1] a la altura z. Sigue la perspectiva iso (recodo en la
+  // arista delantera). Útil para ranuras de panel sobre postes/dinteles.
+  function edgeLine(ctx, p, x0, y0, x1, y1, z, col, lw) {
+    const a = p(x1, y0, z), b = p(x1, y1, z), c = p(x0, y1, z);
+    ctx.strokeStyle = col; ctx.lineWidth = lw || 1;
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(c.x, c.y); ctx.stroke();
+  }
+
   // Caja iso: tinta de la sala con SOMBREADO PLANO suave (caras un poco más
   // oscuras, mismo tono) y contornos negros. Limpio, sin puntos.
   function box(ctx, p, x0, y0, x1, y1, z0, z1, col) {
@@ -151,23 +160,34 @@ const AP = (() => {
   //   hole=true  → abre un hueco negro en la pared (puertas del fondo).
   //   hole=false → solo el marco 3D, dejando ver la sala (puertas del frente).
   // `fixed` es el borde (0 o n); el marco se mete un poco HACIA DENTRO.
-  const DOOR_T = 0.26, POST_W = 0.34, LINTEL_H = 0.42;
+  const DOOR_T = 0.34, POST_W = 0.40, LINTEL_H = 0.46;
   function door(ctx, p, axis, fixed, a0, a1, H, col, hole) {
     const inset = (fixed < 0.5) ? [fixed, fixed + DOOR_T] : [fixed - DOOR_T, fixed];
     const d0 = inset[0], d1 = inset[1];
+    const hi = darken(col, 1);   // mismo tono (luz) para el filo iluminado del bisel
     const Bx = (x0, y0, x1, y1, z0, z1) => box(ctx, p, x0, y0, x1, y1, z0, z1, col);
+    const zPost = [H * 0.26, H * 0.5, H * 0.74];
+    // Ranura de panel: línea NEGRA (recodo iso) + un filo claro justo encima = bisel.
+    const groove = (x0, y0, x1, y1, z) => {
+      edgeLine(ctx, p, x0, y0, x1, y1, z + 0.03, hi, 1);   // brillo
+      edgeLine(ctx, p, x0, y0, x1, y1, z, BLACK, 1);       // hendidura
+    };
     if (axis === "x") {
       if (hole) poly(ctx, [p(a0 + POST_W, fixed, H - LINTEL_H), p(a1 - POST_W, fixed, H - LINTEL_H),
                            p(a1 - POST_W, fixed, 0), p(a0 + POST_W, fixed, 0)], BLACK, null);
       Bx(a0, d0, a0 + POST_W, d1, 0, H);          // poste izquierdo
       Bx(a1 - POST_W, d0, a1, d1, 0, H);          // poste derecho
       Bx(a0, d0, a1, d1, H - LINTEL_H, H);        // dintel
+      for (const z of zPost) { groove(a0, d0, a0 + POST_W, d1, z); groove(a1 - POST_W, d0, a1, d1, z); }
+      groove(a0, d0, a1, d1, H - LINTEL_H + 0.10);   // ranura del dintel
     } else {
       if (hole) poly(ctx, [p(fixed, a0 + POST_W, H - LINTEL_H), p(fixed, a1 - POST_W, H - LINTEL_H),
                            p(fixed, a1 - POST_W, 0), p(fixed, a0 + POST_W, 0)], BLACK, null);
       Bx(d0, a0, d1, a0 + POST_W, 0, H);
       Bx(d0, a1 - POST_W, d1, a1, 0, H);
       Bx(d0, a0, d1, a1, H - LINTEL_H, H);
+      for (const z of zPost) { groove(d0, a0, d1, a0 + POST_W, z); groove(d0, a1 - POST_W, d1, a1, z); }
+      groove(d0, a0, d1, a1, H - LINTEL_H + 0.10);
     }
   }
 
@@ -191,13 +211,20 @@ const AP = (() => {
       poly(ctx, [b4, b3, ap], col, BLACK);                 // frontal izquierda (+y), iluminada
       poly(ctx, [b2, b3, ap], darken(col, 0.62), BLACK);   // frontal derecha (+x)
     } else if (shape === "dome") {
-      const c = p(x, y, z), rx = r * p.TW / 2, ry = r * p.TH / 2, dh = rx * 0.95;
-      ctx.beginPath(); ctx.moveTo(c.x - rx, c.y);
-      ctx.bezierCurveTo(c.x - rx, c.y - dh, c.x + rx, c.y - dh, c.x + rx, c.y);
-      ctx.ellipse(c.x, c.y, rx, ry, 0, 0, Math.PI, true); ctx.closePath();
-      ctx.fillStyle = col; ctx.fill(); ctx.strokeStyle = BLACK; ctx.lineWidth = 1; ctx.stroke();
-      ctx.beginPath(); ctx.ellipse(c.x, c.y - dh * 0.35, rx * 0.45, ry * 0.45, 0, 0, Math.PI * 2);
-      ctx.strokeStyle = BLACK; ctx.stroke();
+      // Semiesfera de CRISTAL transparente: relleno muy tenue (se ve a través), aro de
+      // base completo (trasera visible), contorno del casquete y brillo especular.
+      const rr = 0.34, c = p(x, y, z), rx = rr * p.TW / 2, ry = rr * p.TH / 2, dh = rx * 1.1;
+      const cap = () => {
+        ctx.beginPath(); ctx.moveTo(c.x - rx, c.y);
+        ctx.bezierCurveTo(c.x - rx, c.y - dh, c.x + rx, c.y - dh, c.x + rx, c.y);
+        ctx.ellipse(c.x, c.y, rx, ry, 0, 0, Math.PI, true); ctx.closePath();
+      };
+      ctx.save(); cap(); ctx.globalAlpha = 0.2; ctx.fillStyle = col; ctx.fill(); ctx.restore();   // cristal
+      ctx.beginPath(); ctx.ellipse(c.x, c.y, rx, ry, 0, 0, Math.PI * 2);                          // aro de base
+      ctx.strokeStyle = darken(col, 0.55); ctx.lineWidth = 1; ctx.stroke();
+      cap(); ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.stroke();                              // contorno
+      ctx.beginPath(); ctx.ellipse(c.x - rx * 0.34, c.y - dh * 0.5, rx * 0.2, dh * 0.26, -0.5, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255,255,255,0.5)"; ctx.fill();                                        // brillo
     } else if (shape === "cylinder") {
       const ch = 0.5, topC = p(x, y, z + ch), botC = p(x, y, z), rx = r * p.TW / 2, ry = r * p.TH / 2;
       ctx.beginPath(); ctx.moveTo(topC.x - rx, topC.y); ctx.lineTo(botC.x - rx, botC.y);

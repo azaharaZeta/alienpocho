@@ -199,7 +199,7 @@ function buildWorld() {
   rooms["1,0"] = makeRoom({ ink: I[2], name: "REACTOR", exits: { xm: "0,0", yp: "1,1" },
     blocks: [ { x: 5, y: 1, z: 0, h: 1 }, { x: 5, y: 2, z: 0, h: 2 }, { x: 5, y: 3, z: 0, h: 3 } ],
     circuits: [ { cx: 5, cy: 3, z: 3, shape: "pyramid", taken: false } ],
-    sockets:  [ { cx: 2, cy: 6, shape: "cube", active: false } ] });
+    sockets:  [ { cx: 6, cy: 5, shape: "cube", active: false } ] });   // zona despejada (no tras la puerta yp)
 
   // BODEGA — reto de SALTO DE HUECO+ALTURA: escalón h1, hueco, y plataforma h2.
   rooms["0,1"] = makeRoom({ ink: I[3], name: "BODEGA", exits: { ym: "0,0", xp: "1,1" },
@@ -258,8 +258,9 @@ const pressed = (action) => CONTROLS[action].some(c => edge(c));
 /* =========================================================================
    PHYSICS — movimiento con colisiones (eje separado para deslizar)
    ========================================================================= */
-/* ¿Está la coord. dentro del HUECO de la puerta (3 celdas centradas)? */
-const DOOR_HALF = 1.15;
+/* ¿Está la coord. dentro del HUECO de la puerta? Vano estrecho: el robot (semiancho
+   ~0.5) pasa con un poco de margen. Coincide con el hueco visual entre postes. */
+const DOOR_HALF = 0.72;
 function inDoor(coord, n) { return Math.abs(coord - n / 2) <= DOOR_HALF; }
 
 /* ¿Cae fuera del suelo? Solo se puede cruzar un borde si tiene salida Y por el
@@ -462,7 +463,7 @@ function render(room) {
   ctx.fillRect(0, 0, CFG.W, CFG.H);
 
   const ink = room.ink, WH = 2.2;
-  const doorSpan = (n) => [n / 2 - 1.5, n / 2 + 1.5];   // 3 celdas centradas
+  const doorSpan = (n) => [n / 2 - 1.12, n / 2 + 1.12]; // vano estrecho (hueco ~1.44 celdas)
 
   // 1) Suelo (siempre al fondo, z=0)
   for (let y = 0; y < room.h; y++)
