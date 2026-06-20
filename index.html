@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alien Pocho</title>
+<style>
+  :root { --ink: #00e0e0; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: #000; color: var(--ink);
+    font-family: "Courier New", monospace;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  /* "Pantalla" CRT: contiene el canvas y superpone scanlines + viñeta */
+  #screen {
+    position: relative;
+    width: min(94vw, 110vh);   /* mantiene 4:3 y entra siempre */
+    background: #000;
+    border: 2px solid #0a5a5a;
+    border-radius: 7px;
+    box-shadow: 0 0 34px rgba(0, 210, 210, 0.22), inset 0 0 0 1px rgba(0,0,0,0.6);
+  }
+  #game {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    width: 100%; height: auto; display: block;
+    border-radius: 5px;
+  }
+  #screen::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: 5px;
+    background: repeating-linear-gradient(0deg,
+      rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px,
+      rgba(0,0,0,0.16) 3px, rgba(0,0,0,0) 4px);
+    box-shadow: inset 0 0 70px rgba(0,0,0,0.5);
+  }
+  #hint { margin-top: 8px; font-size: 11px; color: #066; letter-spacing: 1px; text-align: center; padding: 0 8px; }
+</style>
+</head>
+<body>
+  <div id="screen"><canvas id="game" width="320" height="240"></canvas></div>
+  <div id="hint">←/→ girar · ↑ avanzar · ESPACIO saltar · E recoger/colocar circuito<br>
+  <span style="color:#ff5d7a">ALIEN POCHO</span> · hecho por Azahara con Claude Code 4.8</div>
+
+<script src="assets.js"></script>
+<script>
+"use strict";
+
+/* =========================================================================
+   CONFIG — constantes globales (estética + geometría isométrica)
+   ========================================================================= */
+const CFG = {
+  W: 320, H: 240,
+  TILE_W: 32,
+  TILE_H: 16,
+  BLOCK_H: 16,
+  WALK: 3.0,                // velocidad de avance (celdas/seg)
+  PRAD: 0.32,               // radio de colisión del jugador
+  STEP: 0.08,               // altura máx. salvable andando (sin saltar)
+  TURN_TIME: 0.12,          // duración del giro de 90° (anim/cooldown)
+  GRAVITY: 22,              // gravedad (celdas/seg^2)
+  // Salto de UN botón: pulsación < JUMP_TAP_TIME => bajo/corto; si se mantiene => alto/largo.
+  JUMP_TAP_TIME: 0.14,              // umbral (seg) entre pulsación corta y larga
+  JUMP_LOW:  { vz: 5.0, vh: 2.2 },  // corto y bajo  (apex ~0.57 celdas)
+  JUMP_HIGH: { vz: 7.6, vh: 3.4 },  // largo y alto  (apex ~1.31, sube 1 bloque)
+  COL: {
+    bg:        "#000000",
+    floorLine: "#0c4747",
+    floorFill: "#04181b",
+    floorFill2:"#020f12",   // tablero sutil del suelo
+    top:       "#22cccc",   // rampa cian coherente (luz desde arriba)
+    left:      "#168f8f",
+    right:     "#0c6363",
+    edge:      "#6fdede",   // arista suave (antes casi blanca = ruido)
+    shadow:    "#010a0a",
+    botTop:    "#8ffcff",
+    botLeft:   "#3ad0d0",
+    botRight:  "#1f9c9c",
+    botDark:   "#063636",
+    botEdge:   "#eaffff",
+    hud:       "#00e0e0",
+    hudDim:    "#066",
+    hudBright: "#dfffff",
+    accent:    "#ff5d7a",   // acento rojo/rosa (guiño a la pastilla de "LIGHT YEARS")
+    accentDim: "#5e1024"
+  }
+};
+
+/* =========================================================================
+   CONTROLS — asignación de teclas (PARAMETRIZABLE). Cada acción admite
+   varias teclas. Códigos: https://developer.mozilla.org/docs/Web/API/KeyboardEvent/code
+   ========================================================================= */
+const CONTROLS = {
+  turnLeft:  ["ArrowLeft", "KeyA"],
+  turnRight: ["ArrowRight", "KeyD"],
+  forward:   ["ArrowUp", "KeyW"],
+  jump:      ["Space"],           // botón único: corto = salto bajo, largo = salto alto
+  use:       ["KeyE", "Enter"]    // recoger / soltar circuito
+};
+
+const ORIGIN = { x: CFG.W / 2, y: 64 };
+
+/* =========================================================================
+   ISO — proyección mundo (x,y,z) -> pantalla y métrica de profundidad
+   ========================================================================= */
+const iso = {
+  toScreen(x, y, z) {
+    return {
+      x: ORIGIN.x + (x - y) * (CFG.TILE_W / 2),
+      y: ORIGIN.y + (x + y) * (CFG.TILE_H / 2) - z * CFG.BLOCK_H
+    };
+  },
+  depth(x, y, z) { return x + y + z; }
+};
+
+/* =========================================================================
+   INPUT — estado de teclado
+   ========================================================================= */
+const keys = Object.create(null);
+const BOUND_CODES = new Set(Object.values(CONTROLS).flat());
+addEventListener("keydown", e => {
+  keys[e.code] = true;
+  if (BOUND_CODES.has(e.code)) e.preventDefault();
+});
+addEventListener("keyup", e => { keys[e.code] = false; });
+
+/* =========================================================================
+   ROOMS / WORLD — varias habitaciones conectadas (flip-screen)
+   Cada sala: su color (ink), bloques, circuitos, zócalos y SALIDAS a salas
+   vecinas. exits = { xm, xp, ym, yp } → clave de la sala al cruzar ese borde:
+     xm: x<0 (atrás-izq)   xp: x≥w (frente-dcha)
+     ym: y<0 (atrás-dcha)  yp: y≥h (frente-izq)
+   ========================================================================= */
+function makeRoom(o) {
+  const w = 8, h = 8;
+  const blocks = o.blocks || [];
+  const solid = new Set();
+  for (const b of blocks)
+    if (b.x >= 0 && b.x < w && b.y >= 0 && b.y < h) solid.add(b.x + "," + b.y);
+  return { w, h, blocks, solid, circuits: o.circuits || [], sockets: o.sockets || [],
+           ink: o.ink, exits: o.exits || {}, name: o.name || "" };
+}
+
+function buildWorld() {
+  const I = AP.INKS;   // [azul, oliva, magenta, verde, naranja, violeta]
+  const rooms = {};
+
+  rooms["0,0"] = makeRoom({ ink: I[0], name: "ENTRADA", exits: { xp: "1,0", yp: "0,1" },
+    blocks: [ { x: 3, y: 2, z: 0, h: 1 }, { x: 4, y: 2, z: 0, h: 2 }, { x: 5, y: 5, z: 0, h: 1 } ],
+    circuits: [ { cx: 2, cy: 5, shape: "cube", taken: false } ],
+    sockets:  [ { cx: 6, cy: 2, shape: "cylinder", active: false } ] });
+
+  rooms["1,0"] = makeRoom({ ink: I[2], name: "REACTOR", exits: { xm: "0,0", yp: "1,1" },
+    blocks: [ { x: 2, y: 2, z: 0, h: 1 }, { x: 3, y: 2, z: 0, h: 2 }, { x: 4, y: 2, z: 0, h: 3 }, { x: 5, y: 5, z: 0, h: 1 } ],
+    circuits: [ { cx: 6, cy: 6, shape: "pyramid", taken: false } ],
+    sockets:  [ { cx: 1, cy: 5, shape: "cube", active: false } ] });
+
+  rooms["0,1"] = makeRoom({ ink: I[3], name: "BODEGA", exits: { ym: "0,0", xp: "1,1" },
+    blocks: [ { x: 4, y: 4, z: 0, h: 2 }, { x: 1, y: 2, z: 0, h: 1 }, { x: 5, y: 2, z: 0, h: 1 } ],
+    circuits: [ { cx: 2, cy: 6, shape: "dome", taken: false } ],
+    sockets:  [ { cx: 6, cy: 5, shape: "pyramid", active: false } ] });
+
+  rooms["1,1"] = makeRoom({ ink: I[4], name: "PUENTE", exits: { xm: "0,1", ym: "1,0" },
+    blocks: [ { x: 3, y: 3, z: 0, h: 1 }, { x: 4, y: 3, z: 0, h: 2 }, { x: 2, y: 6, z: 0, h: 1 } ],
+    circuits: [ { cx: 1, cy: 6, shape: "cylinder", taken: false } ],
+    sockets:  [ { cx: 6, cy: 6, shape: "dome", active: false } ] });
+
+  return { rooms, start: "0,0" };
+}
+
+/* =========================================================================
+   ENTITIES — el jugador (robot Pocho)
+   ========================================================================= */
+const player = {
+  x: 1.5, y: 6.5, z: 0,        // posición
+  vz: 0, vx: 0, vy: 0,         // velocidades (vx,vy solo durante el salto)
+  onGround: true,
+  facing: 3,                   // 0:+x  1:+y  2:-x  3:-y  (mira a -y = NE)
+  turnTimer: 0,                // tiempo restante de la animación de giro
+  walkPhase: 0,                // fase de la animación de caminar
+  moving: false,
+  jumpPending: false,          // salto "cargándose" (decidiendo corto/largo)
+  jumpPendTime: 0,
+  jdx: 0, jdy: 0,              // dirección fijada al iniciar el salto
+  face: "NE"
+};
+
+/* Las 4 direcciones de mirada, alineadas a los ejes del suelo */
+const DIRS = [
+  { dx: 1, dy: 0, face: "SE" },   // 0: +x  (abajo-derecha)
+  { dx: 0, dy: 1, face: "SW" },   // 1: +y  (abajo-izquierda)
+  { dx: -1, dy: 0, face: "NW" },  // 2: -x  (arriba-izquierda)
+  { dx: 0, dy: -1, face: "NE" }   // 3: -y  (arriba-derecha)
+];
+
+/* Dimensiones del sprite del robot (en celdas): semi-ancho (lado a lado),
+   semi-fondo (frente-atrás) y alto. Usadas TANTO al dibujar COMO al ordenar
+   por profundidad, para que la oclusión cuadre con lo que se ve. */
+const ROBOT = { WID: 0.50, DEP: 0.33, H: 1.50 };
+
+/* Detección de flancos de teclado (pulsación nueva este frame) */
+const prevKeys = Object.create(null);
+function edge(code) { return keys[code] && !prevKeys[code]; }
+
+/* Helpers de acciones según CONTROLS (parametrizable) */
+const held    = (action) => CONTROLS[action].some(c => keys[c]);
+const pressed = (action) => CONTROLS[action].some(c => edge(c));
+
+/* =========================================================================
+   PHYSICS — movimiento con colisiones (eje separado para deslizar)
+   ========================================================================= */
+/* ¿Está la coord. dentro del HUECO de la puerta (3 celdas centradas)? */
+const DOOR_HALF = 1.15;
+function inDoor(coord, n) { return Math.abs(coord - n / 2) <= DOOR_HALF; }
+
+/* ¿Cae fuera del suelo? Solo se puede cruzar un borde si tiene salida Y por el
+   HUECO de su puerta; el resto del borde es pared sólida (no se atraviesa). */
+function outOfBounds(room, fx, fy) {
+  if (fx < 0)        return !(room.exits.xm && inDoor(fy, room.h));
+  if (fx >= room.w)  return !(room.exits.xp && inDoor(fy, room.h));
+  if (fy < 0)        return !(room.exits.ym && inDoor(fx, room.w));
+  if (fy >= room.h)  return !(room.exits.yp && inDoor(fx, room.w));
+  return false;
+}
+
+/* Solape de la caja del jugador (en planta) con la celda de un bloque */
+function overlapsFootprint(bl, x, y) {
+  const r = CFG.PRAD;
+  return (x - r) < (bl.x + 1) && (x + r) > bl.x &&
+         (y - r) < (bl.y + 1) && (y + r) > bl.y;
+}
+
+/* ¿El movimiento horizontal a (nx,ny) choca, con los pies a feetZ?
+   Un bloque solo bloquea si su cima queda POR ENCIMA del pie (no se sube
+   andando: hay que SALTAR). Bloques al nivel del pie o por debajo son
+   pisables/transitables. */
+function blocksHoriz(room, nx, ny, feetZ) {
+  const r = CFG.PRAD;
+  if (outOfBounds(room, nx - r, ny - r) || outOfBounds(room, nx + r, ny - r) ||
+      outOfBounds(room, nx - r, ny + r) || outOfBounds(room, nx + r, ny + r)) return true;
+  for (const bl of room.blocks) {
+    const top = bl.z + bl.h;
+    if (top > feetZ + CFG.STEP && overlapsFootprint(bl, nx, ny)) return true;
+  }
+  return false;
+}
+
+/* Altura de la superficie de apoyo bajo el jugador: el suelo (0) o la cima
+   del bloque más alto que esté a la altura del pie o por debajo. */
+function supportHeight(room, x, y, feetZ) {
+  let h = 0;
+  for (const bl of room.blocks) {
+    const top = bl.z + bl.h;
+    if (top <= feetZ + CFG.STEP && top > h && overlapsFootprint(bl, x, y)) h = top;
+  }
+  return h;
+}
+
+/* Modelo de control TIPO TANQUE (fiel a Alien 8 / Knight Lore):
+   - girar 90° a izquierda/derecha (siempre alineado a los ejes del suelo)
+   - avanzar en línea recta en la dirección que se mira
+   - saltar en la dirección que se mira; dos tipos: corto/bajo y largo/alto */
+function updatePlayer(room, dt) {
+  const turnLeft  = pressed("turnLeft");
+  const turnRight = pressed("turnRight");
+  const forward   = held("forward");
+  const jumpNow   = pressed("jump");
+  const jumpHeld  = held("jump");
+
+  // Giro en curso o salto cargándose → bloquea otras acciones
+  if (player.turnTimer > 0) player.turnTimer -= dt;
+  const busy = player.turnTimer > 0;
+
+  // --- Inicio de salto: queda "pendiente" mientras se decide corto/largo ---
+  if (player.onGround && !busy && !player.jumpPending && jumpNow) {
+    player.jumpPending = true;
+    player.jumpPendTime = 0;
+    player.jdx = DIRS[player.facing].dx;
+    player.jdy = DIRS[player.facing].dy;
+  }
+  const locked = busy || player.jumpPending;
+
+  // --- Giro de 90° (solo en el suelo, si no está bloqueado) ---
+  if (player.onGround && !locked) {
+    if (turnLeft)       { player.facing = (player.facing + 3) % 4; player.turnTimer = CFG.TURN_TIME; }
+    else if (turnRight) { player.facing = (player.facing + 1) % 4; player.turnTimer = CFG.TURN_TIME; }
+  }
+  const dir = DIRS[player.facing];
+  player.face = dir.face;
+
+  // --- Resolución del salto de un botón (tap = bajo/corto, mantener = alto/largo) ---
+  if (player.jumpPending) {
+    player.jumpPendTime += dt;
+    const launch = (J) => {
+      player.vz = J.vz;
+      player.vx = player.jdx * J.vh;
+      player.vy = player.jdy * J.vh;
+      player.onGround = false;
+      player.jumpPending = false;
+    };
+    if (!jumpHeld) launch(CFG.JUMP_LOW);                            // soltó pronto → corto/bajo
+    else if (player.jumpPendTime >= CFG.JUMP_TAP_TIME) launch(CFG.JUMP_HIGH); // mantenido → largo/alto
+  }
+
+  // --- Avance recto en el suelo ---
+  player.moving = false;
+  if (player.onGround && !locked && forward) {
+    const step = CFG.WALK * dt;
+    const nx = player.x + dir.dx * step;
+    const ny = player.y + dir.dy * step;
+    if (!blocksHoriz(room, nx, ny, player.z)) {
+      player.x = nx; player.y = ny; player.moving = true;
+      player.walkPhase += dt * 12;
+    }
+  }
+
+  // --- Desplazamiento horizontal en el aire (impulso del salto) ---
+  // Si el avance choca con un bloque a la altura actual del pie, NO anulamos la
+  // velocidad: simplemente no avanzamos ese eje este frame y reintentamos. Así,
+  // al pegarte a un bloque y saltar, el arco te sube por encima de su cima y, al
+  // superarla, el avance se reanuda y aterrizas ENCIMA (como en el Alien 8 real).
+  if (!player.onGround && (player.vx !== 0 || player.vy !== 0)) {
+    const nx = player.x + player.vx * dt;
+    const ny = player.y + player.vy * dt;
+    if (!blocksHoriz(room, nx, player.y, player.z)) player.x = nx;
+    if (!blocksHoriz(room, player.x, ny, player.z)) player.y = ny;
+  }
+
+  // --- Gravedad / eje Z ---
+  player.vz -= CFG.GRAVITY * dt;
+  let nz = player.z + player.vz * dt;
+  const support = supportHeight(room, player.x, player.y, player.z);
+  // Solo se aterriza BAJANDO (vz<=0). Si subiendo se roza el borde de un bloque,
+  // no se "engancha": completa el arco por encima y cae encima, ya adelantado.
+  if (nz <= support && player.vz <= 0) {
+    nz = support;
+    player.vz = 0; player.vx = 0; player.vy = 0;
+    player.onGround = true;
+  } else {
+    player.onGround = false;
+  }
+  player.z = nz;
+
+  // --- Recoger / colocar circuito ---
+  if (pressed("use")) interact(room);
+
+  // Guardar estado de teclas para la detección de flancos del próximo frame
+  for (const k in keys) prevKeys[k] = keys[k];
+}
+
+/* ¿Está el jugador lo bastante cerca del centro de celda (cx,cy)? */
+function nearCell(cx, cy) {
+  return Math.hypot(player.x - (cx + 0.5), player.y - (cy + 0.5)) < 0.8;
+}
+
+/* Recoger un circuito, o colocar el que llevas en un zócalo de su misma forma */
+function interact(room) {
+  if (game.won) return;
+  if (game.carried) {
+    for (const s of room.sockets) {
+      if (!s.active && s.shape === game.carried && nearCell(s.cx, s.cy)) {
+        s.active = true; game.carried = null; game.circuits++;
+        if (game.circuits >= game.circuitsTotal) game.won = true;
+        return;
+      }
+    }
+    return; // llevas algo pero no hay zócalo compatible al lado
+  }
+  for (const c of room.circuits) {
+    if (!c.taken && nearCell(c.cx, c.cy)) { c.taken = true; game.carried = c.shape; return; }
+  }
+}
+
+/* =========================================================================
+   RENDER — suelo + (cubos y jugador) ordenados por profundidad + HUD
+   ========================================================================= */
+const ctx = document.getElementById("game").getContext("2d");
+const P = AP.projector(ORIGIN.x, ORIGIN.y);   // proyector iso para los assets
+
+function polygon(pts, fill, stroke) {
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+  ctx.closePath();
+  if (fill)   { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke(); }
+}
+
+/* (Los assets de dibujo —suelo, cubos, robot, sombra…— viven ahora en
+   assets.js: AP.floor / AP.cube / AP.wall / AP.robot / AP.shadow / etc.) */
+
+/* Orden de pintado: técnica CLÁSICA de tile iso (como el motor Filmation).
+   Clave = celda en diagonal (cx+cy) como PRIMARIO y altura (z) como secundario.
+   Es un ORDEN TOTAL → sin ciclos ni ambigüedades:
+   - una celda con menor (x+y) está más al fondo → se pinta antes;
+   - dentro de la misma celda, lo más bajo (menor z) se pinta antes.
+   El jugador se asigna a su celda central (huella de colisión), y su z continua
+   lo intercala correctamente con los bloques (p. ej. al subirse encima de uno).
+   El multiplicador grande garantiza que la diagonal domina sobre la altura. */
+const DIAG = 1000;
+function sortKey(it) { return it.diag * DIAG + it.z; }
+
+function render(room) {
+  ctx.fillStyle = CFG.COL.bg;
+  ctx.fillRect(0, 0, CFG.W, CFG.H);
+
+  const ink = room.ink, WH = 2.2;
+  const doorSpan = (n) => [n / 2 - 1.5, n / 2 + 1.5];   // 3 celdas centradas
+
+  // 1) Suelo (siempre al fondo, z=0)
+  for (let y = 0; y < room.h; y++)
+    for (let x = 0; x < room.w; x++)
+      AP.floor(ctx, P, x, y, ink);
+
+  // 1b) Paredes del fondo (siempre detrás). Si hay salida, abre una PUERTA con marco.
+  AP.flatWall(ctx, P, "x", 0, 0, room.w, WH, ink);                       // borde y=0 (atrás-dcha)
+  if (room.exits.ym) { const [s0, s1] = doorSpan(room.w); AP.door(ctx, P, "x", 0, s0, s1, WH, ink, true); }
+  AP.flatWall(ctx, P, "y", 0, 0, room.h, WH, ink);                       // borde x=0 (atrás-izq)
+  if (room.exits.xm) { const [s0, s1] = doorSpan(room.h); AP.door(ctx, P, "y", 0, s0, s1, WH, ink, true); }
+
+  // 2) Dibujables: cada cubo en su celda (diagonal = cx+cy)
+  const items = [];
+  for (const bl of room.blocks)
+    for (let k = 0; k < bl.h; k++) {
+      const z = bl.z + k;
+      items.push({ kind: "cube", cx: bl.x, cy: bl.y, cz: z, diag: bl.x + bl.y, z, wall: !!bl.wall });
+    }
+
+  // Diagonal del jugador = MÁX entre su celda central y la de cualquier bloque
+  // sobre el que se apoya/está por encima (su huella solapa y su cima ≤ sus pies).
+  // Así, al pisar el borde de un bloque, NUNCA queda ese bloque dibujado encima.
+  let robotDiag = Math.floor(player.x) + Math.floor(player.y);
+  for (const bl of room.blocks)
+    if (overlapsFootprint(bl, player.x, player.y) && (bl.z + bl.h) <= player.z + CFG.STEP)
+      robotDiag = Math.max(robotDiag, bl.x + bl.y);
+
+  // El jugador se dibuja por ENCIMA de todo lo de su misma diagonal (cosas que
+  // tiene al lado) pero DETRÁS de lo de diagonales mayores (lo realmente delante).
+  // z = DIAG-1 lo coloca al final de la banda de su diagonal.
+  items.push({ kind: "player", diag: robotDiag, z: DIAG - 1 });
+
+  // Zócalos (en el suelo) y circuitos por recoger
+  for (const s of room.sockets)
+    items.push({ kind: "socket", shape: s.shape, active: s.active,
+                 x: s.cx + 0.5, y: s.cy + 0.5, diag: s.cx + s.cy, z: 0.05 });
+  for (const c of room.circuits)
+    if (!c.taken) items.push({ kind: "circuit", shape: c.shape,
+                 x: c.cx + 0.5, y: c.cy + 0.5, diag: c.cx + c.cy, z: 0.1 });
+
+  // 3) Pintar de atrás (menor x+y) a delante, y de abajo a arriba
+  items.sort((a, b) => sortKey(a) - sortKey(b));
+  for (const it of items) {
+    if (it.kind === "cube") {
+      AP.cube(ctx, P, it.cx, it.cy, it.cz, ink);
+    } else if (it.kind === "socket") {
+      AP.socket(ctx, P, it.x, it.y, 0, it.shape, it.active, ink);
+    } else if (it.kind === "circuit") {
+      AP.circuit(ctx, P, it.x, it.y, 0, it.shape, ink);
+    } else {
+      const gz = supportHeight(room, player.x, player.y, player.z);
+      AP.shadow(ctx, P, player.x, player.y, gz);
+      AP.robot(ctx, P, player.x, player.y, player.z, player.facing, ink,
+               { moving: player.moving, walkPhase: player.walkPhase });
+      // Circuito que lleva encima (flotando sobre la cabeza)
+      if (game.carried) AP.circuit(ctx, P, player.x, player.y, player.z + 1.6, game.carried, ink);
+    }
+  }
+
+  // Puertas del FRENTE: solo el marco (se ve la sala a través), delante de todo
+  if (room.exits.yp) { const [s0, s1] = doorSpan(room.w); AP.door(ctx, P, "x", room.h, s0, s1, WH, ink, false); }
+  if (room.exits.xp) { const [s0, s1] = doorSpan(room.h); AP.door(ctx, P, "y", room.w, s0, s1, WH, ink, false); }
+
+  drawHUD();
+  if (game.won) drawWinBanner();
+}
+
+/* Banner de victoria (provisional; la pantalla final llega en la Fase 8) */
+function drawWinBanner() {
+  ctx.fillStyle = "rgba(0,0,0,0.55)";
+  ctx.fillRect(0, CFG.H / 2 - 22, CFG.W, 44);
+  ctx.fillStyle = CFG.COL.hudBright;
+  ctx.font = "14px 'Courier New', monospace";
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText("¡MISION COMPLETA!", CFG.W / 2, CFG.H / 2 - 4);
+  ctx.fillStyle = CFG.COL.hud; ctx.font = "8px 'Courier New', monospace";
+  ctx.fillText("circuitos restaurados", CFG.W / 2, CFG.H / 2 + 12);
+  ctx.textAlign = "left"; ctx.textBaseline = "top";
+}
+
+/* Estado de partida (placeholders hasta las fases 5-7) */
+const game = { lives: 3, circuits: 0, circuitsTotal: 4, carried: null, lightYears: 9999, won: false };
+
+/* --- Helpers de HUD --- */
+// Barra vertical segmentada (las "esquineras" del marco original)
+function drawSegBar(cx, y0, y1) {
+  ctx.fillStyle = CFG.COL.hud;
+  for (let y = y0; y < y1; y += 6) ctx.fillRect(cx - 3, y, 6, 4);
+}
+// Mini cubo isométrico (icono del circuito que llevas)
+function drawMiniCube(cx, by, s, filled) {
+  const C = CFG.COL;
+  const top = filled ? C.botTop : C.hudDim, l = filled ? C.botLeft : C.hudDim,
+        r = filled ? C.botRight : "#022", e = filled ? C.botEdge : C.hudDim;
+  const poly = (pts, f) => { ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]); ctx.closePath();
+    ctx.fillStyle = f; ctx.fill(); ctx.strokeStyle = e; ctx.lineWidth = 1; ctx.stroke(); };
+  const h = s; // altura del cubo
+  poly([[cx, by - s - h], [cx + s, by - s / 2 - h], [cx, by - h], [cx - s, by - s / 2 - h]], top); // techo
+  poly([[cx, by - h], [cx + s, by - s / 2 - h], [cx + s, by - s / 2], [cx, by]], r);               // dcha
+  poly([[cx, by - h], [cx - s, by - s / 2 - h], [cx - s, by - s / 2], [cx, by]], l);               // izq
+}
+// Mini robot (icono de vidas)
+function drawMiniRobot(x, y) {
+  const C = CFG.COL;
+  ctx.fillStyle = C.botFill || C.hud;
+  ctx.fillStyle = C.botTop; ctx.fillRect(x, y + 1, 8, 7);          // cuerpo/cabeza
+  ctx.strokeStyle = C.botEdge; ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, y + 1.5, 7, 6);
+  ctx.fillStyle = C.botDark; ctx.fillRect(x + 1, y + 3, 6, 2);     // visor
+  ctx.fillStyle = C.botEdge; ctx.fillRect(x + 2, y + 3, 1, 1); ctx.fillRect(x + 5, y + 3, 1, 1); // ojos
+  ctx.beginPath(); ctx.moveTo(x + 4.5, y + 1); ctx.lineTo(x + 4.5, y - 1); ctx.stroke(); // antena
+}
+// Pastilla redondeada del reloj (homenaje al recuadro rojo de "LIGHT YEARS")
+function drawPill(x, y, w, h, text) {
+  const C = CFG.COL;
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, h / 2);
+  ctx.fillStyle = C.accentDim; ctx.fill();
+  ctx.strokeStyle = C.accent; ctx.lineWidth = 2; ctx.stroke();
+  ctx.beginPath(); ctx.roundRect(x + 2.5, y + 2.5, w - 5, h - 5, (h - 5) / 2);   // anillo interior
+  ctx.strokeStyle = "rgba(255,120,150,0.5)"; ctx.lineWidth = 1; ctx.stroke();
+  ctx.fillStyle = C.hudBright; ctx.font = "bold " + Math.round(h * 0.6) + "px 'Courier New', monospace";
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText(text, x + w / 2, y + h / 2 + 1);
+  ctx.textAlign = "left"; ctx.textBaseline = "top";
+}
+
+/* Esquinera decorativa en (x,y) abriéndose hacia (dx,dy) */
+function drawCorner(x, y, dx, dy, len, col) {
+  ctx.strokeStyle = col; ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x + dx * len, y); ctx.lineTo(x, y); ctx.lineTo(x, y + dy * len);
+  ctx.stroke();
+}
+
+/* HUD — homenaje al marcador de Alien 8, marco grande y decorado */
+function drawHUD() {
+  const C = CFG.COL;
+  ctx.textBaseline = "top"; ctx.textAlign = "left";
+
+  // ===== Cabecera =====
+  ctx.fillStyle = C.hud; ctx.font = "bold 13px 'Courier New', monospace";
+  ctx.fillText("ALIEN POCHO", 10, 5);
+  ctx.fillStyle = "#3bc4c4"; ctx.font = "9px 'Courier New', monospace";
+  ctx.fillText("hecho por Azahara con Claude Code 4.8", 11, 21);
+  if (room && room.name) {
+    ctx.fillStyle = C.accent; ctx.font = "11px 'Courier New', monospace"; ctx.textAlign = "right";
+    ctx.fillText("» " + room.name, CFG.W - 10, 8); ctx.textAlign = "left";
+  }
+  ctx.strokeStyle = C.hudDim; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(10, 30); ctx.lineTo(CFG.W - 10, 30); ctx.stroke();
+
+  // ===== Panel inferior (marco doble + esquineras) =====
+  const px = 6, pw = CFG.W - 12, py = 190, ph = 240 - py - 4;
+  ctx.fillStyle = "rgba(0,26,30,0.62)"; ctx.fillRect(px, py, pw, ph);
+  ctx.strokeStyle = C.hud;    ctx.lineWidth = 1; ctx.strokeRect(px + 0.5, py + 0.5, pw - 1, ph - 1);
+  ctx.strokeStyle = C.hudDim; ctx.strokeRect(px + 3.5, py + 3.5, pw - 7, ph - 7);
+  drawCorner(px, py, 1, 1, 12, C.accent);
+  drawCorner(px + pw, py, -1, 1, 12, C.accent);
+  drawCorner(px, py + ph, 1, -1, 12, C.accent);
+  drawCorner(px + pw, py + ph, -1, -1, 12, C.accent);
+
+  // --- Circuitos (izquierda) ---
+  ctx.fillStyle = C.hudDim; ctx.font = "8px 'Courier New', monospace";
+  ctx.fillText("CIRCUITOS", 42, py + 9);
+  drawMiniCube(26, py + 36, 9, game.carried !== null);
+  ctx.fillStyle = C.hudBright; ctx.font = "bold 16px 'Courier New', monospace";
+  ctx.fillText(game.circuits + "/" + game.circuitsTotal, 42, py + 19);
+
+  // --- Vidas (centro) ---
+  ctx.fillStyle = C.hudDim; ctx.font = "8px 'Courier New', monospace";
+  ctx.fillText("VIDAS", 146, py + 9);
+  drawMiniRobot(144, py + 24);
+  ctx.fillStyle = C.hudBright; ctx.font = "bold 16px 'Courier New', monospace";
+  ctx.fillText("×" + game.lives, 158, py + 20);
+
+  // --- Años luz (derecha) ---
+  ctx.fillStyle = C.hudDim; ctx.font = "8px 'Courier New', monospace"; ctx.textAlign = "right";
+  ctx.fillText("AÑOS LUZ", CFG.W - 18, py + 9); ctx.textAlign = "left";
+  drawPill(CFG.W - 84, py + 19, 66, 22, String(Math.floor(game.lightYears)).padStart(4, "0").slice(-4));
+}
+
+/* =========================================================================
+   MAIN — bucle de juego con requestAnimationFrame + delta-time
+   ========================================================================= */
+const world = buildWorld();
+let room = world.rooms[world.start];
+
+/* Transición flip-screen: al cruzar un borde con salida, cambia de sala y
+   reaparece por el borde opuesto conservando la coordenada perpendicular. */
+function checkExits() {
+  const e = room.exits;
+  let key = null;
+  if (player.x >= room.w && e.xp)      { key = e.xp; player.x = 0.2; }
+  else if (player.x < 0 && e.xm)       { key = e.xm; player.x = world.rooms[e.xm].w - 0.2; }
+  else if (player.y >= room.h && e.yp) { key = e.yp; player.y = 0.2; }
+  else if (player.y < 0 && e.ym)       { key = e.ym; player.y = world.rooms[e.ym].h - 0.2; }
+  if (key) {
+    room = world.rooms[key];
+    player.z = 0; player.vz = 0; player.vx = 0; player.vy = 0;
+    player.onGround = true; player.jumpPending = false;
+  }
+}
+
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  updatePlayer(room, dt);
+  checkExits();
+  game.lightYears = Math.max(0, game.lightYears - dt * 6); // cuenta atrás (cosmética por ahora)
+  render(room);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* API mínima para pruebas automáticas */
+window.__pocho = { player, get room() { return room; }, world };
+</script>
+</body>
+</html>

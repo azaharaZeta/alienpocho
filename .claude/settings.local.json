@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:en.wikipedia.org)",
+      "WebFetch(domain:handwiki.org)",
+      "WebFetch(domain:zxart.ee)",
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "mcp__Claude_Preview__preview_start",
+      "WebFetch(domain:retrospec.sgn.net)",
+      "WebFetch(domain:www.funspot.it)"
+    ]
+  }
+}

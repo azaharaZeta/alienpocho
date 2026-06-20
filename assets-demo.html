@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alien Pocho — Demo de assets</title>
+<style>
+  html, body { margin: 0; background: #000; color: #36c8ff;
+    font-family: "Courier New", monospace; display: flex; flex-direction: column;
+    align-items: center; gap: 14px; padding: 18px 0 40px; }
+  h1 { font-size: 16px; letter-spacing: 3px; color: #36c8ff; margin: 4px 0; }
+  h2 { font-size: 12px; letter-spacing: 2px; color: #2a8; margin: 6px 0 0; align-self: flex-start; margin-left: 6%; }
+  .screen { position: relative; width: min(92vw, 900px); border: 2px solid #144;
+    border-radius: 7px; box-shadow: 0 0 30px rgba(0,180,255,0.15); background: #000; }
+  canvas { image-rendering: pixelated; width: 100%; height: auto; display: block; border-radius: 5px; }
+  .screen::after { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: 5px;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,0) 0 2px, rgba(0,0,0,0.14) 3px, rgba(0,0,0,0) 4px);
+    box-shadow: inset 0 0 60px rgba(0,0,0,0.45); }
+  .note { font-size: 11px; color: #267; }
+</style>
+</head>
+<body>
+  <h1>ALIEN POCHO · BIBLIOTECA DE ASSETS</h1>
+  <h2>CATÁLOGO (monocromo, contornos negros, teselado)</h2>
+  <div class="screen"><canvas id="gallery" width="660" height="540"></canvas></div>
+  <h2>EL COLOR CAMBIA POR SALA</h2>
+  <div class="screen"><canvas id="rooms" width="660" height="260"></canvas></div>
+  <div class="note">assets.js — estilo Alien 8: una sola tinta por pantalla + negro</div>
+
+<script src="assets.js"></script>
+<script>
+"use strict";
+function label(ctx, text, cx, y, col) {
+  ctx.fillStyle = col || "#2a8"; ctx.font = "9px 'Courier New', monospace";
+  ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.fillText(text, cx, y); ctx.textAlign = "left";
+}
+
+/* ----------------- GALERÍA ----------------- */
+(() => {
+  const ctx = document.getElementById("gallery").getContext("2d");
+  ctx.fillStyle = "#000"; ctx.fillRect(0, 0, 660, 540);
+  const C = AP.INKS[0];   // tinta de muestra
+  const cols = 4, cw = 165, ch = 132;
+  const items = [
+    ["Suelo",        (c, p) => { for (let y=0;y<2;y++) for (let x=0;x<2;x++) AP.floor(c,p,x,y,C); }],
+    ["Bloque",       (c, p) => { AP.floor(c,p,0,0,C); AP.cube(c,p,0,0,0,C); }],
+    ["Pared plana",  (c, p) => { AP.flatWall(c,p,"x",1,-0.2,2.2,2.2,C); }],
+    ["Puerta (arco)",(c, p) => { AP.flatWall(c,p,"x",1,-0.4,3.4,2.5,C); AP.door(c,p,"x",1,0.3,2.7,2.5,C,true); }],
+    ["Columna",      (c, p) => { AP.floor(c,p,0,0,C); AP.pillar(c,p,0,0,2.2,C); }],
+    ["Circuito cubo",(c, p) => { AP.floor(c,p,0,0,C); AP.circuit(c,p,0.5,0.5,0,"cube",C); }],
+    ["Circ. pirámide",(c,p) => { AP.floor(c,p,0,0,C); AP.circuit(c,p,0.5,0.5,0,"pyramid",C); }],
+    ["Circuito domo",(c, p) => { AP.floor(c,p,0,0,C); AP.circuit(c,p,0.5,0.5,0,"dome",C); }],
+    ["Circ. cilindro",(c,p) => { AP.floor(c,p,0,0,C); AP.circuit(c,p,0.5,0.5,0,"cylinder",C); }],
+    ["Zócalo",       (c, p) => { AP.floor(c,p,0,0,C); AP.socket(c,p,0.5,0.5,0,"cube",false,C); }],
+    ["Zócalo activo",(c, p) => { AP.floor(c,p,0,0,C); AP.socket(c,p,0.5,0.5,0,"dome",true,C); }],
+    ["Pinchos",      (c, p) => { AP.floor(c,p,0,0,C); AP.spikes(c,p,0.5,0.5,0,C); }],
+    ["Planta",       (c, p) => { AP.floor(c,p,0,0,C); AP.plant(c,p,0.5,0.5,0,C); }],
+    ["Dron",         (c, p) => { AP.floor(c,p,0,0,C); AP.drone(c,p,0.5,0.5,0,C); }],
+    ["Robot",        (c, p) => { AP.floor(c,p,0,0,C); AP.shadow(c,p,0.5,0.5,0); AP.robot(c,p,0.5,0.5,0,0,C); }],
+  ];
+  items.forEach((it, i) => {
+    const col = i % cols, row = (i / cols) | 0;
+    const cx = col * cw + cw / 2 + 6, top = row * ch + 6;
+    const p = AP.projector(cx, top + 92);
+    it[1](ctx, p);
+    label(ctx, it[0], cx, top + ch - 16, C);
+  });
+})();
+
+/* ----------------- 3 SALAS, 3 COLORES ----------------- */
+(() => {
+  const ctx = document.getElementById("rooms").getContext("2d");
+  ctx.fillStyle = "#000"; ctx.fillRect(0, 0, 660, 260);
+  const inks = [AP.INKS[0], AP.INKS[1], AP.INKS[2]];
+  const W = 4, H = 4, Hw = 2;
+  for (let k = 0; k < 3; k++) {
+    const C = inks[k];
+    const p = AP.projector(110 + k * 220, 50, { TILE_W: 26, TILE_H: 13, BLOCK_H: 13 });
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) AP.floor(ctx, p, x, y, C);
+    // muros planos al fondo, con una puerta en uno
+    AP.flatWall(ctx, p, "y", 0, 0, H, Hw, C);
+    AP.flatWall(ctx, p, "x", 0, 0, W, Hw, C);
+    AP.door(ctx, p, "x", 0, 1, 3, Hw, C, true);
+    // contenido ordenado por profundidad
+    const it = [];
+    it.push({ d: 2, fn: () => AP.cube(ctx, p, 1, 1, 0, C) });
+    it.push({ d: 4, fn: () => { AP.cube(ctx, p, 2, 2, 0, C); AP.cube(ctx, p, 2, 2, 1, C); } });
+    it.push({ d: 3, fn: () => AP.circuit(ctx, p, 2.5, 0.5, 0, "pyramid", C) });
+    it.push({ d: 4, fn: () => AP.spikes(ctx, p, 0.5, 3.5, 0, C) });
+    it.push({ d: 5, fn: () => AP.socket(ctx, p, 3.5, 1.5, 0, "dome", true, C) });
+    it.push({ d: 4.5, fn: () => { AP.shadow(ctx, p, 1.5, 3.0, 0); AP.robot(ctx, p, 1.5, 3.0, 0, 0, C); } });
+    it.sort((a, b) => a.d - b.d).forEach(o => o.fn());
+    label(ctx, ["AZUL", "OLIVA", "MAGENTA"][k], 110 + k * 220, 238, C);
+  }
+})();
+</script>
+</body>
+</html>
