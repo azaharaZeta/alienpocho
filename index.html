@@ -2,47 +2,78 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Alien Pocho</title>
 <style>
-  :root { --ink: #00e0e0; }
   html, body {
     margin: 0; padding: 0; height: 100%;
-    background: #000; color: var(--ink);
+    background: #000; color: #36c8ff;
     font-family: "Courier New", monospace;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
     overflow: hidden;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
   }
-  /* "Pantalla" CRT: contiene el canvas y superpone scanlines + viñeta */
+  /* Escenario: [controles izq] [pantalla] [controles der] centrados */
+  #stage {
+    display: flex; align-items: center; justify-content: center;
+    gap: 1.5vw; width: 100vw; height: 100dvh; box-sizing: border-box; padding: 4px;
+  }
+  /* La pantalla ocupa el MÁXIMO por altura, manteniendo 4:3 */
   #screen {
-    position: relative;
-    width: min(94vw, 110vh);   /* mantiene 4:3 y entra siempre */
-    background: #000;
-    border: 2px solid #0a5a5a;
-    border-radius: 7px;
+    position: relative; flex: 0 0 auto;
+    height: min(96dvh, 62vw); aspect-ratio: 4 / 3;
+    background: #000; border: 2px solid #0a5a5a; border-radius: 7px;
     box-shadow: 0 0 34px rgba(0, 210, 210, 0.22), inset 0 0 0 1px rgba(0,0,0,0.6);
   }
   #game {
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-    width: 100%; height: auto; display: block;
-    border-radius: 5px;
+    image-rendering: pixelated; image-rendering: crisp-edges;
+    width: 100%; height: 100%; display: block; border-radius: 5px;
   }
   #screen::after {
     content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: 5px;
     background: repeating-linear-gradient(0deg,
-      rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px,
-      rgba(0,0,0,0.16) 3px, rgba(0,0,0,0) 4px);
+      rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px, rgba(0,0,0,0.16) 3px, rgba(0,0,0,0) 4px);
     box-shadow: inset 0 0 70px rgba(0,0,0,0.5);
   }
-  #hint { margin-top: 8px; font-size: 11px; color: #066; letter-spacing: 1px; text-align: center; padding: 0 8px; }
+  /* Mandos táctiles a los lados */
+  .pad { flex: 0 0 auto; display: flex; flex-direction: column;
+         align-items: center; justify-content: center; gap: clamp(10px, 4vh, 30px); }
+  .btn {
+    width: clamp(46px, 12vh, 88px); height: clamp(46px, 12vh, 88px);
+    border-radius: 50%; border: 2px solid #0a8a8a; background: rgba(0,40,46,0.55);
+    color: #6fdede; font-size: clamp(20px, 5vh, 34px); line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    touch-action: none; cursor: pointer; user-select: none;
+  }
+  .btn.big { border-color: #18b6b6; color: #bdf7f7; }
+  .btn.jump { border-color: #ff5d7a; color: #ff9db0; }
+  .btn.on { background: #0a5a5a; color: #fff; }
+  .btn.jump.on { background: #5e1024; color: #fff; }
+  #rotate { display: none; }
+  /* En móvil vertical, pedir horizontal */
+  @media (orientation: portrait) and (pointer: coarse) {
+    #stage { display: none; }
+    #rotate { display: flex; position: fixed; inset: 0; align-items: center;
+      justify-content: center; text-align: center; color: #6fdede; padding: 24px;
+      font-size: 20px; letter-spacing: 1px; }
+  }
 </style>
 </head>
 <body>
-  <div id="screen"><canvas id="game" width="320" height="240"></canvas></div>
-  <div id="hint">←/→ girar · ↑ avanzar · ESPACIO saltar · E recoger/colocar circuito<br>
-  <span style="color:#ff5d7a">ALIEN POCHO</span> · hecho por Azahara con Claude Code 4.8</div>
+  <div id="stage">
+    <div class="pad">
+      <button class="btn" data-code="ArrowLeft"  aria-label="girar izquierda">⟲</button>
+      <button class="btn big" data-code="ArrowUp" aria-label="avanzar">▲</button>
+      <button class="btn" data-code="ArrowRight" aria-label="girar derecha">⟳</button>
+    </div>
+    <div id="screen"><canvas id="game" width="320" height="240"></canvas></div>
+    <div class="pad">
+      <button class="btn big jump" data-code="Space" aria-label="saltar">⤒</button>
+      <button class="btn" data-code="KeyE" aria-label="coger o colocar">✋</button>
+    </div>
+  </div>
+  <div id="rotate">↻<br>Gira el móvil<br>en horizontal</div>
 
 <script src="assets.js"></script>
 <script>
@@ -140,32 +171,37 @@ function makeRoom(o) {
   for (const b of blocks)
     if (b.x >= 0 && b.x < w && b.y >= 0 && b.y < h) solid.add(b.x + "," + b.y);
   return { w, h, blocks, solid, circuits: o.circuits || [], sockets: o.sockets || [],
-           ink: o.ink, exits: o.exits || {}, name: o.name || "" };
+           hazards: o.hazards || [], ink: o.ink, exits: o.exits || {}, name: o.name || "" };
 }
 
 function buildWorld() {
   const I = AP.INKS;   // [azul, oliva, magenta, verde, naranja, violeta]
   const rooms = {};
 
+  // ENTRADA — intro suave: un salto a una plataforma para coger el cubo.
   rooms["0,0"] = makeRoom({ ink: I[0], name: "ENTRADA", exits: { xp: "1,0", yp: "0,1" },
-    blocks: [ { x: 3, y: 2, z: 0, h: 1 }, { x: 4, y: 2, z: 0, h: 2 }, { x: 5, y: 5, z: 0, h: 1 } ],
-    circuits: [ { cx: 2, cy: 5, shape: "cube", taken: false } ],
-    sockets:  [ { cx: 6, cy: 2, shape: "cylinder", active: false } ] });
+    blocks: [ { x: 2, y: 2, z: 0, h: 1 } ],
+    circuits: [ { cx: 2, cy: 2, z: 1, shape: "cube", taken: false } ],
+    sockets:  [ { cx: 6, cy: 5, shape: "cylinder", active: false } ] });
 
+  // REACTOR — reto de ESCALADA: escalera 1→2→3, circuito arriba del todo.
   rooms["1,0"] = makeRoom({ ink: I[2], name: "REACTOR", exits: { xm: "0,0", yp: "1,1" },
-    blocks: [ { x: 2, y: 2, z: 0, h: 1 }, { x: 3, y: 2, z: 0, h: 2 }, { x: 4, y: 2, z: 0, h: 3 }, { x: 5, y: 5, z: 0, h: 1 } ],
-    circuits: [ { cx: 6, cy: 6, shape: "pyramid", taken: false } ],
-    sockets:  [ { cx: 1, cy: 5, shape: "cube", active: false } ] });
+    blocks: [ { x: 5, y: 1, z: 0, h: 1 }, { x: 5, y: 2, z: 0, h: 2 }, { x: 5, y: 3, z: 0, h: 3 } ],
+    circuits: [ { cx: 5, cy: 3, z: 3, shape: "pyramid", taken: false } ],
+    sockets:  [ { cx: 2, cy: 6, shape: "cube", active: false } ] });
 
+  // BODEGA — reto de SALTO DE HUECO+ALTURA: escalón h1, hueco, y plataforma h2.
   rooms["0,1"] = makeRoom({ ink: I[3], name: "BODEGA", exits: { ym: "0,0", xp: "1,1" },
-    blocks: [ { x: 4, y: 4, z: 0, h: 2 }, { x: 1, y: 2, z: 0, h: 1 }, { x: 5, y: 2, z: 0, h: 1 } ],
-    circuits: [ { cx: 2, cy: 6, shape: "dome", taken: false } ],
-    sockets:  [ { cx: 6, cy: 5, shape: "pyramid", active: false } ] });
+    blocks: [ { x: 2, y: 3, z: 0, h: 1 }, { x: 4, y: 3, z: 0, h: 2 } ],
+    circuits: [ { cx: 4, cy: 3, z: 2, shape: "dome", taken: false } ],
+    sockets:  [ { cx: 6, cy: 6, shape: "pyramid", active: false } ] });
 
+  // PUENTE — reto de PUENTE DE PIEDRAS sobre pinchos hasta una plataforma alta.
   rooms["1,1"] = makeRoom({ ink: I[4], name: "PUENTE", exits: { xm: "0,1", ym: "1,0" },
-    blocks: [ { x: 3, y: 3, z: 0, h: 1 }, { x: 4, y: 3, z: 0, h: 2 }, { x: 2, y: 6, z: 0, h: 1 } ],
-    circuits: [ { cx: 1, cy: 6, shape: "cylinder", taken: false } ],
-    sockets:  [ { cx: 6, cy: 6, shape: "dome", active: false } ] });
+    blocks: [ { x: 2, y: 4, z: 0, h: 1 }, { x: 4, y: 4, z: 0, h: 1 }, { x: 4, y: 6, z: 0, h: 2 } ],
+    circuits: [ { cx: 4, cy: 6, z: 2, shape: "cylinder", taken: false } ],
+    sockets:  [ { cx: 6, cy: 2, shape: "dome", active: false } ],
+    hazards:  [ { cx: 3, cy: 4 }, { cx: 4, cy: 5 } ] });
 
   return { rooms, start: "0,0" };
 }
@@ -350,9 +386,10 @@ function updatePlayer(room, dt) {
   for (const k in keys) prevKeys[k] = keys[k];
 }
 
-/* ¿Está el jugador lo bastante cerca del centro de celda (cx,cy)? */
-function nearCell(cx, cy) {
-  return Math.hypot(player.x - (cx + 0.5), player.y - (cy + 0.5)) < 0.8;
+/* Cerca en planta (2D) Y a la misma ALTURA (hay que subir a la plataforma) */
+function nearCell(cx, cy, z) {
+  return Math.hypot(player.x - (cx + 0.5), player.y - (cy + 0.5)) < 0.8 &&
+         Math.abs(player.z - (z || 0)) < 0.6;
 }
 
 /* Recoger un circuito, o colocar el que llevas en un zócalo de su misma forma */
@@ -360,7 +397,7 @@ function interact(room) {
   if (game.won) return;
   if (game.carried) {
     for (const s of room.sockets) {
-      if (!s.active && s.shape === game.carried && nearCell(s.cx, s.cy)) {
+      if (!s.active && s.shape === game.carried && nearCell(s.cx, s.cy, s.z)) {
         s.active = true; game.carried = null; game.circuits++;
         if (game.circuits >= game.circuitsTotal) game.won = true;
         return;
@@ -369,7 +406,7 @@ function interact(room) {
     return; // llevas algo pero no hay zócalo compatible al lado
   }
   for (const c of room.circuits) {
-    if (!c.taken && nearCell(c.cx, c.cy)) { c.taken = true; game.carried = c.shape; return; }
+    if (!c.taken && nearCell(c.cx, c.cy, c.z)) { c.taken = true; game.carried = c.shape; return; }
   }
 }
 
@@ -441,23 +478,27 @@ function render(room) {
   // z = DIAG-1 lo coloca al final de la banda de su diagonal.
   items.push({ kind: "player", diag: robotDiag, z: DIAG - 1 });
 
-  // Zócalos (en el suelo) y circuitos por recoger
+  // Pinchos (peligros), zócalos y circuitos por recoger — a su altura (oz)
+  for (const hz of room.hazards)
+    items.push({ kind: "spike", x: hz.cx + 0.5, y: hz.cy + 0.5, diag: hz.cx + hz.cy, oz: 0, z: 0.04 });
   for (const s of room.sockets)
     items.push({ kind: "socket", shape: s.shape, active: s.active,
-                 x: s.cx + 0.5, y: s.cy + 0.5, diag: s.cx + s.cy, z: 0.05 });
+                 x: s.cx + 0.5, y: s.cy + 0.5, diag: s.cx + s.cy, oz: s.z || 0, z: (s.z || 0) + 0.05 });
   for (const c of room.circuits)
     if (!c.taken) items.push({ kind: "circuit", shape: c.shape,
-                 x: c.cx + 0.5, y: c.cy + 0.5, diag: c.cx + c.cy, z: 0.1 });
+                 x: c.cx + 0.5, y: c.cy + 0.5, diag: c.cx + c.cy, oz: c.z || 0, z: (c.z || 0) + 0.1 });
 
   // 3) Pintar de atrás (menor x+y) a delante, y de abajo a arriba
   items.sort((a, b) => sortKey(a) - sortKey(b));
   for (const it of items) {
     if (it.kind === "cube") {
       AP.cube(ctx, P, it.cx, it.cy, it.cz, ink);
+    } else if (it.kind === "spike") {
+      AP.spikes(ctx, P, it.x, it.y, it.oz, ink);
     } else if (it.kind === "socket") {
-      AP.socket(ctx, P, it.x, it.y, 0, it.shape, it.active, ink);
+      AP.socket(ctx, P, it.x, it.y, it.oz, it.shape, it.active, ink);
     } else if (it.kind === "circuit") {
-      AP.circuit(ctx, P, it.x, it.y, 0, it.shape, ink);
+      AP.circuit(ctx, P, it.x, it.y, it.oz, it.shape, ink);
     } else {
       const gz = supportHeight(room, player.x, player.y, player.z);
       AP.shadow(ctx, P, player.x, player.y, gz);
@@ -626,6 +667,26 @@ requestAnimationFrame(loop);
 
 /* API mínima para pruebas automáticas */
 window.__pocho = { player, get room() { return room; }, world };
+</script>
+
+<script>
+/* Controles táctiles en pantalla → reusan el teclado del juego (mismos códigos,
+   así el salto corto/largo depende también de cuánto mantengas pulsado). */
+(function () {
+  "use strict";
+  const send = (code, down) =>
+    window.dispatchEvent(new KeyboardEvent(down ? "keydown" : "keyup", { code, bubbles: true }));
+  document.querySelectorAll(".btn").forEach(function (b) {
+    const code = b.dataset.code;
+    const down = (e) => { e.preventDefault(); b.classList.add("on"); send(code, true); };
+    const up   = (e) => { e.preventDefault(); b.classList.remove("on"); send(code, false); };
+    b.addEventListener("pointerdown", down);
+    b.addEventListener("pointerup", up);
+    b.addEventListener("pointerleave", up);
+    b.addEventListener("pointercancel", up);
+    b.addEventListener("contextmenu", (e) => e.preventDefault());
+  });
+})();
 </script>
 </body>
 </html>
