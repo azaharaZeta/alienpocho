@@ -375,15 +375,20 @@ function interact(room) {
     return;                                  // sin hueco → no suelta
   }
 
-  // Manos libres: coger SOLO el objeto sobre el que estás subido. Al cogerlo, se
-  // quita del mundo y el robot cae (gravedad) al sitio que ocupaba el objeto.
+  // Manos libres: coger el objeto si estás SUBIDO encima (tu huella lo pisa y los
+  // pies a su cima) o PEGADO a él (a su misma altura base y las huellas casi
+  // tocándose). Subido → al cogerlo caes al hueco; pegado → te quedas donde estás.
+  const REACH = 0.2;   // margen de alcance lateral para "pegado"
   for (let i = 0; i < room.objects.length; i++) {
-    const o = room.objects[i];
-    if (Math.abs(player.x - o.x) < 0.5 && Math.abs(player.y - o.y) < 0.5 &&
-        Math.abs((o.z + AP.PROP.H) - player.z) < 0.25) {
+    const o = room.objects[i], b = objBox(o);
+    const encima = overlapsBox(b, player.x, player.y) && Math.abs((o.z + AP.PROP.H) - player.z) < 0.25;
+    const pegado = Math.abs(player.z - o.z) < 0.4 &&
+      (player.x - CFG.PRAD - REACH) < b.x1 && (player.x + CFG.PRAD + REACH) > b.x0 &&
+      (player.y - CFG.PRAD - REACH) < b.y1 && (player.y + CFG.PRAD + REACH) > b.y0;
+    if (encima || pegado) {
       game.carried = o.shape;
       room.objects.splice(i, 1);
-      player.onGround = false; player.vz = 0;  // que se vea caer hasta o.z
+      if (encima) { player.onGround = false; player.vz = 0; }  // que se vea caer hasta o.z
       return;
     }
   }
