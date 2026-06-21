@@ -52,10 +52,11 @@ investigación del original: [RESEARCH.md](RESEARCH.md).
 > Volcado libre de ideas (algunas sensatas, otras locas). **No son órdenes ni están
 > priorizadas**: son material para analizar y estudiar cuando toque. Solo las edita un humano.
 - Mejorar estéticamente los bloques-cubo. Las esquinas hacerlas más pronunciadas, y transparentes.
-- Añadirle manitas al robot
 - Mejorar las puertas, darles formas más trabajadas.
 - Esta es gorda: Convertir el juego en un roguelike. Cada run, mapa random, ubicaciones random.
-- Intercambiar las posiciones de botón de avanzar y de salto
+- Mejorar el mapa: zonas un poco más claras, bordes ok. 
+- Colocar el nombre de la habitación encima del mapa (en la misma zona donde se dibuja ahora el mapa)
+- Arreglar ui inferior: Colocar toda la info en la zona más gruesa (igual que hacemos arriba con el mapa). "ALIEN POCHO" ponerlo siempre junto, no cortado por la ui.
 
 ## 🧭 Direcciones posibles (ideas, sin orden ni obligación)
 > Antes esto era un "roadmap por fases". Ahora son ideas a tomar (o no) cuando apetezca.

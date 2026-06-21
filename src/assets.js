@@ -1,14 +1,18 @@
 /* =============================================================================
    ALIEN POCHO — Biblioteca de ASSETS (assets.js)
    -----------------------------------------------------------------------------
-   MONOCROMO de verdad: cada sala usa UN solo color de tinta sobre negro, y las
-   formas se definen con CONTORNOS NEGROS (teselado limpio). El color cambia por
-   pantalla. Las caras en sombra se "oscurecen" con sombreado plano (darken).
+   Líneas y caras sobre negro. Cada sala tiene DOS tintas (ver palette.js): una
+   PRIMARIA (suelo, paredes, bloques, robot) y una SECUNDARIA complementaria
+   (circuitos, zócalos, textos del HUD). Las formas se definen con CONTORNOS NEGROS
+   (teselado limpio); el color cambia por sala y las caras en sombra se "oscurecen"
+   con sombreado plano (darken).
    - Paredes: PLANAS y teseladas (panal), no cubos.
-   - Puertas/arcos: GRANDES y abiertos.
+   - Puertas: marco 3D (postes + dintel con ranuras) que sobresale del borde.
    - Bloques: figuras con bordes "mordidos" (chaflanes), no cubos exactos.
-   - El robot mantiene su propio color (azul), visible en cualquier sala.
+   - El robot se pinta en la tinta que se le pasa (en juego, la PRIMARIA de la sala);
+     su color por defecto (ROBOT_INK) solo se usa si no se indica ninguno.
    Uso:  AP.<asset>(ctx, p, ..., col)   con p = AP.projector(ox, oy)
+   Catálogo visual interactivo: assets-demo.html
    ============================================================================= */
 "use strict";
 
@@ -209,6 +213,18 @@ export const AP = (() => {
     const fB = { x: x - perp.x * sep - dir.dx * swing, y: y - perp.y * sep - dir.dy * swing };
     const feet = [fA, fB].sort((a, b) => (a.x + a.y) - (b.x + b.y));
     for (const q of feet) box(ctx, p, q.x - fw, q.y - fw, q.x + fw, q.y + fw, z, z + 0.22, col);
+
+    // --- BRAZOS + MANITAS: cuelgan a los lados del torso y balancean opuestos a los pies ---
+    const armW = 0.075, sh = ROBOT.WID * 0.92;                 // semigrosor del brazo · separación al hombro
+    const az0 = z + 0.30, az1 = z + 0.90, armSwing = -swing;   // cadera → hombro · balanceo opuesto a piernas
+    const drawArm = (s) => {
+      const ax = x + perp.x * sh * s + dir.dx * armSwing * s;
+      const ay = y + perp.y * sh * s + dir.dy * armSwing * s;
+      box(ctx, p, ax - armW, ay - armW, ax + armW, ay + armW, az0, az1, col);   // brazo (sin mano, más simple)
+    };
+    const backS = (perp.x + perp.y < 0) ? 1 : -1;   // lado que queda DETRÁS del torso (orden de pintado)
+    drawArm(backS);                                  // brazo trasero (lo tapará el torso)
+
     box(ctx, p, x - bX, y - bY, x + bX, y + bY, z + 0.22, z + 0.98, col);
     const hz0 = z + 0.98, hz1 = z + ROBOT.H;
     box(ctx, p, x - hX, y - hY, x + hX, y + hY, hz0, hz1, col);
@@ -230,6 +246,7 @@ export const AP = (() => {
       poly(ctx, [facePt(Q, 0.45, 0.49), facePt(Q, 0.55, 0.49), facePt(Q, 0.55, 0.63), facePt(Q, 0.45, 0.63)], col, null);
     };
     if (facing === 0) chestOn(bRF); else if (facing === 1) chestOn(bLF);
+    drawArm(-backS);                                 // brazo delantero (por delante del torso)
     const aTop = p(x, y, hz1);
     ctx.strokeStyle = col; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(Math.round(aTop.x) + 0.5, Math.round(aTop.y)); ctx.lineTo(Math.round(aTop.x) + 0.5, Math.round(aTop.y) - 5); ctx.stroke();

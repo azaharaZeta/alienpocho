@@ -3,95 +3,214 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Alien Pocho — Demo de assets</title>
+<title>Alien Pocho — Catálogo de assets</title>
 <style>
-  html, body { margin: 0; background: #000; color: #36c8ff;
-    font-family: "Courier New", monospace; display: flex; flex-direction: column;
-    align-items: center; gap: 14px; padding: 18px 0 40px; }
-  h1 { font-size: 16px; letter-spacing: 3px; color: #36c8ff; margin: 4px 0; }
-  h2 { font-size: 12px; letter-spacing: 2px; color: #2a8; margin: 6px 0 0; align-self: flex-start; margin-left: 6%; }
-  .screen { position: relative; width: min(92vw, 900px); border: 2px solid #144;
-    border-radius: 7px; box-shadow: 0 0 30px rgba(0,180,255,0.15); background: #000; }
-  canvas { image-rendering: pixelated; width: 100%; height: auto; display: block; border-radius: 5px; }
-  .screen::after { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: 5px;
-    background: repeating-linear-gradient(0deg, rgba(0,0,0,0) 0 2px, rgba(0,0,0,0.14) 3px, rgba(0,0,0,0) 4px);
-    box-shadow: inset 0 0 60px rgba(0,0,0,0.45); }
-  .note { font-size: 11px; color: #267; }
+  :root { --ink: #36c8ff; --ink2: #ffd27a; --dim: #15384a; }
+  html, body { margin: 0; background: #05080a; color: var(--ink);
+    font-family: "Courier New", monospace; }
+  header { padding: 18px 6% 4px; }
+  h1 { font-size: 17px; letter-spacing: 3px; margin: 0 0 6px; }
+  .note { font-size: 12px; color: #8fb8c8; max-width: 70ch; line-height: 1.5; margin: 0 0 10px; }
+  h2 { font-size: 12px; letter-spacing: 2px; color: var(--ink); margin: 22px 0 8px;
+    border-bottom: 1px solid var(--dim); padding-bottom: 5px; }
+  main { padding: 0 6% 60px; }
+
+  /* Paleta: parejas primario/secundario por sala */
+  .palette { display: flex; flex-wrap: wrap; gap: 10px; margin: 6px 0 4px; }
+  .pal { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 10px; color: #8fb8c8; }
+  .pal .pair { display: flex; border: 1px solid #234; border-radius: 5px; overflow: hidden; }
+  .pal .pair span { width: 26px; height: 20px; display: block; }
+
+  /* Rejilla de miniaturas */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .tile { background: #000; border: 1px solid var(--dim); border-radius: 8px; padding: 6px 6px 8px;
+    cursor: pointer; color: var(--ink); display: flex; flex-direction: column; align-items: center;
+    font-family: inherit; transition: border-color .12s, transform .12s; }
+  .tile:hover { border-color: var(--ink); transform: translateY(-2px); }
+  .tile canvas { width: 100%; height: auto; image-rendering: auto; display: block; border-radius: 5px; }
+  .tile .name { font-size: 11px; margin-top: 5px; letter-spacing: 1px; }
+  .tile .badge { font-size: 9px; color: #7aa; }
+
+  /* Overlay grande */
+  #overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.82); display: none;
+    align-items: center; justify-content: center; z-index: 10; }
+  #overlay.open { display: flex; }
+  .modal { background: #07101a; border: 1px solid var(--ink); border-radius: 12px;
+    padding: 16px 18px 20px; max-width: 92vw; max-height: 92vh; overflow: auto;
+    box-shadow: 0 0 50px rgba(54,200,255,0.25); }
+  .modal .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 10px; }
+  .modal h3 { margin: 0; font-size: 15px; letter-spacing: 2px; color: var(--ink); }
+  .modal .close { background: none; border: 1px solid var(--dim); color: var(--ink);
+    border-radius: 6px; width: 30px; height: 30px; font-size: 18px; cursor: pointer; }
+  .modal .close:hover { border-color: var(--ink); }
+  #bigCanvas { display: block; background: #000; border-radius: 7px; max-width: 100%; height: auto;
+    image-rendering: auto; }
+  .swatches { display: flex; gap: 8px; margin: 12px 0 2px; align-items: center; flex-wrap: wrap; }
+  .swatches .lbl { font-size: 10px; color: #8fb8c8; margin-right: 2px; }
+  .swatches button { width: 30px; height: 22px; border-radius: 5px; border: 2px solid transparent;
+    cursor: pointer; padding: 0; display: flex; overflow: hidden; }
+  .swatches button.sel { border-color: #fff; }
+  .swatches button span { flex: 1; }
 </style>
 </head>
 <body>
-  <h1>ALIEN POCHO · BIBLIOTECA DE ASSETS</h1>
-  <h2>CATÁLOGO (monocromo, contornos negros, teselado)</h2>
-  <div class="screen"><canvas id="gallery" width="660" height="540"></canvas></div>
-  <h2>EL COLOR CAMBIA POR SALA</h2>
-  <div class="screen"><canvas id="rooms" width="660" height="260"></canvas></div>
-  <div class="note">assets.js — estilo Alien 8: una sola tinta por pantalla + negro</div>
+  <header>
+    <h1>ALIEN POCHO · CATÁLOGO DE ASSETS</h1>
+    <p class="note">
+      Líneas sobre negro, contornos negros, teselado. Cada sala usa <b>DOS tintas</b>
+      (definidas en <code>src/palette.js</code>): una <b style="color:var(--ink)">PRIMARIA</b>
+      (suelo, paredes, bloques, robot) y una <b style="color:var(--ink2)">SECUNDARIA</b>
+      complementaria (circuitos, zócalos, textos del HUD). Pulsa un asset para verlo en grande
+      y probar cómo cambia con la paleta de cada sala.
+    </p>
+    <div class="palette" id="palette"></div>
+  </header>
+  <main id="catalog"></main>
+
+  <div id="overlay">
+    <div class="modal">
+      <div class="top">
+        <h3 id="bigTitle"></h3>
+        <button class="close" id="closeBtn" aria-label="cerrar">×</button>
+      </div>
+      <canvas id="bigCanvas"></canvas>
+      <div class="swatches" id="swatches"><span class="lbl">paleta de sala:</span></div>
+    </div>
+  </div>
 
 <script type="module">
-import { AP } from "./src/assets.js";   // AP importa engine.js de forma transitiva
-function label(ctx, text, cx, y, col) {
-  ctx.fillStyle = col || "#2a8"; ctx.font = "9px 'Courier New', monospace";
-  ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.fillText(text, cx, y); ctx.textAlign = "left";
+import { AP } from "./src/assets.js";
+import { INKS, INK2 } from "./src/palette.js";
+
+const NAMES = ["cian", "oliva", "magenta", "verde", "naranja", "violeta"];
+
+/* Cada asset = { name, badge?, views:[{label, center?, draw(ctx,p,ink,ink2)}] }.
+   La miniatura usa views[0]; el overlay muestra todas las vistas a lo grande.
+   center = punto del mundo (celda) a centrar en el lienzo (def. {0.5,0.5,0.6}). */
+const circuitItem = (name, shape) => ({ name, views: [{ label: name, center: { x: .5, y: .5, z: .3 },
+  draw: (c, p, ink, ink2) => { AP.floor(c, p, 0, 0, ink); AP.circuit(c, p, 0.5, 0.5, 0, shape, ink2); } }] });
+const socketItem = (name, shape) => ({ name, badge: "inactivo·activo", views: [
+  { label: "inactivo", center: { x: .5, y: .5, z: .3 }, draw: (c, p, ink, ink2) => { AP.floor(c, p, 0, 0, ink); AP.socket(c, p, 0.5, 0.5, 0, shape, false, ink2); } },
+  { label: "activo",   center: { x: .5, y: .5, z: .3 }, draw: (c, p, ink, ink2) => { AP.floor(c, p, 0, 0, ink); AP.socket(c, p, 0.5, 0.5, 0, shape, true, ink2); } } ] });
+
+const GROUPS = [
+  { title: "Terreno y estructura", items: [
+    { name: "Suelo", views: [{ label: "suelo 2×2", center: { x: 1, y: 1, z: 0 },
+      draw: (c, p, ink) => { for (let y = 0; y < 2; y++) for (let x = 0; x < 2; x++) AP.floor(c, p, x, y, ink); } }] },
+    { name: "Bloque", views: [{ label: "bloque", center: { x: .5, y: .5, z: .5 },
+      draw: (c, p, ink) => { AP.floor(c, p, 0, 0, ink); AP.cube(c, p, 0, 0, 0, ink); } }] },
+    { name: "Pared (panal)", views: [{ label: "pared", center: { x: 1.25, y: 0, z: 1.1 },
+      draw: (c, p, ink) => AP.flatWall(c, p, "x", 0, 0, 2.5, 2.2, ink) }] },
+    { name: "Puerta (arco)", badge: "eje x · eje y", views: [
+      { label: "eje x", center: { x: 1.5, y: 0, z: 1.3 }, draw: (c, p, ink) => { AP.flatWall(c, p, "x", 0, -0.3, 3.3, 2.6, ink); const s = AP.DOOR.SPAN_HALF; AP.door(c, p, "x", 0, 1.5 - s, 1.5 + s, 2.6, ink, true); } },
+      { label: "eje y", center: { x: 0, y: 1.5, z: 1.3 }, draw: (c, p, ink) => { AP.flatWall(c, p, "y", 0, -0.3, 3.3, 2.6, ink); const s = AP.DOOR.SPAN_HALF; AP.door(c, p, "y", 0, 1.5 - s, 1.5 + s, 2.6, ink, true); } } ] },
+    { name: "Columna", views: [{ label: "columna", center: { x: .5, y: .5, z: 1.1 },
+      draw: (c, p, ink) => { AP.floor(c, p, 0, 0, ink); AP.pillar(c, p, 0, 0, 2.2, ink); } }] },
+  ] },
+  { title: "Circuitos (transportables)", items: [
+    circuitItem("Cubo", "cube"), circuitItem("Pirámide", "pyramid"),
+    circuitItem("Domo", "dome"), circuitItem("Cilindro", "cylinder"),
+  ] },
+  { title: "Zócalos (destino, por forma)", items: [
+    socketItem("Zócalo cubo", "cube"), socketItem("Zócalo pirámide", "pyramid"),
+    socketItem("Zócalo domo", "dome"), socketItem("Zócalo cilindro", "cylinder"),
+  ] },
+  { title: "Peligros y decoración", items: [
+    { name: "Pinchos", views: [{ label: "pinchos", center: { x: .5, y: .5, z: .3 }, draw: (c, p, ink) => { AP.floor(c, p, 0, 0, ink); AP.spikes(c, p, 0.5, 0.5, 0, ink); } }] },
+    { name: "Planta", views: [{ label: "planta", center: { x: .5, y: .5, z: .3 }, draw: (c, p, ink) => { AP.floor(c, p, 0, 0, ink); AP.plant(c, p, 0.5, 0.5, 0, ink); } }] },
+    { name: "Dron", views: [{ label: "dron", center: { x: .5, y: .5, z: .7 }, draw: (c, p, ink) => { AP.floor(c, p, 0, 0, ink); AP.drone(c, p, 0.5, 0.5, 0, ink); } }] },
+  ] },
+  { title: "Personaje", items: [
+    { name: "Robot Pocho", badge: "4 vistas", views: [0, 1, 2, 3].map(f => ({
+      label: ["+x", "+y", "-x", "-y"][f], center: { x: .5, y: .5, z: .8 },
+      draw: (c, p, ink) => { AP.shadow(c, p, 0.5, 0.5, 0); AP.robot(c, p, 0.5, 0.5, 0, f, ink); } })) },
+  ] },
+];
+
+/* Dibuja una vista centrada en (anchorX, anchorY) del lienzo, a escala TILE. */
+function drawView(ctx, anchorX, anchorY, view, ink, ink2, TILE) {
+  const c = view.center || { x: 0.5, y: 0.5, z: 0.6 };
+  const TW = TILE, TH = TILE / 2, BH = TILE * 0.62;
+  const ox = anchorX - (c.x - c.y) * TW / 2;
+  const oy = anchorY - (c.x + c.y) * TH / 2 + c.z * BH;
+  const p = AP.projector(ox, oy, { TILE_W: TW, TILE_H: TH, BLOCK_H: BH });
+  view.draw(ctx, p, ink, ink2);
 }
 
-/* ----------------- GALERÍA ----------------- */
-(() => {
-  const ctx = document.getElementById("gallery").getContext("2d");
-  ctx.fillStyle = "#000"; ctx.fillRect(0, 0, 660, 540);
-  const C = AP.INKS[0];   // tinta de muestra
-  const cols = 4, cw = 165, ch = 132;
-  const items = [
-    ["Suelo",        (c, p) => { for (let y=0;y<2;y++) for (let x=0;x<2;x++) AP.floor(c,p,x,y,C); }],
-    ["Bloque",       (c, p) => { AP.floor(c,p,0,0,C); AP.cube(c,p,0,0,0,C); }],
-    ["Pared plana",  (c, p) => { AP.flatWall(c,p,"x",1,-0.2,2.2,2.2,C); }],
-    ["Puerta (arco)",(c, p) => { AP.flatWall(c,p,"x",1,-0.4,3.4,2.5,C); AP.door(c,p,"x",1,0.3,2.7,2.5,C,true); }],
-    ["Columna",      (c, p) => { AP.floor(c,p,0,0,C); AP.pillar(c,p,0,0,2.2,C); }],
-    ["Circuito cubo",(c, p) => { AP.floor(c,p,0,0,C); AP.circuit(c,p,0.5,0.5,0,"cube",C); }],
-    ["Circ. pirámide",(c,p) => { AP.floor(c,p,0,0,C); AP.circuit(c,p,0.5,0.5,0,"pyramid",C); }],
-    ["Circuito domo",(c, p) => { AP.floor(c,p,0,0,C); AP.circuit(c,p,0.5,0.5,0,"dome",C); }],
-    ["Circ. cilindro",(c,p) => { AP.floor(c,p,0,0,C); AP.circuit(c,p,0.5,0.5,0,"cylinder",C); }],
-    ["Zócalo",       (c, p) => { AP.floor(c,p,0,0,C); AP.socket(c,p,0.5,0.5,0,"cube",false,C); }],
-    ["Zócalo activo",(c, p) => { AP.floor(c,p,0,0,C); AP.socket(c,p,0.5,0.5,0,"dome",true,C); }],
-    ["Pinchos",      (c, p) => { AP.floor(c,p,0,0,C); AP.spikes(c,p,0.5,0.5,0,C); }],
-    ["Planta",       (c, p) => { AP.floor(c,p,0,0,C); AP.plant(c,p,0.5,0.5,0,C); }],
-    ["Dron",         (c, p) => { AP.floor(c,p,0,0,C); AP.drone(c,p,0.5,0.5,0,C); }],
-    ["Robot",        (c, p) => { AP.floor(c,p,0,0,C); AP.shadow(c,p,0.5,0.5,0); AP.robot(c,p,0.5,0.5,0,0,C); }],
-  ];
-  items.forEach((it, i) => {
-    const col = i % cols, row = (i / cols) | 0;
-    const cx = col * cw + cw / 2 + 6, top = row * ch + 6;
-    const p = AP.projector(cx, top + 92);
-    it[1](ctx, p);
-    label(ctx, it[0], cx, top + ch - 16, C);
-  });
-})();
+/* ---------- Paleta (cabecera) ---------- */
+const palDiv = document.getElementById("palette");
+INKS.forEach((ink, i) => {
+  const d = document.createElement("div"); d.className = "pal";
+  d.innerHTML = `<div class="pair"><span style="background:${ink}"></span><span style="background:${INK2[i]}"></span></div>${NAMES[i] || i}`;
+  palDiv.appendChild(d);
+});
 
-/* ----------------- 3 SALAS, 3 COLORES ----------------- */
-(() => {
-  const ctx = document.getElementById("rooms").getContext("2d");
-  ctx.fillStyle = "#000"; ctx.fillRect(0, 0, 660, 260);
-  const inks = [AP.INKS[0], AP.INKS[1], AP.INKS[2]];
-  const W = 4, H = 4, Hw = 2;
-  for (let k = 0; k < 3; k++) {
-    const C = inks[k];
-    const p = AP.projector(110 + k * 220, 50, { TILE_W: 26, TILE_H: 13, BLOCK_H: 13 });
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) AP.floor(ctx, p, x, y, C);
-    // muros planos al fondo, con una puerta en uno
-    AP.flatWall(ctx, p, "y", 0, 0, H, Hw, C);
-    AP.flatWall(ctx, p, "x", 0, 0, W, Hw, C);
-    AP.door(ctx, p, "x", 0, 1, 3, Hw, C, true);
-    // contenido ordenado por profundidad
-    const it = [];
-    it.push({ d: 2, fn: () => AP.cube(ctx, p, 1, 1, 0, C) });
-    it.push({ d: 4, fn: () => { AP.cube(ctx, p, 2, 2, 0, C); AP.cube(ctx, p, 2, 2, 1, C); } });
-    it.push({ d: 3, fn: () => AP.circuit(ctx, p, 2.5, 0.5, 0, "pyramid", C) });
-    it.push({ d: 4, fn: () => AP.spikes(ctx, p, 0.5, 3.5, 0, C) });
-    it.push({ d: 5, fn: () => AP.socket(ctx, p, 3.5, 1.5, 0, "dome", true, C) });
-    it.push({ d: 4.5, fn: () => { AP.shadow(ctx, p, 1.5, 3.0, 0); AP.robot(ctx, p, 1.5, 3.0, 0, 0, C); } });
-    it.sort((a, b) => a.d - b.d).forEach(o => o.fn());
-    label(ctx, ["AZUL", "OLIVA", "MAGENTA"][k], 110 + k * 220, 238, C);
+/* ---------- Miniaturas agrupadas ---------- */
+const catalog = document.getElementById("catalog");
+for (const g of GROUPS) {
+  const h = document.createElement("h2"); h.textContent = g.title; catalog.appendChild(h);
+  const grid = document.createElement("div"); grid.className = "grid"; catalog.appendChild(grid);
+  for (const item of g.items) {
+    const tile = document.createElement("button"); tile.className = "tile";
+    const cv = document.createElement("canvas"); cv.width = 150; cv.height = 120;
+    const ctx = cv.getContext("2d");
+    ctx.fillStyle = "#000"; ctx.fillRect(0, 0, cv.width, cv.height);
+    drawView(ctx, cv.width / 2, cv.height * 0.58, item.views[0], INKS[0], INK2[0], 38);
+    tile.appendChild(cv);
+    const nm = document.createElement("span"); nm.className = "name"; nm.textContent = item.name; tile.appendChild(nm);
+    if (item.badge) { const b = document.createElement("span"); b.className = "badge"; b.textContent = item.badge; tile.appendChild(b); }
+    tile.addEventListener("click", () => openOverlay(item));
+    grid.appendChild(tile);
   }
-})();
+}
+
+/* ---------- Overlay grande + selector de paleta ---------- */
+const overlay = document.getElementById("overlay");
+const bigCanvas = document.getElementById("bigCanvas");
+const bigTitle = document.getElementById("bigTitle");
+const swatches = document.getElementById("swatches");
+let curItem = null, palIdx = 0;
+
+function renderBig() {
+  const views = curItem.views, n = views.length;
+  const colW = 240, H = 360;
+  bigCanvas.width = n * colW; bigCanvas.height = H;
+  const c = bigCanvas.getContext("2d");
+  c.fillStyle = "#000"; c.fillRect(0, 0, bigCanvas.width, H);
+  const ink = INKS[palIdx], ink2 = INK2[palIdx];
+  views.forEach((v, i) => {
+    drawView(c, colW * (i + 0.5), H * 0.52, v, ink, ink2, 100);
+    c.fillStyle = ink; c.font = "14px 'Courier New', monospace"; c.textAlign = "center";
+    c.fillText(v.label, colW * (i + 0.5), H - 20);
+  });
+}
+
+function openOverlay(item) {
+  curItem = item;
+  bigTitle.textContent = item.name;
+  renderBig();
+  overlay.classList.add("open");
+}
+function closeOverlay() { overlay.classList.remove("open"); }
+
+// Selector de paleta dentro del overlay (demuestra "el color cambia por sala")
+INKS.forEach((ink, i) => {
+  const b = document.createElement("button");
+  b.innerHTML = `<span style="background:${ink}"></span><span style="background:${INK2[i]}"></span>`;
+  b.title = NAMES[i] || i;
+  if (i === palIdx) b.classList.add("sel");
+  b.addEventListener("click", () => {
+    palIdx = i;
+    [...swatches.querySelectorAll("button")].forEach(x => x.classList.remove("sel"));
+    b.classList.add("sel");
+    renderBig();
+  });
+  swatches.appendChild(b);
+});
+
+document.getElementById("closeBtn").addEventListener("click", closeOverlay);
+overlay.addEventListener("click", (e) => { if (e.target === overlay) closeOverlay(); });
+addEventListener("keydown", (e) => { if (e.key === "Escape") closeOverlay(); });
 </script>
 </body>
 </html>

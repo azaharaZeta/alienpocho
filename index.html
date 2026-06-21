@@ -15,11 +15,12 @@
 <body>
   <div id="stage">
     <div class="pad tri">
-      <button class="btn big" data-code="ArrowUp" aria-label="avanzar">
-        <!-- flecha en PERSPECTIVA: punta (lejos) arriba y estrecha, base (cerca) abajo más ancha -->
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      <button class="btn big jump" data-code="Space" aria-label="saltar">
+        <svg class="ico-jump" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-          <path d="M12 2.5 5 9 10.5 9 7 21 17 21 13.5 9 19 9Z"/>
+          <path d="M12 3v11"/>
+          <path d="M7 8l5-5 5 5"/>
+          <path d="M5 19q7-5 14 0"/>
         </svg>
       </button>
       <div class="tri-row">
@@ -48,12 +49,11 @@
           <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-6-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.83L7 15"/>
         </svg>
       </button>
-      <button class="btn big jump" data-code="Space" aria-label="saltar">
-        <svg class="ico-jump" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      <button class="btn big" data-code="ArrowUp" aria-label="avanzar">
+        <!-- flecha en PERSPECTIVA: punta (lejos) arriba y estrecha, base (cerca) abajo más ancha -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-          <path d="M12 3v11"/>
-          <path d="M7 8l5-5 5 5"/>
-          <path d="M5 19q7-5 14 0"/>
+          <path d="M12 2.5 5 9 10.5 9 7 21 17 21 13.5 9 19 9Z"/>
         </svg>
       </button>
     </div>
