@@ -3,6 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<!-- Lanzar SIN barra del navegador al "Añadir a pantalla de inicio" (iOS y Android) -->
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Alien Pocho">
+<meta name="theme-color" content="#000000">
 <title>Alien Pocho</title>
 <style>
   html, body {
@@ -43,7 +49,7 @@
   .pad.tri { gap: clamp(8px, 2.2vh, 18px); }
   .tri-row { display: flex; gap: clamp(10px, 3vh, 26px); }
   /* mando de acciones: coger (izq) + saltar (der) en fila */
-  .pad.row { flex-direction: row; gap: clamp(10px, 3vh, 26px); }
+  .pad.row { flex-direction: row; gap: clamp(16px, 4vh, 34px); }
   .btn {
     width: clamp(46px, 12vh, 88px); height: clamp(46px, 12vh, 88px);
     border-radius: 50%; border: 2px solid #0a8a8a; background: rgba(0,40,46,0.55);
@@ -52,19 +58,41 @@
     touch-action: none; cursor: pointer; user-select: none;
   }
   .btn.big { border-color: #18b6b6; color: #bdf7f7; }
-  .btn.jump { border-color: #ff5d7a; color: #ff9db0; }
+  .btn.jump { border-color: #8b76c4; color: #b9a6ff; }
   .btn.on { background: #0a5a5a; color: #fff; }
-  .btn.jump.on { background: #5e1024; color: #fff; }
-  /* En móvil VERTICAL: rotamos TODA la interfaz para forzar horizontal,
-     sin pedirle nada al usuario. (Unidades intercambiadas dentro del marco.) */
+  .btn.jump.on { background: #352a55; color: #fff; }
+  /* Botón de PANTALLA COMPLETA (esquina). Solo en táctil; se oculta por JS si el
+     navegador no soporta la Fullscreen API o si ya se abrió como app (standalone). */
+  #fsbtn {
+    position: fixed; top: 6px; right: 6px; z-index: 10; display: none;
+    width: 34px; height: 34px; padding: 0; border-radius: 8px;
+    border: 1px solid #0a8a8a; background: rgba(0,40,46,0.55); color: #6fdede;
+    font-size: 18px; line-height: 1; cursor: pointer;
+    align-items: center; justify-content: center;
+  }
+  @media (pointer: coarse) { #fsbtn { display: flex; } }
+  /* En móvil VERTICAL: NO se rota. Pantalla ARRIBA y los dos mandos ABAJO (mover a la
+     izquierda, acciones a la derecha). Grid recoloca sin depender del orden del HTML. */
   @media (orientation: portrait) and (pointer: coarse) {
     #stage {
-      position: fixed; top: 0; left: 0;
-      width: 100vh; height: 100vw;
-      transform: rotate(90deg) translateY(-100vw);
-      transform-origin: top left;
+      display: grid; row-gap: 5vh; column-gap: 4vw; padding: 2vh 2vw;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto;          /* bloque compacto (pantalla + mandos)... */
+      grid-template-areas:
+        "screen screen"
+        "move   act";
+      align-content: center;                  /* ...centrado verticalmente en la pantalla */
+      justify-items: center; align-items: center;
     }
-    #screen { height: min(96vw, 62vh); }
+    #screen { grid-area: screen; width: min(96vw, 72vh); height: auto; }
+    .pad.tri { grid-area: move; }
+    .pad.row { grid-area: act; }
+    /* En vertical el límite es el ANCHO: dimensionar botones por vw para que las dos
+       mitades (mover / acciones) quepan sin desbordar. */
+    .btn { width: clamp(44px, 16vw, 74px); height: clamp(44px, 16vw, 74px); font-size: clamp(18px, 6vw, 30px); }
+    .pad.row { gap: clamp(14px, 4.5vw, 26px); }
+    .pad.tri { gap: clamp(6px, 2vw, 14px); }
+    .tri-row { gap: clamp(8px, 3vw, 18px); }
   }
 </style>
 </head>
@@ -83,6 +111,7 @@
       <button class="btn big jump" data-code="Space" aria-label="saltar">⤒</button>
     </div>
   </div>
+  <button id="fsbtn" aria-label="pantalla completa" title="Pantalla completa">⛶</button>
 
 <script src="engine.js?v=10"></script>
 <script src="assets.js?v=10"></script>
@@ -125,6 +154,7 @@ const CFG = {
     hud:       "#00e0e0",
     hudDim:    "#066",
     hudBright: "#dfffff",
+    roomName:  "#b9a6ff",   // morado sutil para el nombre de la sala (a juego con el botón saltar)
     accent:    "#ff5d7a",   // acento rojo/rosa (guiño a la pastilla de "LIGHT YEARS")
     accentDim: "#5e1024"
   }
@@ -297,7 +327,7 @@ function drawHUD() {
 
   // ── Sala actual (arriba-derecha) ──
   if (room && room.name) {
-    ctx.textAlign = "right"; ctx.fillStyle = C.accent; ctx.font = "11px 'Courier New', monospace";
+    ctx.textAlign = "right"; ctx.fillStyle = C.roomName; ctx.font = "11px 'Courier New', monospace";
     ctx.fillText(room.name, W - 8, 4); ctx.textAlign = "left";
   }
 
@@ -467,6 +497,24 @@ window.__pocho = { player, entities, game, get room() { return room; }, world };
     b.addEventListener("pointercancel", up);
     b.addEventListener("contextmenu", (e) => e.preventDefault());
   });
+})();
+
+/* Botón de PANTALLA COMPLETA (Fullscreen API). En iPhone/Safari no existe esta API:
+   ahí se oculta el botón y la vía es "Compartir → Añadir a pantalla de inicio", que
+   con las meta tags lanza el juego sin barra. Si ya está en modo app, también se oculta. */
+(function () {
+  "use strict";
+  const fsbtn = document.getElementById("fsbtn");
+  const root = document.documentElement;
+  const enter = root.requestFullscreen || root.webkitRequestFullscreen;
+  const exit  = document.exitFullscreen || document.webkitExitFullscreen;
+  const isFs  = () => document.fullscreenElement || document.webkitFullscreenElement;
+  const isStandalone = matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+  if (!enter || isStandalone) { fsbtn.style.display = "none"; return; }
+  fsbtn.addEventListener("click", () => {
+    if (isFs()) exit.call(document); else enter.call(root);
+  });
+  document.addEventListener("fullscreenchange", () => { fsbtn.textContent = isFs() ? "🗗" : "⛶"; });
 })();
 </script>
 </body>
