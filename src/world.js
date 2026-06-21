@@ -10,7 +10,7 @@
    ============================================================================= */
 "use strict";
 
-import { AP } from "./assets.js";
+import { INKS, INK2 } from "./palette.js";
 import { ROOMS, START } from "./data/rooms.js";
 
 /* Construye una sala a partir de su definición (datos).
@@ -46,8 +46,8 @@ export function buildWorld() {
   for (const [key, def] of Object.entries(ROOMS)) {
     rooms[key] = makeRoom({
       ...def,
-      ink:  AP.INKS[def.paletteIndex],
-      ink2: AP.INK2[def.paletteIndex]
+      ink:  INKS[def.paletteIndex],
+      ink2: INK2[def.paletteIndex]
     });
   }
 

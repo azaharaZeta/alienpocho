@@ -13,14 +13,15 @@ Solo cosas **por hacer** o **por explorar**. Contexto y diseño: [GDD.md](GDD.md
 investigación del original: [RESEARCH.md](RESEARCH.md).
 
 ## Ficheros (orientación)
-> Refactor de estructura hecho (Fases 0-3 de [ASSESSMENT.md](ASSESSMENT.md)): ES modules
-> bajo `src/`, sin globales de shell, simulación troceada en física/jugador/estado. Fases 4-5
-> (partir `main.js` en render/screens, parametrización fina) quedan pendientes.
-- `src/config.js` — PARÁMETROS: `CFG` (dims/física/salto/colores UI), `CONTROLS`, `ORIGIN`,
-  `POPT`. Módulo hoja (no importa nada) → lo importan los demás.
+> Refactor de estructura COMPLETO (Fases 0-5 de [ASSESSMENT.md](ASSESSMENT.md)): ES modules
+> bajo `src/`, sin globales ni ciclos de shell, simulación y presentación troceadas, y geometría/
+> paleta unificadas en `config.js`/`palette.js` (fuente única). Red de seguridad: `npm test`.
+- `src/config.js` — PARÁMETROS (fuente única): `CFG` (dims/física/salto/colores UI), `CONTROLS`,
+  `ORIGIN`, `POPT` y la GEOMETRÍA compartida `DOOR`/`PROP`/`ROBOT`/`SOCKET`/`SCENE`. Hoja.
+- `src/palette.js` — colores del juego (`INKS`/`INK2`/`ROBOT_INK`). Hoja.
 - `src/engine.js` — MOTOR iso genérico `ENGINE.*` (proyección, `box`/`poly`/`honeycomb`,
   `darken`/`lighten` y el painter `depthSort` con gating por solape). Sin nada del juego.
-- `src/assets.js` — biblioteca de dibujo `AP.*` (monocromo, paletas `INKS`/`INK2`); usa `ENGINE`.
+- `src/assets.js` — biblioteca de dibujo `AP.*` (monocromo); usa `engine` + `palette` + `config`.
 - `src/input.js` — teclado + flancos + `held`/`pressed` + táctil. DOM diferido a `init*()`.
 - `src/view.js` — `ctx` del canvas + proyector `P` (binding vivo) + tema. DOM diferido a init.
 - `src/data/rooms.js` — EL MAPA como DATOS puros (salas, bloques, objetos, zócalos, salidas;
@@ -33,8 +34,11 @@ investigación del original: [RESEARCH.md](RESEARCH.md).
   (`tryPush`), dibujo (`addDraws`). Importa física + input + view + game (uso en call-time).
 - `src/game.js` — ESTADO + REGLAS: `game`, `interact` (coger/colocar + victoria), `world`,
   `room`, `checkExits`, `resetGame`. Importa física + player + world.
-- `src/main.js` — PRESENTACIÓN + arranque: `render`, HUD, minimapa, pantallas, bucle `loop`,
-  fullscreen, `window.__pocho`, e `init*()`. Único `<script type="module">` de `index.html`.
+- `src/render.js` — RENDER de escena (suelo+paredes+cajas por profundidad) + HUD + minimapa +
+  banner de victoria. Expone `render(room)`; lee estado de game.js, dibuja con AP/engine/view.
+- `src/screens.js` — pantallas de no-juego: `drawTitleScreen(now, pal)` (título). Paleta por parámetro.
+- `src/main.js` — ARRANQUE + bucle `loop` (título↔juego), `init*()`, fullscreen, `window.__pocho`.
+  Único `<script type="module">` de `index.html`.
 - `index.html` — markup + `styles.css`. `styles.css` — estilos de la shell (layout/mandos).
 - `assets-demo.html` — catálogo visual de assets (importa `src/assets.js` como módulo).
 - `test/smoke.mjs` — oráculo de no-regresión (mundo/painter/física/objetos). `npm test`.
@@ -94,7 +98,7 @@ investigación del original: [RESEARCH.md](RESEARCH.md).
 - Cachear las paredes: `honeycomb` se recalcula cada frame ([assets.js](assets.js)); si crece
   el nº de salas/paredes, dibujarlas a un canvas offscreen.
 - Afinar a gusto `CFG.JUMP_*` / `CFG.WALK` (distancias/alturas de salto y velocidad).
-- Añadir un `CLAUDE.md` breve (arranque, mapa de ficheros, reglas "no romper").
+- ✅ `CLAUDE.md` breve (arranque, mapa de ficheros, reglas "no romper") — hecho.
 - Robustez móvil: layout por orientación con CSS Grid (vertical: pantalla arriba + mandos
   abajo; horizontal: mandos a los lados) + botón de pantalla completa / PWA. Probar en
   dispositivo real.

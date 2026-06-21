@@ -62,3 +62,27 @@ export const ORIGIN = { x: CFG.W / 2, y: 66 };
 
 // Opciones del proyector iso, derivadas del tamaño de tesela (compartidas dibujo/lógica).
 export const POPT = { TILE_W: CFG.TILE_W, TILE_H: CFG.TILE_H, BLOCK_H: CFG.BLOCK_H };
+
+/* =========================================================================
+   GEOMETRÍA COMPARTIDA — fuente ÚNICA de las medidas que usan A LA VEZ el dibujo
+   (assets.js) y la física (physics.js). Antes estaban duplicadas a mano en ambos
+   lados (y había que mantenerlas iguales). Ahora se definen aquí y se importan.
+   ========================================================================= */
+
+// Objeto físico transportable (circuito): semilado en planta y alto (medio bloque).
+export const PROP = { HALF: 0.28, H: 0.5 };
+
+// Robot Pocho: semianchos del cuerpo (ancho/profundidad) y alto total.
+export const ROBOT = { WID: 0.50, DEP: 0.33, H: 1.50 };
+
+// Puerta: grosor del marco (T), ancho de poste (POST_W), alto del dintel (LINTEL_H)
+// y semiancho del VANO visual (SPAN_HALF, de extremo a extremo del marco). El HUECO
+// FÍSICO por el que pasa el robot se DERIVA: SPAN_HALF − POST_W (= el hueco entre postes).
+export const DOOR = { T: 0.34, POST_W: 0.40, LINTEL_H: 0.46, SPAN_HALF: 1.12 };
+
+// Zócalo: alto de la peana (sobre ella encaja el circuito al activarse).
+export const SOCKET = { BASE_H: 0.2 };
+
+// Encuadre de la escena: el proyector por sala centra el rombo verticalmente en
+// PROJECTOR_OY y baja la escena PROJECTOR_DROP px (se come la banda negra inferior).
+export const SCENE = { PROJECTOR_OY: 134, PROJECTOR_DROP: 20 };

@@ -7,13 +7,13 @@
 > Fecha: 2026-06-21 · Alcance: `engine.js`, `assets.js`, `game.js`, `index.html`,
 > `assets-demo.html` (~1.670 líneas de fuente).
 >
-> **✅ ESTADO: Fases 0-3 implementadas y verificadas (2026-06-21).** Migrado a ES modules bajo
-> `src/`, roto el ciclo de dependencias (config/input/view propios), datos del mapa separados
-> en `data/rooms.js` + `world.js`, simulación troceada en `physics.js` + `player.js` + `game.js`
-> (estado/reglas), CSS en `styles.css`, y red de seguridad en `test/smoke.mjs` (13/13 verde).
-> Juego verificado en navegador (idéntico al baseline). **Pendiente: Fases 4-5** (partir
-> `main.js` en render/screens/main, parametrización fina: unificar geometría duplicada, nombrar
-> mágicos, `palette.js`).
+> **✅ ESTADO: refactor COMPLETO — Fases 0-5 implementadas y verificadas (2026-06-21).** ES
+> modules bajo `src/` (sin globales ni ciclos de shell), datos del mapa en `data/rooms.js` +
+> `world.js`, simulación en `physics.js`/`player.js`/`game.js`, presentación en `render.js`/
+> `screens.js`/`main.js`, y parametrización fina: geometría compartida (puerta/zócalo/prop/robot)
+> unificada en `config.js` y paleta en `palette.js` — física/estado ya NO dependen del dibujo. CSS
+> en `styles.css`, red de seguridad `test/smoke.mjs` (13/13). Verificado en navegador (idéntico al
+> baseline). El resto del documento describe el punto de partida (pre-refactor).
 
 ---
 

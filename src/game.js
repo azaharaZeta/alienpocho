@@ -10,8 +10,7 @@
    ============================================================================= */
 "use strict";
 
-import { CFG } from "./config.js";
-import { AP } from "./assets.js";
+import { CFG, PROP } from "./config.js";
 import { canStandOn, activeSocketTop, overlapsBox, objBox } from "./physics.js";
 import { player } from "./player.js";
 import { buildWorld } from "./world.js";
@@ -42,10 +41,10 @@ export function interact(room) {
       }
     }
     // 2) soltar bajo los pies y subirse encima — solo si hay sitio para estar arriba
-    if (player.onGround && canStandOn(room, player.x, player.y, player.z + AP.PROP.H)) {
+    if (player.onGround && canStandOn(room, player.x, player.y, player.z + PROP.H)) {
       room.objects.push({ x: player.x, y: player.y, z: player.z, shape: game.carried });
       game.carried = null;
-      player.z += AP.PROP.H;                 // subir encima, inmediato
+      player.z += PROP.H;                 // subir encima, inmediato
       player.vz = 0; player.onGround = true;
     }
     return;                                  // sin hueco → no suelta
@@ -57,7 +56,7 @@ export function interact(room) {
   const REACH = 0.2;   // margen de alcance lateral para "pegado"
   for (let i = 0; i < room.objects.length; i++) {
     const o = room.objects[i], b = objBox(o);
-    const encima = overlapsBox(b, player.x, player.y) && Math.abs((o.z + AP.PROP.H) - player.z) < 0.25;
+    const encima = overlapsBox(b, player.x, player.y) && Math.abs((o.z + PROP.H) - player.z) < 0.25;
     const pegado = Math.abs(player.z - o.z) < 0.4 &&
       (player.x - CFG.PRAD - REACH) < b.x1 && (player.x + CFG.PRAD + REACH) > b.x0 &&
       (player.y - CFG.PRAD - REACH) < b.y1 && (player.y + CFG.PRAD + REACH) > b.y0;

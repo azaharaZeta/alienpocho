@@ -6,7 +6,7 @@
 
    Cada sala:
      name         nombre mostrado en el HUD.
-     paletteIndex índice en AP.INKS/AP.INK2 (color primario/secundario de la sala).
+     paletteIndex índice en INKS/INK2 (palette.js) → color primario/secundario de la sala.
      w, h         tamaño de la rejilla. LÍMITES (los aplica makeRoom): w,h ∈ [3,13]
                   y w+h ≤ 16, para que el rombo y el HUD quepan en pantalla.
      exits        { xm, xp, ym, yp } → clave de la sala vecina al cruzar ese borde:
@@ -14,9 +14,19 @@
                     ym: y<0 (atrás-dcha)  yp: y≥h (frente-izq)
                   Cada salida debe tener su RECÍPROCA en la sala destino.
      blocks       cubos sólidos { x, y, z, h } (h = nº de capas). Suelo z:0 = andable.
-     objects      circuitos físicos { x, y, z, shape }  (x,y = CENTRO continuo).
+     objects      circuitos físicos { x, y, z, shape } (transportables: se empujan/sueltan/caen).
      sockets      zócalos-destino { cx, cy, z, shape, active }.
      hazards      pinchos { cx, cy } (hoy decorativos).
+
+   COORDENADAS — OJO: hay DOS convenciones (el NOMBRE del campo la delata):
+     · ÍNDICE DE CELDA (entero) → blocks (x,y) y sockets/hazards (cx,cy = "cell x/y"): es la celda
+       de la rejilla. Un bloque {x:2,y:2} LLENA la celda [2,3]×[2,3]; a los zócalos el código les
+       suma 0.5 para centrarlos en su celda.
+     · CENTRO CONTINUO (decimal) → objects (x,y), MISMA convención que el jugador: un punto exacto
+       (no una celda), porque los objetos se MUEVEN y su x/y toma valores no enteros. Por eso
+       `2.5` = CENTRO de la celda (2,2). Para centrar un objeto en la celda (n,m): x:n+0.5, y:m+0.5
+       (x:2 lo dejaría en la ESQUINA entre cuatro celdas).
+     z = altura de la base (continua; los objetos caen y se apilan). z:0 = en el suelo.
 
    Formas (objects/sockets): "cube" | "pyramid" | "dome" | "cylinder".
    4 circuitos + 4 zócalos (a juego por forma) repartidos → el juego es completable.

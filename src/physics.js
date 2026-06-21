@@ -9,12 +9,11 @@
    ============================================================================= */
 "use strict";
 
-import { CFG } from "./config.js";
-import { AP } from "./assets.js";
+import { CFG, PROP, ROBOT, SOCKET, DOOR } from "./config.js";
 
 /* ¿Está la coord. dentro del HUECO de la puerta? Vano estrecho: el robot (semiancho
    ~0.5) pasa con un poco de margen. Coincide con el hueco visual entre postes. */
-const DOOR_HALF = 0.72;
+const DOOR_HALF = DOOR.SPAN_HALF - DOOR.POST_W;   // hueco passable = vano − postes (≈ 0.72)
 function inDoor(coord, n) { return Math.abs(coord - n / 2) <= DOOR_HALF; }
 
 /* ¿Cae fuera del suelo? Solo se puede cruzar un borde si tiene salida Y por el
@@ -30,8 +29,8 @@ export function outOfBounds(room, fx, fy) {
 /* Caja física de un OBJETO transportable, centrada en su celda. Misma geometría
    para colisión, apoyo, empuje y dibujo (AP.prop) → nunca se solapa con el robot. */
 export function objBox(o) {
-  const m = AP.PROP.HALF;   // o.x,o.y = CENTRO continuo (igual convención que el jugador)
-  return { x0: o.x - m, y0: o.y - m, x1: o.x + m, y1: o.y + m, z0: o.z, top: o.z + AP.PROP.H, obj: o };
+  const m = PROP.HALF;   // o.x,o.y = CENTRO continuo (igual convención que el jugador)
+  return { x0: o.x - m, y0: o.y - m, x1: o.x + m, y1: o.y + m, z0: o.z, top: o.z + PROP.H, obj: o };
 }
 
 /* CAJAS SÓLIDAS de la sala — fuente ÚNICA para colisión y apoyo. Cada sólido es
@@ -41,9 +40,8 @@ export function objBox(o) {
    Los ZÓCALOS NO son sólidos: son la casilla-DESTINO sobre la que el robot se planta
    para soltar el circuito y activarlos (ver interact). Los PINCHOS tampoco (se saltan;
    el daño llega en Fase 6). */
-const SOCKET_BASE_H = 0.2;   // alto de la peana del zócalo (ver AP.socket)
-/* Cima de un zócalo ACTIVADO (peana + circuito encajado encima). */
-export function activeSocketTop(s) { return (s.z || 0) + SOCKET_BASE_H + AP.PROP.H; }
+/* Cima de un zócalo ACTIVADO (peana SOCKET.BASE_H + circuito PROP.H encajado encima). */
+export function activeSocketTop(s) { return (s.z || 0) + SOCKET.BASE_H + PROP.H; }
 
 export function roomSolids(room) {
   const s = [];
@@ -92,7 +90,7 @@ export function supportHeight(room, x, y, feetZ) {
    invada el volumen del cuerpo por encima de los pies). Se usa para decidir si se
    puede soltar un objeto bajo el robot y subirse encima. */
 export function canStandOn(room, x, y, feetZ) {
-  const m = CFG.PRAD, headZ = feetZ + AP.ROBOT.H;
+  const m = CFG.PRAD, headZ = feetZ + ROBOT.H;
   if (outOfBounds(room, x - m, y - m) || outOfBounds(room, x + m, y - m) ||
       outOfBounds(room, x - m, y + m) || outOfBounds(room, x + m, y + m)) return false;
   for (const b of roomSolids(room)) {
@@ -106,7 +104,7 @@ export function canStandOn(room, x, y, feetZ) {
    sale de la sala o si pisa otro sólido (bloque/objeto/zócalo) cuya cima quede por
    encima de su base. Empuje en PLANO: no se empuja un objeto hacia arriba. */
 export function objBlocked(room, obj, nx, ny) {
-  const m = AP.PROP.HALF;
+  const m = PROP.HALF;
   // Los objetos NO cruzan puertas (solo el robot): chocan con TODO el borde de la sala.
   if (nx - m < 0 || nx + m > room.w || ny - m < 0 || ny + m > room.h) return true;
   for (const b of roomSolids(room)) {
@@ -120,7 +118,7 @@ export function objBlocked(room, obj, nx, ny) {
 /* Superficie de apoyo bajo un objeto (cima del sólido más alto que pisa, sin contarse a
    sí mismo); el suelo (0) si no hay nada. Sirve para que los objetos CAIGAN. */
 export function objSupport(room, o) {
-  const m = AP.PROP.HALF; let h = 0;
+  const m = PROP.HALF; let h = 0;
   for (const b of roomSolids(room)) {
     if (b.obj === o) continue;
     const ov = (o.x - m) < b.x1 && (o.x + m) > b.x0 && (o.y - m) < b.y1 && (o.y + m) > b.y0;

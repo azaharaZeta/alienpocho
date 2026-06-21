@@ -13,6 +13,8 @@
 "use strict";
 
 import { ENGINE } from "./engine.js";
+import { INKS, INK2, ROBOT_INK } from "./palette.js";
+import { DOOR, PROP, ROBOT, SOCKET } from "./config.js";
 
 export const AP = (() => {
 
@@ -20,14 +22,8 @@ export const AP = (() => {
   const ENG = ENGINE;
   const { BLACK, darken, lighten, projector, poly, facePt, edgeLine, box, honeycomb } = ENG;
 
-  // Colores de tinta por pantalla (PRIMARIO de cada sala) + su SECUNDARIO (textos del HUD
-  // y botón de saltar). CRITERIO: el secundario es el COMPLEMENTARIO del primario (tono
-  // opuesto en la rueda, hue+180°) en versión clara/neón → contrasta como acento sin chillar.
-  //          azul/cian   amarillo-ol  magenta    verde      naranja    violeta
-  const INKS = ["#36c8ff", "#d7d98a", "#e070c5", "#79e6a6", "#ff9d5c", "#b9a6ff"];
-  const INK2 = ["#ffd27a", "#aab0ff", "#86eaa0", "#f59ad6", "#79d0ff", "#d8e68a"];
-  //            ámbar       azul-viol   verde      rosa       cian       amarillo-verd
-  const ROBOT_INK = "#6fd0ff";   // el robot siempre azul claro
+  // Paletas (INKS/INK2/ROBOT_INK desde palette.js) y geometría compartida (DOOR/PROP/ROBOT/
+  // SOCKET desde config.js): su FUENTE vive fuera; aquí solo se usan y se reexportan en AP.
 
   /* =====================  ASSETS  ===================== */
 
@@ -69,7 +65,6 @@ export const AP = (() => {
   //   hole=false → solo el marco 3D, dejando ver la sala (puertas del frente).
   // `fixed` es el borde (0 o n); el marco se dibuja HACIA FUERA de la rejilla (sobresale del
   // borde, no hacia dentro) → evita conflictos de isométrica con bloques/objetos del borde.
-  const DOOR = { T: 0.34, POST_W: 0.40, LINTEL_H: 0.46 };
   const doorInset = (fixed) => (fixed < 0.5) ? [fixed - DOOR.T, fixed] : [fixed, fixed + DOOR.T];
   // Ranura de panel: línea NEGRA (recodo iso) + filo claro encima = bisel.
   function _groove(ctx, p, x0, y0, x1, y1, z, col) {
@@ -149,7 +144,6 @@ export const AP = (() => {
   // OBJETO FÍSICO transportable: SE DIBUJA COMO LA FIGURA DEL CIRCUITO (sin base ni
   // pedestal). Es SÓLIDO en el juego (se empuja, se sube uno encima, se apila); su
   // caja física —HALF/H— se ajusta al tamaño visible de la figura.
-  const PROP = { HALF: 0.28, H: 0.5 };   // todos los objetos miden MEDIO bloque de alto
   function prop(ctx, p, x, y, z, shape, col) {
     circuit(ctx, p, x, y, z, shape, col);
   }
@@ -157,14 +151,14 @@ export const AP = (() => {
   // Zócalo / pedestal
   function socket(ctx, p, x, y, z, shape, active, col) {
     const c = active ? col : darken(col, 0.4);
-    box(ctx, p, x - 0.34, y - 0.34, x + 0.34, y + 0.34, z, z + 0.2, c);
-    const top = p(x, y, z + 0.2), s = 5;
+    box(ctx, p, x - 0.34, y - 0.34, x + 0.34, y + 0.34, z, z + SOCKET.BASE_H, c);
+    const top = p(x, y, z + SOCKET.BASE_H), s = 5;
     ctx.strokeStyle = active ? col : darken(col, 0.7); ctx.lineWidth = 1;
     if (shape === "cube") ctx.strokeRect(top.x - s, top.y - s / 2, s * 2, s);
     else if (shape === "pyramid") poly(ctx, [{ x: top.x, y: top.y - s }, { x: top.x + s, y: top.y + s / 2 }, { x: top.x - s, y: top.y + s / 2 }], null, ctx.strokeStyle);
     else if (shape === "dome") { ctx.beginPath(); ctx.arc(top.x, top.y, s, Math.PI, 0); ctx.stroke(); }
     else { ctx.beginPath(); ctx.ellipse(top.x, top.y, s, s / 2, 0, 0, Math.PI * 2); ctx.stroke(); }
-    if (active) circuit(ctx, p, x, y, z + 0.2, shape, col);
+    if (active) circuit(ctx, p, x, y, z + SOCKET.BASE_H, shape, col);
   }
 
   // Pinchos (peligro): roseta de púas
@@ -200,7 +194,6 @@ export const AP = (() => {
 
   /* ---- Robot Pocho (color propio fijo; 4 vistas, traseras = espejo) ---- */
   const DIRS = [{ dx: 1, dy: 0 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 0, dy: -1 }];
-  const ROBOT = { WID: 0.50, DEP: 0.33, H: 1.50 };
 
   function robot(ctx, p, x, y, z, facing, col, opts = {}) {
     col = col || ROBOT_INK;

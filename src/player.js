@@ -11,7 +11,7 @@
    ============================================================================= */
 "use strict";
 
-import { CFG } from "./config.js";
+import { CFG, ROBOT } from "./config.js";
 import { AP } from "./assets.js";
 import { pressed, held } from "./input.js";
 import { ctx, P } from "./view.js";
@@ -171,7 +171,7 @@ player.addDraws = function (draws, room) {
   // El circuito cargado se dibuja en z+1.6 (por encima de ROBOT.H=1.5): si la caja
   // de orden no lo cubre, queda fuera del painter y puede ocluirse mal. Extendemos
   // el techo de la caja para envolver también la carga.
-  const top = player.z + (game.carried ? 2.2 : AP.ROBOT.H);
+  const top = player.z + (game.carried ? 2.2 : ROBOT.H);
   draws.push({
     x0: player.x - pr, y0: player.y - pr, z0: player.z,
     x1: player.x + pr, y1: player.y + pr, z1: top,
