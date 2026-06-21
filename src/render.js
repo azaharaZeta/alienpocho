@@ -110,7 +110,7 @@ function drawSegBar(cx, y0, y1, col) {
 // Casilla del objeto que llevas: marco cuadrado centrado en (cx,cy); si hay objeto,
 // se dibuja centrado y RECORTADO dentro del marco (sea cual sea su forma).
 function drawCarrySlot(cx, cy, shape, frameCol, circuitCol) {
-  const s = 11;                                   // semilado del marco
+  const s = 9;                                    // semilado del marco
   ctx.strokeStyle = frameCol; ctx.lineWidth = 1;
   ctx.strokeRect(cx - s + 0.5, cy - s + 0.5, s * 2 - 1, s * 2 - 1);
   if (!shape) return;
@@ -123,20 +123,20 @@ function drawCarrySlot(cx, cy, shape, frameCol, circuitCol) {
 // el número. Más grande, a juego con la tipografía del marcador.
 function drawMiniRobot(cx, cy, col) {
   col = col || CFG.COL.hud;
-  const w = 14, h = 11, x = cx - w / 2, yTop = cy - h / 2;
+  const w = 12, h = 9.5, x = cx - w / 2, yTop = cy - h / 2;
   ctx.save();
   ctx.strokeStyle = col; ctx.fillStyle = col;
-  ctx.lineWidth = 1.2; ctx.lineJoin = "round"; ctx.lineCap = "round";
+  ctx.lineWidth = 1.1; ctx.lineJoin = "round"; ctx.lineCap = "round";
   // antena + bolita
-  ctx.beginPath(); ctx.moveTo(cx, yTop); ctx.lineTo(cx, yTop - 3.5); ctx.stroke();
-  ctx.beginPath(); ctx.arc(cx, yTop - 4.4, 1.2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(cx, yTop); ctx.lineTo(cx, yTop - 3); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx, yTop - 3.8, 1.05, 0, Math.PI * 2); ctx.fill();
   // cabeza (contorno redondeado)
   ctx.beginPath();
-  if (ctx.roundRect) ctx.roundRect(x, yTop, w, h, 3); else ctx.rect(x, yTop, w, h);
+  if (ctx.roundRect) ctx.roundRect(x, yTop, w, h, 2.6); else ctx.rect(x, yTop, w, h);
   ctx.stroke();
   // ojos
-  ctx.beginPath(); ctx.arc(cx - 3.5, cy + 0.5, 1.2, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(cx + 3.5, cy + 0.5, 1.2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx - 3, cy + 0.5, 1.05, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + 3, cy + 0.5, 1.05, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 }
 /* MINIMAPA (arriba-izquierda): VISIÓN CENITAL real. Cada sala se dibuja como su
@@ -149,7 +149,7 @@ function minimapOnRight() { return room.w > room.h; }
 function drawMinimap() {
   if (room.wx === undefined) return;
   const ink = room.ink, ink2 = room.ink2 || ink;
-  const MM = 45, oy = 6;                    // viewport cuadrado (75% del anterior 60)
+  const MM = 45, oy = 18;                   // viewport cuadrado; bajado para dejar hueco al nombre encima
   const ox = minimapOnRight() ? (CFG.W - MM - 8) : 8;
   const WS = 26, sc = MM / WS, INS = 0.6;   // INS: medio hueco entre salas (= pared, sin doblar)
   const ccx = room.wx + room.w / 2, ccy = room.wy + room.h / 2;   // centro de la sala actual
@@ -182,86 +182,96 @@ function drawMinimap() {
     }
   }
   ctx.restore();
+
+  // Nombre de la sala JUSTO ENCIMA del minimapa (misma esquina/zona que el mapa): alineado
+  // al borde del recuadro, en el secundario de la sala.
+  if (room.name) {
+    ctx.fillStyle = ink2; ctx.font = "10px 'Courier New', monospace"; ctx.textBaseline = "top";
+    if (minimapOnRight()) { ctx.textAlign = "right"; ctx.fillText(room.name, ox + MM + 4, oy - 16); }
+    else { ctx.textAlign = "left"; ctx.fillText(room.name, ox - 4, oy - 16); }
+    ctx.textAlign = "left";
+  }
 }
 
-/* HUD — homenaje al marcador de Alien 8: marco inferior con barras segmentadas a los
-   lados y líneas en "V" hacia el centro, que enmarcan las dos zonas triangulares.
-   Izquierda = CIRCUITOS (icono = forma que llevas) · Derecha = VIDAS. Sin años luz. */
+/* HUD — el marcador (circuitos + vidas + título) va DENTRO del triángulo negro más grande
+   que deja el rombo del suelo abajo, repartido en VARIAS FILAS. Sin años luz. */
 function drawHUD() {
   const C = CFG.COL, W = CFG.W;
   ctx.textBaseline = "top";
 
   const ink2 = room.ink2 || C.roomName;   // secundario de la sala para los TEXTOS del HUD
+  // (El nombre de la sala se dibuja ENCIMA del minimapa, ver drawMinimap.)
 
-  // ── Nombre de la sala: al lado OPUESTO al minimapa (si el mapa va a la derecha, el
-  //    nombre a la izquierda, y viceversa) ──
-  if (room && room.name) {
-    ctx.fillStyle = ink2; ctx.font = "11px 'Courier New', monospace";
-    if (minimapOnRight()) { ctx.textAlign = "left"; ctx.fillText(room.name, 8, 4); }
-    else { ctx.textAlign = "right"; ctx.fillText(room.name, W - 8, 4); }
-    ctx.textAlign = "left";
-  }
-
-  // ── Marco inferior: barras segmentadas + aristas PARALELAS a los bordes inferiores
-  //    de la sala (pendiente ±0.5 = TILE_H/TILE_W), del color de la sala. Aprovecha el
-  //    hueco que deja el rombo isométrico, prolongando su silueta. Vértice de la "V"
-  //    bajo el pico de la sala (160). El contenido va DENTRO de las zonas delimitadas.
+  // ── Marco inferior (homenaje Alien 8): barras segmentadas a los lados + aristas en "V"
+  //    PARALELAS a los bordes frontales del rombo (pendiente ±0.5), del color de la sala.
+  //    Prolongan la silueta del suelo y enmarcan la zona del marcador. Se dibuja PRIMERO,
+  //    así la info del triángulo queda por encima.
   const ink = room.ink, fc = P(room.w, room.h, 0);   // pico frontal del rombo (proyectado)
-  // SEPARACIÓN grid↔HUD = 2× el saliente de las puertas (que ahora sobresalen del borde):
-  // así, aún con las puertas por fuera, queda un hueco negro entre la rejilla y el marcador.
-  const GAP = Math.round(AP.DOOR.T * CFG.TILE_W);   // hueco = ancho iso de la puerta
-  // Vértice de la "V" bajo el PICO del rombo (mismo x), desplazado GAP hacia abajo: así los
-  // raíles quedan PARALELOS a los bordes frontales de la sala (pendiente ±0.5) pero offset
-  // GAP por debajo → nunca pisan el suelo y prolongan su silueta. (La escena se bajó 20px en
-  // projectorFor, por eso todo el marco cae más abajo, sin tocar nombre/mapa ni iconos.)
+  const GAP = Math.round(AP.DOOR.T * CFG.TILE_W);     // hueco bajo el pico (= ancho iso de puerta)
   const vx = Math.round(fc.x);
-  const vy = Math.round(fc.y) + GAP;
+  const vy = Math.round(fc.y) + GAP;                  // vértice de la "V", GAP por debajo del pico
   const leftTopY = vy - 0.5 * (vx - 6), rightTopY = vy - 0.5 * ((W - 6) - vx);   // aristas a ±0.5
   drawSegBar(6, Math.round(leftTopY), 236, ink);
   drawSegBar(W - 6, Math.round(rightTopY), 236, ink);
   ctx.strokeStyle = ink; ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(6, leftTopY);      ctx.lineTo(vx, vy);     // arista izquierda  (∥ borde sala)
-  ctx.moveTo(W - 6, rightTopY); ctx.lineTo(vx, vy);     // arista derecha
+  ctx.moveTo(6, leftTopY);      ctx.lineTo(vx, vy);   // arista izquierda  (∥ borde sala)
+  ctx.moveTo(W - 6, rightTopY); ctx.lineTo(vx, vy);   // arista derecha
   ctx.stroke();
 
-  // Iconos del marcador en la franja INFERIOR, por DEBAJO del vértice de la "V": así
-  // ninguna arista los cruza, aunque el pico se vaya a una esquina (salas rectangulares).
-  const hudY = 224, slotCy = 229;   // bajados para ALINEARSE con el título "ALIEN POCHO" (y≈224)
-  // ── Zona izquierda: CIRCUITOS — marco cuadrado + objeto dentro ──
-  drawCarrySlot(34, slotCy, game.carried, ink, ink2);
-  ctx.fillStyle = ink2; ctx.font = "bold 16px 'Courier New', monospace";
-  ctx.fillText(game.circuits + "/" + game.circuitsTotal, 52, hudY);
+  // ── MARCADOR dentro del TRIÁNGULO grande de la zona inferior ──
+  // El rombo del suelo deja dos triángulos negros abajo, uno a cada lado del pico frontal.
+  // Metemos TODA la info en el MÁS GRANDE —el del lado OPUESTO al minimapa— repartida en
+  // VARIAS FILAS ancladas a ese borde de pantalla. El triángulo se ensancha hacia abajo, así
+  // que la fila inferior (la más ancha) lleva lo más largo —el título— y las de arriba los
+  // iconos (circuitos y vidas), más estrechos.
+  const onRight = !minimapOnRight();                  // HUD en el triángulo opuesto al mapa (el mayor)
+  const PAD = 20, ax = onRight ? W - PAD : PAD;        // borde de anclaje (margen dentro del marco)
+  const dy = 20, yTitle = 222, yCirc = yTitle - dy, yLife = yCirc - dy;
 
-  // ── Zona derecha: VIDAS — carita + número ──
-  ctx.fillStyle = ink2; ctx.font = "bold 16px 'Courier New', monospace";
-  ctx.textAlign = "right"; ctx.fillText("×" + game.lives, W - 24, hudY); ctx.textAlign = "left";
-  drawMiniRobot(W - 56, slotCy, ink2);
-
-  // ── Título "ALIEN POCHO" SIEMPRE centrado y abajo (desacoplado del pico, que puede irse
-  //    a un lado en salas rectangulares) → nunca pisa los iconos de las esquinas. ──
-  drawTitle(W / 2, 222);
+  // Fila inferior (la más ancha): TÍTULO "ALIEN POCHO" (una sola frase, junta), anclado al borde.
+  drawTitle(ax, yTitle, onRight);
+  // Fila media: CIRCUITOS — casilla (lo que llevas) + N/M.
+  drawStat(ax, yCirc, onRight, 18, (cx, cy) => drawCarrySlot(cx, cy, game.carried, ink, ink2),
+           game.circuits + "/" + game.circuitsTotal, ink2);
+  // Fila superior (la más estrecha): VIDAS — carita + ×N.
+  drawStat(ax, yLife, onRight, 14, (cx, cy) => drawMiniRobot(cx, cy, ink2),
+           "×" + game.lives, ink2);
 }
 
-/* Título con look "neón futurista": glow en el color de la sala + núcleo blanco con
-   contorno; las dos palabras flanquean el pico (vx) del marco inferior. */
-function drawTitle(vx, vy) {
-  const C = CFG.COL, ink = room.ink, y = vy + 2, gap = 12;
+/* Una FILA del marcador anclada a un borde: ICONO + NÚMERO (en este orden si va a la
+   izquierda; invertido si va a la derecha, para que el icono quede pegado al borde). El icono
+   lo pinta `drawIcon(cx, cy)` centrado; `iw` = su ancho, para reservarle el hueco. */
+function drawStat(ax, y, onRight, iw, drawIcon, text, col) {
+  const gap = 4, cy = y + 7;                          // centro vertical del icono ≈ centro del texto
+  ctx.font = "bold 14px 'Courier New', monospace";
+  ctx.fillStyle = col; ctx.textBaseline = "top";
+  if (onRight) {                                      // [texto][icono] terminando en ax
+    drawIcon(ax - iw / 2, cy);
+    ctx.textAlign = "right"; ctx.fillText(text, ax - iw - gap, y);
+  } else {                                            // [icono][texto] empezando en ax
+    drawIcon(ax + iw / 2, cy);
+    ctx.textAlign = "left"; ctx.fillText(text, ax + iw + gap, y);
+  }
+  ctx.textAlign = "left";
+}
+
+/* Título con look "neón futurista": glow en el color de la sala + núcleo brillante con
+   contorno. UNA sola frase "ALIEN POCHO" anclada al borde (izq/dcha) — nunca cortada. */
+function drawTitle(ax, vy, onRight) {
+  const ink = room.ink, y = vy + 2;
   ctx.save();
-  ctx.font = "bold 15px 'Courier New', monospace";
-  ctx.letterSpacing = "2px";
-  ctx.textBaseline = "top";
+  ctx.font = "bold 13px 'Courier New', monospace";
+  ctx.letterSpacing = "1.5px";
+  ctx.textBaseline = "top"; ctx.textAlign = onRight ? "right" : "left";
   ctx.lineJoin = "round";
-  const draw = () => {
-    ctx.textAlign = "right"; ctx.strokeText("ALIEN", vx - gap, y); ctx.fillText("ALIEN", vx - gap, y);
-    ctx.textAlign = "left";  ctx.strokeText("POCHO", vx + gap, y); ctx.fillText("POCHO", vx + gap, y);
-  };
+  const draw = () => { ctx.strokeText("ALIEN POCHO", ax, y); ctx.fillText("ALIEN POCHO", ax, y); };
   ctx.shadowColor = ink; ctx.shadowBlur = 6;          // resplandor (color de la sala)
   ctx.lineWidth = 3; ctx.strokeStyle = ink; ctx.fillStyle = ink;
   draw();
   ctx.shadowBlur = 0;                                  // núcleo nítido y brillante
   ctx.lineWidth = 2; ctx.strokeStyle = ink; ctx.fillStyle = ENGINE.lighten(ink, 0.6);
   draw();
-  ctx.letterSpacing = "0px";
+  ctx.letterSpacing = "0px"; ctx.textAlign = "left";
   ctx.restore();
 }
