@@ -1,0 +1,10 @@
+# === .vercelignore ===
+# En Vercel se publica el JUEGO (index.html + styles.css + src/) y el catálogo (assets-demo.html).
+# No se publican documentación ni pruebas. Mismo formato que .gitignore.
+
+# Documentación del proyecto (en docs/) + cualquier markdown suelto en la raíz.
+docs/
+*.md
+
+# Pruebas (oráculo de no-regresión; corre en Node, no se sirve en el navegador)
+test/

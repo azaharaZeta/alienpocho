@@ -96,7 +96,7 @@ investigación del original: [RESEARCH.md](RESEARCH.md).
   exigir estas mecánicas (ahora las posiciones son provisionales/accesibles sin reto).
 
 ## 🧰 Calidad / técnica (no bloquea)
-- Cachear las paredes: `honeycomb` se recalcula cada frame ([assets.js](assets.js)); si crece
+- Cachear las paredes: `honeycomb` se recalcula cada frame ([assets.js](../src/assets.js)); si crece
   el nº de salas/paredes, dibujarlas a un canvas offscreen.
 - Afinar a gusto `CFG.JUMP_*` / `CFG.WALK` (distancias/alturas de salto y velocidad).
 - ✅ `CLAUDE.md` breve (arranque, mapa de ficheros, reglas "no romper") — hecho.
