@@ -7,11 +7,13 @@
 > Fecha: 2026-06-21 · Alcance: `engine.js`, `assets.js`, `game.js`, `index.html`,
 > `assets-demo.html` (~1.670 líneas de fuente).
 >
-> **✅ ESTADO: Fases 0-2 implementadas y verificadas (2026-06-21).** Migrado a ES modules bajo
+> **✅ ESTADO: Fases 0-3 implementadas y verificadas (2026-06-21).** Migrado a ES modules bajo
 > `src/`, roto el ciclo de dependencias (config/input/view propios), datos del mapa separados
-> en `data/rooms.js` + `world.js`, CSS en `styles.css`, y red de seguridad en `test/smoke.mjs`
-> (13/13 verde). Juego verificado en navegador (idéntico al baseline). **Pendiente: Fases 3-5**
-> (trocear física/jugador/estado, partir `main.js` en render/screens, parametrización fina).
+> en `data/rooms.js` + `world.js`, simulación troceada en `physics.js` + `player.js` + `game.js`
+> (estado/reglas), CSS en `styles.css`, y red de seguridad en `test/smoke.mjs` (13/13 verde).
+> Juego verificado en navegador (idéntico al baseline). **Pendiente: Fases 4-5** (partir
+> `main.js` en render/screens/main, parametrización fina: unificar geometría duplicada, nombrar
+> mágicos, `palette.js`).
 
 ---
 

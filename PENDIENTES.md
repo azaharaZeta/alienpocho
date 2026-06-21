@@ -13,9 +13,9 @@ Solo cosas **por hacer** o **por explorar**. Contexto y diseño: [GDD.md](GDD.md
 investigación del original: [RESEARCH.md](RESEARCH.md).
 
 ## Ficheros (orientación)
-> Refactor de estructura hecho (Fases 0-2 de [ASSESSMENT.md](ASSESSMENT.md)): ES modules
-> bajo `src/`, sin globales de shell. Fases 3-5 (trocear física/jugador, partir `main.js` en
-> render/screens, parametrización fina) quedan pendientes.
+> Refactor de estructura hecho (Fases 0-3 de [ASSESSMENT.md](ASSESSMENT.md)): ES modules
+> bajo `src/`, sin globales de shell, simulación troceada en física/jugador/estado. Fases 4-5
+> (partir `main.js` en render/screens, parametrización fina) quedan pendientes.
 - `src/config.js` — PARÁMETROS: `CFG` (dims/física/salto/colores UI), `CONTROLS`, `ORIGIN`,
   `POPT`. Módulo hoja (no importa nada) → lo importan los demás.
 - `src/engine.js` — MOTOR iso genérico `ENGINE.*` (proyección, `box`/`poly`/`honeycomb`,
@@ -27,9 +27,12 @@ investigación del original: [RESEARCH.md](RESEARCH.md).
   paleta por índice). Editar niveles aquí, sin tocar lógica.
 - `src/world.js` — motor de mundo: `makeRoom` (límites + clona arrays mutables) + `buildWorld`
   + layout cenital. Consume `data/rooms.js`.
-- `src/game.js` — SIMULACIÓN: entidades (`player`+`entities[]`), física (`roomSolids`/
-  `blocksHoriz`/`supportHeight`), objetos físicos (`tryPush`/`interact`), estado `game`,
-  `checkExits`, `resetGame`. Importa `CFG`/`AP`/`pressed`/`held`/`ctx`/`P`/`buildWorld`.
+- `src/physics.js` — FÍSICA pura (geometría/colisión sobre `room`, sin jugador): `roomSolids`/
+  `blocksHoriz`/`supportHeight`/`canStandOn`/`objBlocked`/`objSupport`/`updateObjects`. Usa `CFG`/`AP`.
+- `src/player.js` — ENTIDAD jugador: `player`, `entities[]`, control tanque (`update`), empuje
+  (`tryPush`), dibujo (`addDraws`). Importa física + input + view + game (uso en call-time).
+- `src/game.js` — ESTADO + REGLAS: `game`, `interact` (coger/colocar + victoria), `world`,
+  `room`, `checkExits`, `resetGame`. Importa física + player + world.
 - `src/main.js` — PRESENTACIÓN + arranque: `render`, HUD, minimapa, pantallas, bucle `loop`,
   fullscreen, `window.__pocho`, e `init*()`. Único `<script type="module">` de `index.html`.
 - `index.html` — markup + `styles.css`. `styles.css` — estilos de la shell (layout/mandos).

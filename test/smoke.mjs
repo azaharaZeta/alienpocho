@@ -13,10 +13,9 @@ import assert from "node:assert/strict";
 import { ENGINE } from "../src/engine.js";
 import { buildWorld } from "../src/world.js";
 import { START } from "../src/data/rooms.js";
-import {
-  game, player, room, interact, checkExits, resetGame, updateObjects,
-  blocksHoriz, supportHeight
-} from "../src/game.js";
+import { game, room, interact, checkExits, resetGame } from "../src/game.js";
+import { player } from "../src/player.js";
+import { updateObjects, blocksHoriz, supportHeight } from "../src/physics.js";
 
 /* ---- mini-runner sin dependencias ---- */
 let passed = 0, failed = 0;

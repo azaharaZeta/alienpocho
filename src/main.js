@@ -21,7 +21,9 @@ import { AP } from "./assets.js";
 import { ctx, P, setProjector, initView } from "./view.js";
 import { pressed, snapshotKeys, initInput, initTouch } from "./input.js";
 // `room` es un binding VIVO: game.js lo reasigna al cambiar de sala y aquí se ve el cambio.
-import { game, player, entities, world, room, checkExits, resetGame, updateObjects } from "./game.js";
+import { game, world, room, checkExits, resetGame } from "./game.js";
+import { player, entities } from "./player.js";
+import { updateObjects } from "./physics.js";
 
 /* =========================================================================
    RENDER — suelo + (cubos y jugador) ordenados por profundidad + HUD
