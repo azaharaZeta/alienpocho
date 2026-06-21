@@ -27,10 +27,8 @@
   <div class="screen"><canvas id="rooms" width="660" height="260"></canvas></div>
   <div class="note">assets.js — estilo Alien 8: una sola tinta por pantalla + negro</div>
 
-<script src="engine.js"></script>
-<script src="assets.js"></script>
-<script>
-"use strict";
+<script type="module">
+import { AP } from "./src/assets.js";   // AP importa engine.js de forma transitiva
 function label(ctx, text, cx, y, col) {
   ctx.fillStyle = col || "#2a8"; ctx.font = "9px 'Courier New', monospace";
   ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.fillText(text, cx, y); ctx.textAlign = "left";

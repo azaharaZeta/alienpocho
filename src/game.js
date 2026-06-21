@@ -1,121 +1,31 @@
 /* =============================================================================
    ALIEN POCHO — SIMULACIÓN (game.js)
    -----------------------------------------------------------------------------
-   El "qué pasa": mundo y salas, entidades (jugador), física tipo tanque, estado
-   de partida, interacción de circuitos y transiciones entre salas (flip-screen).
-   La PRESENTACIÓN (CFG, input, proyector, render, HUD, pantallas, bucle) vive en
-   index.html. Se comparte por GLOBALES LÉXICOS del realm (igual que ENGINE/AP):
-     - este fichero LEE de la shell:  CFG, ctx, P, pressed(), held()
-     - este fichero EXPONE a la shell: game, player, entities, world, room,
-       supportHeight(), checkExits(), resetGame()
-   Carga: engine.js → assets.js → game.js → bloque inline de index.html.
+   El "qué pasa": entidades (jugador), física tipo tanque, estado de partida,
+   interacción de circuitos y transiciones entre salas (flip-screen).
+   Los DATOS del mapa viven en data/rooms.js y los arma world.js (buildWorld).
+   La PRESENTACIÓN (render, HUD, pantallas, bucle) vive en main.js.
+
+   Ya NO lee globales del shell: importa lo que necesita —CFG (config), AP (assets),
+   pressed/held (input), ctx/P (view), buildWorld (world)— rompiendo el antiguo ciclo.
+   Expone (para main.js y tests): game, player, entities, world, room, checkExits,
+   resetGame, updateObjects (+ interact y algunos helpers de física para los tests).
    ============================================================================= */
 "use strict";
 
-/* =========================================================================
-   ROOMS / WORLD — varias habitaciones conectadas (flip-screen)
-   Cada sala: su color (ink), bloques, circuitos, zócalos y SALIDAS a salas
-   vecinas. exits = { xm, xp, ym, yp } → clave de la sala al cruzar ese borde:
-     xm: x<0 (atrás-izq)   xp: x≥w (frente-dcha)
-     ym: y<0 (atrás-dcha)  yp: y≥h (frente-izq)
-   ========================================================================= */
-function makeRoom(o) {
-  // Salas rectangulares con LÍMITES: ancho/largo ∈ [3,13] y ancho+largo ≤ 16 (para que
-  // el rombo y el HUD adaptado siempre quepan en pantalla). Se recortan si se exceden.
-  let w = Math.min(13, Math.max(3, o.w || 8));
-  let h = Math.min(13, Math.max(3, o.h || 8));
-  if (w + h > 16) { if (w >= h) w = 16 - h; else h = 16 - w; }
-  const blocks = o.blocks || [];
-  const solid = new Set();
-  for (const b of blocks)
-    if (b.x >= 0 && b.x < w && b.y >= 0 && b.y < h) solid.add(b.x + "," + b.y);
-  return { w, h, blocks, solid, objects: o.objects || [], sockets: o.sockets || [],
-           hazards: o.hazards || [], ink: o.ink, ink2: o.ink2, exits: o.exits || {}, name: o.name || "" };
-}
-
-function buildWorld() {
-  const I = AP.INKS, I2 = AP.INK2;   // primario y secundario por sala
-  const rooms = {};
-
-  // MUNDO de salas de TODOS los tamaños (w,h ∈ [3,13], w+h ≤ 16), conectadas en árbol.
-  // Cada salida tiene su recíproca en la sala destino. 4 circuitos + 4 zócalos (a juego por
-  // forma) repartidos para que el juego sea completable. Suelo z:0 = accesible andando.
-
-  // ENTRADA — cuadrada 8×8 (inicio).
-  rooms["0,0"] = makeRoom({ ink: I[0], ink2: I2[0], name: "ENTRADA", w: 8, h: 8,
-    exits: { xp: "1,0" },
-    blocks: [ { x: 2, y: 2, z: 0, h: 1 } ],
-    objects: [ { x: 3.5, y: 5.5, z: 0, shape: "cube" } ],
-    sockets:  [ { cx: 6, cy: 5, z: 0, shape: "cube", active: false } ] });
-
-  // GALERÍA — pasillo ANCHO máximo 13×3.
-  rooms["1,0"] = makeRoom({ ink: I[2], ink2: I2[2], name: "GALERIA", w: 13, h: 3,
-    exits: { xm: "0,0", xp: "2,0", yp: "1,1" },
-    blocks: [ { x: 4, y: 1, z: 0, h: 1 }, { x: 9, y: 1, z: 0, h: 2 } ] });
-
-  // CELDA — mini sala 3×3.
-  rooms["2,0"] = makeRoom({ ink: I[3], ink2: I2[3], name: "CELDA", w: 3, h: 3,
-    exits: { xm: "1,0", xp: "3,0", ym: "2,-1" },
-    objects: [ { x: 1.5, y: 1.5, z: 0, shape: "pyramid" } ],
-    sockets:  [ { cx: 1, cy: 0, z: 0, shape: "pyramid", active: false } ] });
-
-  // TORRE — pasillo LARGO máximo 3×13.
-  rooms["3,0"] = makeRoom({ ink: I[4], ink2: I2[4], name: "TORRE", w: 3, h: 13,
-    exits: { xm: "2,0", yp: "3,1" },
-    blocks: [ { x: 1, y: 4, z: 0, h: 1 }, { x: 1, y: 8, z: 0, h: 2 } ] });
-
-  // NAVE — rectangular ancha 10×6.
-  rooms["3,1"] = makeRoom({ ink: I[5], ink2: I2[5], name: "NAVE", w: 10, h: 6,
-    exits: { ym: "3,0", xp: "4,1" },
-    blocks: [ { x: 5, y: 2, z: 0, h: 1 }, { x: 7, y: 4, z: 0, h: 2 } ],
-    objects: [ { x: 2.5, y: 2.5, z: 0, shape: "dome" } ],
-    sockets:  [ { cx: 8, cy: 4, z: 0, shape: "dome", active: false } ] });
-
-  // CONDUCTO — pasillo LARGO 4×12.
-  rooms["1,1"] = makeRoom({ ink: I[1], ink2: I2[1], name: "CONDUCTO", w: 4, h: 12,
-    exits: { ym: "1,0" },
-    blocks: [ { x: 1, y: 3, z: 0, h: 1 }, { x: 2, y: 7, z: 0, h: 1 }, { x: 1, y: 9, z: 0, h: 2 } ] });
-
-  // NICHO — mini sala 3×3 (rama trasera).
-  rooms["2,-1"] = makeRoom({ ink: I[1], ink2: I2[1], name: "NICHO", w: 3, h: 3,
-    exits: { yp: "2,0" },
-    blocks: [ { x: 1, y: 1, z: 0, h: 1 } ] });
-
-  // BODEGA — rectangular alta 6×10 (final).
-  rooms["4,1"] = makeRoom({ ink: I[0], ink2: I2[0], name: "BODEGA", w: 6, h: 10,
-    exits: { xm: "3,1" },
-    blocks: [ { x: 3, y: 4, z: 0, h: 1 }, { x: 2, y: 6, z: 0, h: 2 } ],
-    objects: [ { x: 2.5, y: 2.5, z: 0, shape: "cylinder" } ],
-    sockets:  [ { cx: 3, cy: 7, z: 0, shape: "cylinder", active: false } ] });
-
-  // PLANO CENITAL coherente: coloca cada sala pegada a su vecina ALINEANDO la puerta
-  // (centro con centro, igual que el recentrado de checkExits), partiendo de la inicial.
-  // Da posiciones de mundo (wx,wy) — un floorplan sin solapes — para el minimapa real.
-  (function layout() {
-    rooms["0,0"].wx = 0; rooms["0,0"].wy = 0;
-    const seen = new Set(["0,0"]), q = ["0,0"];
-    while (q.length) {
-      const r = rooms[q.shift()];
-      for (const [dir, t] of Object.entries(r.exits)) {
-        const n = rooms[t]; if (!n || seen.has(t)) continue; seen.add(t); q.push(t);
-        if (dir === "xp")      { n.wx = r.wx + r.w;  n.wy = r.wy + r.h / 2 - n.h / 2; }
-        else if (dir === "xm") { n.wx = r.wx - n.w;  n.wy = r.wy + r.h / 2 - n.h / 2; }
-        else if (dir === "yp") { n.wy = r.wy + r.h;  n.wx = r.wx + r.w / 2 - n.w / 2; }
-        else if (dir === "ym") { n.wy = r.wy - n.h;  n.wx = r.wx + r.w / 2 - n.w / 2; }
-      }
-    }
-  })();
-
-  return { rooms, start: "0,0" };
-}
+import { CFG } from "./config.js";
+import { AP } from "./assets.js";
+import { pressed, held } from "./input.js";
+import { ctx, P } from "./view.js";
+import { buildWorld } from "./world.js";
 
 /* Estado de partida (placeholders hasta las fases 5-7) */
-const game = { state: "title", lives: 3, circuits: 0, circuitsTotal: 4, carried: null, lightYears: 9999, won: false };
+export const game = { state: "title", lives: 3, circuits: 0, circuitsTotal: 4, carried: null, lightYears: 9999, won: false };
 
 /* =========================================================================
    ENTITIES — el jugador (robot Pocho)
    ========================================================================= */
-const player = {
+export const player = {
   x: 1.5, y: 6.5, z: 0,        // posición
   vz: 0, vx: 0, vy: 0,         // velocidades (vx,vy solo durante el salto)
   onGround: true,
@@ -281,7 +191,7 @@ function objSupport(room, o) {
 
 /* Gravedad de los OBJETOS: si quedan en el aire (p. ej. tras empujarlos fuera de una
    plataforma), caen hasta su superficie de apoyo. Se llama una vez por frame. */
-function updateObjects(room, dt) {
+export function updateObjects(room, dt) {
   for (const o of room.objects) {
     const s = objSupport(room, o);
     if (o.z > s + 1e-3 || o.vz) {
@@ -296,7 +206,7 @@ function updateObjects(room, dt) {
    - girar 90° a izquierda/derecha (siempre alineado a los ejes del suelo)
    - avanzar en línea recta en la dirección que se mira
    - saltar en la dirección que se mira; dos tipos: corto/bajo y largo/alto
-   El jugador es una ENTIDAD: loop() actualiza entities[] y hace UNA vez por frame
+   El jugador es una ENTIDAD: el bucle actualiza entities[] y hace UNA vez por frame
    el snapshot de teclas para los flancos (por eso aquí ya no se guarda prevKeys). */
 player.update = function (room, dt) {
   // Tras la victoria, el juego se detiene: cualquier acción reinicia la partida.
@@ -395,7 +305,7 @@ player.update = function (room, dt) {
    pintado. La caja de ORDEN usa su HUELLA DE COLISIÓN (±PRAD), no el ancho visual
    de los hombros: así nunca solapa con un bloque adyacente (la colisión lo garantiza)
    y la separación por ejes es limpia → orden correcto. Dibuja sombra + robot + carga.
-   Usa ctx/P de la shell (presentación) en tiempo de pintado. */
+   Usa ctx/P de view (presentación) en tiempo de pintado. */
 player.addDraws = function (draws, room) {
   const pr = CFG.PRAD, ink = room.ink;
   // El circuito cargado se dibuja en z+1.6 (por encima de ROBOT.H=1.5): si la caja
@@ -417,7 +327,7 @@ player.addDraws = function (draws, room) {
 
 /* Lista de ENTIDADES vivas (se actualizan y se dibujan en bloque). De momento solo
    el jugador; en la Fase 6 se añaden pinchos/enemigos implementando update/addDraws. */
-const entities = [player];
+export const entities = [player];
 
 /* interact() — interacción VERTICAL con los objetos:
    - LLEVANDO algo: si estás en la casilla-destino de un zócalo compatible → lo
@@ -425,7 +335,7 @@ const entities = [player];
      encima al instante — pero SOLO si hay hueco para estar encima; si no, no sueltas.
    - MANOS LIBRES: solo puedes COGER el objeto sobre el que estás subido; al cogerlo
      caes a su sitio (caída visible por gravedad). */
-function interact(room) {
+export function interact(room) {
   if (game.won) return;
 
   if (game.carried) {
@@ -473,13 +383,13 @@ function interact(room) {
 /* =========================================================================
    WORLD INSTANCE + transiciones entre salas
    ========================================================================= */
-const world = buildWorld();
-let room = world.rooms[world.start];
+export const world = buildWorld();
+export let room = world.rooms[world.start];
 
 /* Transición flip-screen: al cruzar un borde con salida, cambia de sala y reaparece
    por el borde opuesto, RECENTRANDO la coordenada perpendicular en la PUERTA de la sala
    destino (su centro). Así funciona aunque las salas tengan tamaños distintos. */
-function checkExits() {
+export function checkExits() {
   const e = room.exits;
   let key = null, R = null;
   if (player.x >= room.w && e.xp)      { key = e.xp; R = world.rooms[key]; player.x = 0.2;        player.y = R.h / 2; }
@@ -494,7 +404,7 @@ function checkExits() {
 }
 
 /* Reinicia la partida desde cero (tras victoria; servirá también para game over). */
-function resetGame() {
+export function resetGame() {
   const fresh = buildWorld();
   world.rooms = fresh.rooms;                 // salas nuevas (circuitos/zócalos sin tocar)
   room = world.rooms[world.start];
@@ -506,3 +416,6 @@ function resetGame() {
   game.lives = 3; game.circuits = 0; game.carried = null;
   game.lightYears = 9999; game.won = false;
 }
+
+/* Helpers de física expuestos para los smoke tests (oráculo de no-regresión). */
+export { blocksHoriz, supportHeight, roomSolids };

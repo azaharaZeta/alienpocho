@@ -1,0 +1,11 @@
+{
+  "name": "alien-pocho",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Puzzle-acción isométrico monocromo (homenaje a Alien 8). Vanilla JS + canvas, sin build.",
+  "scripts": {
+    "test": "node test/smoke.mjs",
+    "serve": "python3 -m http.server 8123"
+  }
+}

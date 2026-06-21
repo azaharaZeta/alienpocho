@@ -1,5 +1,5 @@
 /* =============================================================================
-   ALIEN POCHO — Biblioteca de ASSETS (estilo Alien 8 fiel)
+   ALIEN POCHO — Biblioteca de ASSETS (assets.js)
    -----------------------------------------------------------------------------
    MONOCROMO de verdad: cada sala usa UN solo color de tinta sobre negro, y las
    formas se definen con CONTORNOS NEGROS (teselado limpio). El color cambia por
@@ -10,11 +10,14 @@
    - El robot mantiene su propio color (azul), visible en cualquier sala.
    Uso:  AP.<asset>(ctx, p, ..., col)   con p = AP.projector(ox, oy)
    ============================================================================= */
-const AP = (() => {
+"use strict";
+
+import { ENGINE } from "./engine.js";
+
+export const AP = (() => {
 
   // Primitivas genéricas del motor (proyección, cajas, panal, painter…).
-  // En navegador `ENGINE` es un global léxico (engine.js se carga antes); en Node se requiere.
-  const ENG = (typeof ENGINE !== "undefined") ? ENGINE : require("./engine.js");
+  const ENG = ENGINE;
   const { BLACK, darken, lighten, projector, poly, facePt, edgeLine, box, honeycomb } = ENG;
 
   // Colores de tinta por pantalla (PRIMARIO de cada sala) + su SECUNDARIO (textos del HUD
@@ -254,5 +257,3 @@ const AP = (() => {
     pillar, circuit, prop, PROP, socket, spikes, plant, drone, robot, shadow
   };
 })();
-
-if (typeof module !== "undefined") module.exports = AP;

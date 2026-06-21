@@ -13,19 +13,30 @@ Solo cosas **por hacer** o **por explorar**. Contexto y diseño: [GDD.md](GDD.md
 investigación del original: [RESEARCH.md](RESEARCH.md).
 
 ## Ficheros (orientación)
-- `engine.js` — MOTOR iso genérico `ENGINE.*` (proyección, `box`/`poly`/`honeycomb`,
-  `darken`/`lighten` y el painter `depthSort`, con gating por solape en pantalla). Sin nada
-  específico del juego.
-- `assets.js` — biblioteca de dibujo `AP.*` (monocromo, una tinta por sala); usa `ENGINE`.
-- `game.js` — SIMULACIÓN: salas/`buildWorld`, entidades (`player`+`entities[]`), física
-  (`roomSolids`/`blocksHoriz`/`supportHeight`), objetos físicos (`tryPush`/`interact`),
-  estado `game`, `checkExits`, `resetGame`. Lee `CFG`/`ctx`/`P`/`pressed`/`held` de la shell.
-- `index.html` — PRESENTACIÓN + shell: `CFG`, input, proyector, `render`, HUD (iconos SVG),
-  pantallas, bucle `loop`, controles táctiles, layout por orientación, pantalla completa.
-- `assets-demo.html` — catálogo visual de assets.
-- Carga de scripts: `engine.js` → `assets.js` → `game.js` → bloque inline de `index.html`
-  (con `?v=N` para romper caché del navegador; subir N al editar).
-- Pruebas: `python3 -m http.server 8123` (`.claude/launch.json`).
+> Refactor de estructura hecho (Fases 0-2 de [ASSESSMENT.md](ASSESSMENT.md)): ES modules
+> bajo `src/`, sin globales de shell. Fases 3-5 (trocear física/jugador, partir `main.js` en
+> render/screens, parametrización fina) quedan pendientes.
+- `src/config.js` — PARÁMETROS: `CFG` (dims/física/salto/colores UI), `CONTROLS`, `ORIGIN`,
+  `POPT`. Módulo hoja (no importa nada) → lo importan los demás.
+- `src/engine.js` — MOTOR iso genérico `ENGINE.*` (proyección, `box`/`poly`/`honeycomb`,
+  `darken`/`lighten` y el painter `depthSort` con gating por solape). Sin nada del juego.
+- `src/assets.js` — biblioteca de dibujo `AP.*` (monocromo, paletas `INKS`/`INK2`); usa `ENGINE`.
+- `src/input.js` — teclado + flancos + `held`/`pressed` + táctil. DOM diferido a `init*()`.
+- `src/view.js` — `ctx` del canvas + proyector `P` (binding vivo) + tema. DOM diferido a init.
+- `src/data/rooms.js` — EL MAPA como DATOS puros (salas, bloques, objetos, zócalos, salidas;
+  paleta por índice). Editar niveles aquí, sin tocar lógica.
+- `src/world.js` — motor de mundo: `makeRoom` (límites + clona arrays mutables) + `buildWorld`
+  + layout cenital. Consume `data/rooms.js`.
+- `src/game.js` — SIMULACIÓN: entidades (`player`+`entities[]`), física (`roomSolids`/
+  `blocksHoriz`/`supportHeight`), objetos físicos (`tryPush`/`interact`), estado `game`,
+  `checkExits`, `resetGame`. Importa `CFG`/`AP`/`pressed`/`held`/`ctx`/`P`/`buildWorld`.
+- `src/main.js` — PRESENTACIÓN + arranque: `render`, HUD, minimapa, pantallas, bucle `loop`,
+  fullscreen, `window.__pocho`, e `init*()`. Único `<script type="module">` de `index.html`.
+- `index.html` — markup + `styles.css`. `styles.css` — estilos de la shell (layout/mandos).
+- `assets-demo.html` — catálogo visual de assets (importa `src/assets.js` como módulo).
+- `test/smoke.mjs` — oráculo de no-regresión (mundo/painter/física/objetos). `npm test`.
+- Carga: ES modules nativos (sin build). Requiere servir por http (no `file://`).
+- Pruebas/arranque: `npm run serve` o `python3 -m http.server 8123` (`.claude/launch.json`).
 
 ## 🐞 Bugs conocidos
 - (ninguno pendiente ahora mismo)

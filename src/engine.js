@@ -1,12 +1,14 @@
 /* =============================================================================
-   ALIEN POCHO — MOTOR ISO genérico (sin nada específico del juego)
+   ALIEN POCHO — MOTOR ISO genérico (engine.js)
    -----------------------------------------------------------------------------
    Primitivas reutilizables: proyección isométrica 2:1, dibujo de polígonos y
    cajas, teselado de paredes y el ORDEN DE PINTADO por cajas (painter topológico).
    No sabe nada de salas, robot ni circuitos: eso vive en assets.js / game.js.
-   Uso en navegador: se carga ANTES que assets.js; expone el global `ENGINE`.
+   Módulo HOJA (no importa nada). Expone el objeto `ENGINE`.
    ============================================================================= */
-const ENGINE = (() => {
+"use strict";
+
+export const ENGINE = (() => {
 
   const BLACK = "#000000";
 
@@ -170,5 +172,3 @@ const ENGINE = (() => {
 
   return { BLACK, darken, lighten, projector, poly, facePt, edgeLine, box, honeycomb, depthSort };
 })();
-
-if (typeof module !== "undefined") module.exports = ENGINE;
