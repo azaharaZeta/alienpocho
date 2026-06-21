@@ -67,10 +67,11 @@ const ENGINE = (() => {
     poly(ctx, [D, C, Cb, Db], darken(col, 0.82), BLACK);  // cara izquierda (+y): media
   }
 
-  // Panal HEXAGONAL sobre una cara plana [TL,TR,BR,BL]: hexágonos que teselan
-  // perfectos (separados por líneas negras), proyectados sobre el plano de la
-  // pared. R = radio del hexágono en píxeles. Se recorta a la cara.
-  function honeycomb(ctx, L, R) {
+  // Panal HEXAGONAL sobre una cara plana [TL,TR,BR,BL]. Dibuja SOLO hexágonos
+  // COMPLETOS (relleno `col` + borde negro de junta); donde un hexágono no cabe entero
+  // se deja NEGRO (el fondo de la pared). Así nunca hay medias celdas ni picos sueltos.
+  // R = radio del hexágono en píxeles.
+  function honeycomb(ctx, L, R, col) {
     const o = L[0];
     const uxx = L[1].x - o.x, uxy = L[1].y - o.y;   // vector ancho
     const vxx = L[3].x - o.x, vxy = L[3].y - o.y;   // vector alto
@@ -82,18 +83,25 @@ const ENGINE = (() => {
     ctx.beginPath(); ctx.moveTo(L[0].x, L[0].y);
     for (let i = 1; i < 4; i++) ctx.lineTo(L[i].x, L[i].y);
     ctx.closePath(); ctx.clip();
-    ctx.strokeStyle = BLACK; ctx.lineWidth = 1;
-    const colS = Math.sqrt(3) * R, rowS = 1.5 * R;   // hexágonos "pointy-top"
-    for (let b = 0, j = 0; b <= hPx + R; b += rowS, j++) {
-      const off = (j & 1) ? colS / 2 : 0;
-      for (let a = -colS; a <= wPx + colS; a += colS) {
+    ctx.fillStyle = col; ctx.strokeStyle = BLACK; ctx.lineWidth = 1;
+    // "FLAT-TOP": el hexágono se asienta en su BASE (lado plano arriba/abajo), no en un
+    // pico. Tesela en COLUMNAS desplazadas media celda en vertical.
+    const colS = 1.5 * R, rowS = Math.sqrt(3) * R, ht = rowS / 2, eps = 0.5, botCut = 3;
+    // ARRIBA: cada columna empieza con su lado plano en/bajo el borde superior → no se corta
+    // arriba (el hueco queda negro). ABAJO y LATERALES: sí se cortan (el clip recorta), pero
+    // si de un hexágono solo asomara una tira < botCut px contra el suelo, no se dibuja
+    // (evita la línea fina de 1-2px del "siguiente" hexágono al pie de la pared).
+    for (let i = 0, a = -colS; a - R < wPx + eps; a += colS, i++) {
+      if (a + R < -eps) continue;            // columna totalmente fuera por la izquierda
+      const voff = (i & 1) ? ht : 0;         // columnas alternas, bajadas media celda
+      for (let b = ht + voff; b - ht < hPx - botCut; b += rowS) {
         ctx.beginPath();
         for (let k = 0; k < 6; k++) {
-          const ang = Math.PI / 180 * (60 * k + 90);
-          const s = toS(a + off + Math.cos(ang) * R, b + Math.sin(ang) * R);
+          const ang = Math.PI / 180 * (60 * k);
+          const s = toS(a + Math.cos(ang) * R, b + Math.sin(ang) * R);
           if (k === 0) ctx.moveTo(s.x, s.y); else ctx.lineTo(s.x, s.y);
         }
-        ctx.closePath(); ctx.stroke();
+        ctx.closePath(); ctx.fill(); ctx.stroke();
       }
     }
     ctx.restore();

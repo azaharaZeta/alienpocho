@@ -57,6 +57,8 @@
     display: flex; align-items: center; justify-content: center;
     touch-action: none; cursor: pointer; user-select: none;
   }
+  /* Iconos SVG de los botones: heredan el color del botón (igual que los glifos). */
+  .btn svg { width: 1.25em; height: 1.25em; display: block; pointer-events: none; }
   .btn.big { border-color: #18b6b6; color: #bdf7f7; }
   .btn.jump { border-color: #8b76c4; color: #b9a6ff; }
   .btn.on { background: #0a5a5a; color: #fff; }
@@ -99,23 +101,54 @@
 <body>
   <div id="stage">
     <div class="pad tri">
-      <button class="btn big" data-code="ArrowUp" aria-label="avanzar">▲</button>
+      <button class="btn big" data-code="ArrowUp" aria-label="avanzar">
+        <!-- flecha en PERSPECTIVA: punta (lejos) arriba y estrecha, base (cerca) abajo más ancha -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <path d="M12 2.5 5 9 10.5 9 7 21 17 21 13.5 9 19 9Z"/>
+        </svg>
+      </button>
       <div class="tri-row">
-        <button class="btn" data-code="ArrowLeft"  aria-label="girar izquierda">⟲</button>
-        <button class="btn" data-code="ArrowRight" aria-label="girar derecha">⟳</button>
+        <button class="btn" data-code="ArrowLeft" aria-label="girar izquierda">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+          </svg>
+        </button>
+        <button class="btn" data-code="ArrowRight" aria-label="girar derecha">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>
+          </svg>
+        </button>
       </div>
     </div>
     <div id="screen"><canvas id="game" width="320" height="240"></canvas></div>
     <div class="pad row">
-      <button class="btn" data-code="KeyE" aria-label="coger o colocar">✋</button>
-      <button class="btn big jump" data-code="Space" aria-label="saltar">⤒</button>
+      <button class="btn" data-code="KeyE" aria-label="coger o colocar">
+        <svg class="ico-hand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <path d="M18 11V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2"/>
+          <path d="M14 10V4a2 2 0 0 0-2-2 2 2 0 0 0-2 2v2"/>
+          <path d="M10 10.5V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v8"/>
+          <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-6-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.83L7 15"/>
+        </svg>
+      </button>
+      <button class="btn big jump" data-code="Space" aria-label="saltar">
+        <svg class="ico-jump" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <path d="M12 3v11"/>
+          <path d="M7 8l5-5 5 5"/>
+          <path d="M5 19q7-5 14 0"/>
+        </svg>
+      </button>
     </div>
   </div>
   <button id="fsbtn" aria-label="pantalla completa" title="Pantalla completa">⛶</button>
 
-<script src="engine.js?v=10"></script>
-<script src="assets.js?v=10"></script>
-<script src="game.js?v=10"></script>
+<script src="engine.js?v=18"></script>
+<script src="assets.js?v=18"></script>
+<script src="game.js?v=18"></script>
 <script>
 "use strict";
 
@@ -155,8 +188,8 @@ const CFG = {
     hudDim:    "#066",
     hudBright: "#dfffff",
     roomName:  "#b9a6ff",   // morado sutil para el nombre de la sala (a juego con el botón saltar)
-    accent:    "#ff5d7a",   // acento rojo/rosa (guiño a la pastilla de "LIGHT YEARS")
-    accentDim: "#5e1024"
+    accent:    "#b9a6ff",   // acento morado sutil (antes rojo): esquinas del marco y textos
+    accentDim: "#352a55"
   }
 };
 
@@ -215,7 +248,7 @@ function render(room) {
   ctx.fillStyle = CFG.COL.bg;
   ctx.fillRect(0, 0, CFG.W, CFG.H);
 
-  const ink = room.ink, WH = 2.2, D = AP.DOOR;
+  const ink = room.ink, WH = 3.6, D = AP.DOOR;   // pared alta: ~3 filas de hexágonos (sin desbordar)
   const doorSpan = (n) => [n / 2 - 1.12, n / 2 + 1.12]; // vano estrecho (hueco ~1.44 celdas)
 
   // 1) Suelo (plano en z=0, nunca ocluye → pre-pase al fondo)
@@ -308,14 +341,25 @@ function drawCarrySlot(cx, cy, shape, ink) {
   AP.circuit(ctx, AP.projector(cx, cy + 4), 0, 0, 0, shape, ink);   // base baja → centra el cubo
   ctx.restore();
 }
-// Mini robot (icono de vidas)
-function drawMiniRobot(x, y) {
+// Mini robot (icono de vidas) — estilo LÍNEA, CENTRADO en (cx,cy) para alinearlo con
+// el número. Más grande, a juego con la tipografía del marcador.
+function drawMiniRobot(cx, cy) {
   const C = CFG.COL;
-  ctx.fillStyle = C.botTop; ctx.fillRect(x, y + 1, 8, 7);          // cuerpo/cabeza
-  ctx.strokeStyle = C.botEdge; ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, y + 1.5, 7, 6);
-  ctx.fillStyle = C.botDark; ctx.fillRect(x + 1, y + 3, 6, 2);     // visor
-  ctx.fillStyle = C.botEdge; ctx.fillRect(x + 2, y + 3, 1, 1); ctx.fillRect(x + 5, y + 3, 1, 1); // ojos
-  ctx.beginPath(); ctx.moveTo(x + 4.5, y + 1); ctx.lineTo(x + 4.5, y - 1); ctx.stroke(); // antena
+  const w = 14, h = 11, x = cx - w / 2, yTop = cy - h / 2;
+  ctx.save();
+  ctx.strokeStyle = C.hud; ctx.fillStyle = C.hud;
+  ctx.lineWidth = 1.2; ctx.lineJoin = "round"; ctx.lineCap = "round";
+  // antena + bolita
+  ctx.beginPath(); ctx.moveTo(cx, yTop); ctx.lineTo(cx, yTop - 3.5); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx, yTop - 4.4, 1.2, 0, Math.PI * 2); ctx.fill();
+  // cabeza (contorno redondeado)
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(x, yTop, w, h, 3); else ctx.rect(x, yTop, w, h);
+  ctx.stroke();
+  // ojos
+  ctx.beginPath(); ctx.arc(cx - 3.5, cy + 0.5, 1.2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + 3.5, cy + 0.5, 1.2, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
 }
 /* HUD — homenaje al marcador de Alien 8: marco inferior con barras segmentadas a los
    lados y líneas en "V" hacia el centro, que enmarcan las dos zonas triangulares.
@@ -350,9 +394,9 @@ function drawHUD() {
   ctx.fillText(game.circuits + "/" + game.circuitsTotal, 54, 196);
 
   // ── Zona derecha (dentro del marco): VIDAS — carita alineada con el número ──
-  drawMiniRobot(W - 60, 201);
   ctx.fillStyle = C.hudBright; ctx.font = "bold 16px 'Courier New', monospace";
   ctx.textAlign = "right"; ctx.fillText("×" + game.lives, W - 26, 196); ctx.textAlign = "left";
+  drawMiniRobot(W - 58, 204);   // centrado y a la misma altura que el número
 
   // ── Título "ALIEN POCHO" abajo-centro, partido por el pico del marco ──
   drawTitle(vx, vy);

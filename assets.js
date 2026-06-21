@@ -50,9 +50,9 @@ const AP = (() => {
     if (axis === "x") { A = p(a0, fixed, 0); B = p(a1, fixed, 0); Bt = p(a1, fixed, H); At = p(a0, fixed, H); }
     else { A = p(fixed, a0, 0); B = p(fixed, a1, 0); Bt = p(fixed, a1, H); At = p(fixed, a0, H); }
     const L = [At, Bt, B, A];
-    poly(ctx, L, col, BLACK);
-    honeycomb(ctx, L, p.TW * 0.32);
-    poly(ctx, L, null, BLACK);     // recontorno limpio
+    poly(ctx, L, BLACK, BLACK);          // fondo NEGRO: lo que no sea hexágono entero queda negro
+    honeycomb(ctx, L, p.TW * 0.40, col); // hexágonos COMPLETOS (más grandes) en la tinta de la sala
+    poly(ctx, L, null, BLACK);           // recontorno limpio
   }
 
   // PUERTA 3D con MARCO (postes + dintel) y un POCO de grosor. Mismo asset
@@ -219,6 +219,15 @@ const AP = (() => {
       poly(ctx, [facePt(Q, 0.56, 0.37), facePt(Q, 0.72, 0.37), facePt(Q, 0.72, 0.50), facePt(Q, 0.56, 0.50)], col, null);
     };
     if (facing === 0) faceOn(rF); else if (facing === 1) faceOn(lF);
+    // detallito de PECHO (vistas frontales): panelito negro con un núcleo que "brilla"
+    const bz0 = z + 0.22, bz1 = z + 0.98;
+    const bRF = [p(x + bX, y - bY, bz1), p(x + bX, y + bY, bz1), p(x + bX, y + bY, bz0), p(x + bX, y - bY, bz0)];
+    const bLF = [p(x - bX, y + bY, bz1), p(x + bX, y + bY, bz1), p(x + bX, y + bY, bz0), p(x - bX, y + bY, bz0)];
+    const chestOn = (Q) => {
+      poly(ctx, [facePt(Q, 0.34, 0.40), facePt(Q, 0.66, 0.40), facePt(Q, 0.66, 0.72), facePt(Q, 0.34, 0.72)], BLACK, null);
+      poly(ctx, [facePt(Q, 0.45, 0.49), facePt(Q, 0.55, 0.49), facePt(Q, 0.55, 0.63), facePt(Q, 0.45, 0.63)], col, null);
+    };
+    if (facing === 0) chestOn(bRF); else if (facing === 1) chestOn(bLF);
     const aTop = p(x, y, hz1);
     ctx.strokeStyle = col; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(Math.round(aTop.x) + 0.5, Math.round(aTop.y)); ctx.lineTo(Math.round(aTop.x) + 0.5, Math.round(aTop.y) - 5); ctx.stroke();
