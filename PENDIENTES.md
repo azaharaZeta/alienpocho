@@ -33,10 +33,9 @@ investigación del original: [RESEARCH.md](RESEARCH.md).
 ## 💡 Ideas aportadas por la usuaria
 > Volcado libre de ideas (algunas sensatas, otras locas). **No son órdenes ni están
 > priorizadas**: son material para analizar y estudiar cuando toque. Solo las edita un humano.
--  Definir juego de colores de la UI (botones y textos) alineado con el color  de la sala. Por ej: botones del mismo color que la sala. Textos en un color secundario. Sala azul, color secundario=morado (el actual). Y así.
-- Mejorar paneles de pared. Que en lugar de dibujar los hexagonos rotos de la parte de arriba, directamente no se dibujen.
 - Mejorar estéticamente los bloques-cubo. Las esquinas hacerlas más pronunciadas, y transparentes.
-- Añadirle algun detalle más al robot. Está muy bien como está, solo sería añadirle algún detallito en el cuerpo.
+- Añadirle manitas al robot
+- Mejorar las puertas, darles formas más trabajadas.
 - Habitaciones rectangulares (pasillos)
 - Esta es gorda: Convertir el juego en un roguelike. Cada run, mapa random, ubicaciones random.
 
@@ -61,6 +60,16 @@ investigación del original: [RESEARCH.md](RESEARCH.md).
 - **Audio** WebAudio (saltar, coger, soltar, colocar) + toggle de silencio persistente.
 - **Más salas / retos** que exploten las mecánicas nuevas (apilar/empujar objetos para
   alcanzar zócalos altos); plataformas móviles; dron (`AP.drone` ya existe).
+
+### Salas / espacios
+- ✅ **Salas rectangulares (pasillos)**: `makeRoom` admite `w`/`h` con LÍMITES (w,h ∈ [3,13] y
+  **w+h ≤ 16**, recortados si se exceden). El proyector se centra por sala y el marco del HUD
+  sigue el pico del rombo; los iconos (circuitos/vidas) caben en los extremos probados (8×8,
+  13×3, 3×13, 12×4). `checkExits` recoloca en la puerta de la sala destino (tamaños distintos).
+  Sala de demo `PASILLO` (12×4) colgando de REACTOR por la derecha (`xp`).
+- 🔜 **Formas más complejas** (giros, L, cruces): hoy la huella es un rectángulo único. Para
+  giros/L habría que componer la sala de varios rectángulos (multi-celda) y revisar suelo,
+  paredes, colisión y el painter. Es el siguiente paso natural si se quiere variedad.
 
 ### Mecánicas de objetos físicos (ya en marcha)
 - Los circuitos son OBJETOS físicos: se empujan, se llevan, se apilan y se suben encima. Los

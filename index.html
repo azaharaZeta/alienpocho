@@ -149,9 +149,9 @@
   </div>
   <button id="fsbtn" aria-label="pantalla completa" title="Pantalla completa">⛶</button>
 
-<script src="engine.js?v=25"></script>
-<script src="assets.js?v=25"></script>
-<script src="game.js?v=25"></script>
+<script src="engine.js?v=30"></script>
+<script src="assets.js?v=30"></script>
+<script src="game.js?v=30"></script>
 <script>
 "use strict";
 
@@ -239,8 +239,17 @@ const pressed = (action) => CONTROLS[action].some(c => edge(c));
    (La SIMULACIÓN —salas, física, entidades, estado— vive en game.js.)
    ========================================================================= */
 const ctx = document.getElementById("game").getContext("2d");
-const P = AP.projector(ORIGIN.x, ORIGIN.y,    // proyector iso para los assets
-  { TILE_W: CFG.TILE_W, TILE_H: CFG.TILE_H, BLOCK_H: CFG.BLOCK_H });
+const POPT = { TILE_W: CFG.TILE_W, TILE_H: CFG.TILE_H, BLOCK_H: CFG.BLOCK_H };
+let P = AP.projector(ORIGIN.x, ORIGIN.y, POPT);   // proyector iso (se recalcula por sala)
+
+/* Proyector centrado para una sala w×h: centra la HUELLA del rombo en pantalla y deja
+   su centro vertical fijo, para que salas rectangulares (pasillos) encajen igual. */
+function projectorFor(r) {
+  const TW = CFG.TILE_W, TH = CFG.TILE_H;
+  const ox = CFG.W / 2 - (r.w - r.h) * TW / 4;   // centra el ancho del rombo
+  const oy = 134 - (r.w + r.h) * TH / 4;          // centro vertical del rombo fijo (≈ el de 8×8)
+  return AP.projector(ox, oy, POPT);
+}
 
 /* (Los assets de dibujo —suelo, cubos, robot, sombra…— viven en assets.js:
    AP.floor / AP.cube / AP.flatWall / AP.robot / AP.shadow / etc.) */
@@ -267,6 +276,7 @@ const menuPalette = (() => {
 
 function render(room) {
   if (room !== _themeRoom) { applyRoomTheme(room); _themeRoom = room; }
+  P = projectorFor(room);                 // proyector centrado para el tamaño de esta sala
   ctx.fillStyle = CFG.COL.bg;
   ctx.fillRect(0, 0, CFG.W, CFG.H);
 
@@ -404,13 +414,17 @@ function drawHUD() {
   //    de la sala (pendiente ±0.5 = TILE_H/TILE_W), del color de la sala. Aprovecha el
   //    hueco que deja el rombo isométrico, prolongando su silueta. Vértice de la "V"
   //    bajo el pico de la sala (160). El contenido va DENTRO de las zonas delimitadas.
-  const ink = room.ink, barTop = 146, vx = 160, vy = barTop + 0.5 * (vx - 6);
-  drawSegBar(6, barTop, 236, ink);
-  drawSegBar(W - 6, barTop, 236, ink);
+  const ink = room.ink, fc = P(room.w, room.h, 0);   // pico frontal del rombo (proyectado)
+  // Vértice de la "V" EN el pico del rombo (no por debajo): así las aristas a ±0.5 suben hacia
+  // las esquinas y dejan LIBRES las zonas inferiores donde van los iconos (circuitos / vidas).
+  const vx = Math.round(fc.x), vy = Math.round(fc.y);
+  const leftTopY = vy - 0.5 * (vx - 6), rightTopY = vy - 0.5 * ((W - 6) - vx);   // aristas a ±0.5
+  drawSegBar(6, Math.round(leftTopY), 236, ink);
+  drawSegBar(W - 6, Math.round(rightTopY), 236, ink);
   ctx.strokeStyle = ink; ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(6, barTop);     ctx.lineTo(vx, vy);     // arista izquierda  (∥ borde sala)
-  ctx.moveTo(W - 6, barTop); ctx.lineTo(vx, vy);     // arista derecha
+  ctx.moveTo(6, leftTopY);      ctx.lineTo(vx, vy);     // arista izquierda  (∥ borde sala)
+  ctx.moveTo(W - 6, rightTopY); ctx.lineTo(vx, vy);     // arista derecha
   ctx.stroke();
 
   // ── Zona izquierda (dentro del marco): CIRCUITOS — marco cuadrado + objeto dentro ──
@@ -423,8 +437,9 @@ function drawHUD() {
   ctx.textAlign = "right"; ctx.fillText("×" + game.lives, W - 26, 196); ctx.textAlign = "left";
   drawMiniRobot(W - 58, 204, ink2);   // centrado y a la misma altura que el número
 
-  // ── Título "ALIEN POCHO" abajo-centro, partido por el pico del marco ──
-  drawTitle(vx, vy);
+  // ── Título "ALIEN POCHO" SIEMPRE centrado y abajo (desacoplado del pico, que puede irse
+  //    a un lado en salas rectangulares) → nunca pisa los iconos de las esquinas. ──
+  drawTitle(W / 2, 216);
 }
 
 /* Título con look "neón futurista": glow en el color de la sala + núcleo blanco con
@@ -535,6 +550,7 @@ function loop(now) {
     drawTitleScreen(now);
   } else {
     for (const e of entities) e.update(room, dt);
+    updateObjects(room, dt);   // gravedad de los objetos (caen si quedan en el aire)
     checkExits();
     if (!game.won) game.lightYears = Math.max(0, game.lightYears - dt * 6); // cuenta atrás (cosmética por ahora)
     render(room);

@@ -20,7 +20,11 @@
      ym: y<0 (atrás-dcha)  yp: y≥h (frente-izq)
    ========================================================================= */
 function makeRoom(o) {
-  const w = 8, h = 8;
+  // Salas rectangulares con LÍMITES: ancho/largo ∈ [3,13] y ancho+largo ≤ 16 (para que
+  // el rombo y el HUD adaptado siempre quepan en pantalla). Se recortan si se exceden.
+  let w = Math.min(13, Math.max(3, o.w || 8));
+  let h = Math.min(13, Math.max(3, o.h || 8));
+  if (w + h > 16) { if (w >= h) w = 16 - h; else h = 16 - w; }
   const blocks = o.blocks || [];
   const solid = new Set();
   for (const b of blocks)
@@ -42,7 +46,7 @@ function buildWorld() {
     objects: [ { x: 2.5, y: 2.5, z: 1, shape: "cube" } ],     // intercambiado: ahora sobre la plataforma
     sockets:  [ { cx: 3, cy: 5, z: 0, shape: "cylinder", active: false } ] });   // intercambiado: en el suelo
 
-  rooms["1,0"] = makeRoom({ ink: I[2], ink2: I2[2], name: "REACTOR", exits: { xm: "0,0", yp: "1,1" },
+  rooms["1,0"] = makeRoom({ ink: I[2], ink2: I2[2], name: "REACTOR", exits: { xm: "0,0", yp: "1,1", xp: "2,0" },
     blocks: [ { x: 5, y: 1, z: 0, h: 1 }, { x: 5, y: 2, z: 0, h: 2 }, { x: 5, y: 3, z: 0, h: 3 } ],
     objects: [ { x: 5.5, y: 3.5, z: 3, shape: "pyramid" } ],   // intercambiado: arriba de la escalera
     sockets:  [ { cx: 2, cy: 2, z: 0, shape: "cube", active: false } ] });   // intercambiado: en el suelo
@@ -57,6 +61,11 @@ function buildWorld() {
     objects: [ { x: 4.5, y: 4.5, z: 1, shape: "cylinder" } ],   // intercambiado: sobre la piedra
     sockets:  [ { cx: 2, cy: 2, z: 0, shape: "dome", active: false } ],   // intercambiado: en el suelo
     hazards:  [ { cx: 3, cy: 4 }, { cx: 4, cy: 5 } ] });
+
+  // PASILLO — sala RECTANGULAR (12×4) de demo, colgando de REACTOR por la derecha.
+  rooms["2,0"] = makeRoom({ ink: I[5], ink2: I2[5], name: "PASILLO", w: 12, h: 4,
+    exits: { xm: "1,0" },
+    blocks: [ { x: 5, y: 1, z: 0, h: 1 }, { x: 8, y: 2, z: 0, h: 2 } ] });
 
   return { rooms, start: "0,0" };
 }
@@ -187,8 +196,8 @@ function canStandOn(room, x, y, feetZ) {
    encima de su base. Empuje en PLANO: no se empuja un objeto hacia arriba. */
 function objBlocked(room, obj, nx, ny) {
   const m = AP.PROP.HALF;
-  if (outOfBounds(room, nx - m, ny - m) || outOfBounds(room, nx + m, ny - m) ||
-      outOfBounds(room, nx - m, ny + m) || outOfBounds(room, nx + m, ny + m)) return true;
+  // Los objetos NO cruzan puertas (solo el robot): chocan con TODO el borde de la sala.
+  if (nx - m < 0 || nx + m > room.w || ny - m < 0 || ny + m > room.h) return true;
   for (const b of roomSolids(room)) {
     if (b.obj === obj) continue;
     const ov = (nx - m) < b.x1 && (nx + m) > b.x0 && (ny - m) < b.y1 && (ny + m) > b.y0;
@@ -206,7 +215,10 @@ function tryPush(room, dir, step, feetZ) {
   let target = null;
   for (const o of room.objects) {
     const b = objBox(o);
-    if (b.top > feetZ + CFG.STEP && overlapsBox(b, probeX, probeY)) { target = o; break; }
+    // Empujable solo si está A TU NIVEL: su BASE en/por debajo de tus pies (b.z0 ≤ feetZ+STEP)
+    // y su cima por encima (es un obstáculo). Así NO empujas un objeto que está en alto
+    // (p. ej. sobre una plataforma) cuando pasas por debajo.
+    if (b.z0 <= feetZ + CFG.STEP && b.top > feetZ + CFG.STEP && overlapsBox(b, probeX, probeY)) { target = o; break; }
   }
   if (!target) return false;
   const nx = target.x + dir.dx * step, ny = target.y + dir.dy * step;
@@ -214,6 +226,31 @@ function tryPush(room, dir, step, feetZ) {
   target.x = nx; target.y = ny;
   player.x += dir.dx * step; player.y += dir.dy * step;
   return true;
+}
+
+/* Superficie de apoyo bajo un objeto (cima del sólido más alto que pisa, sin contarse a
+   sí mismo); el suelo (0) si no hay nada. Sirve para que los objetos CAIGAN. */
+function objSupport(room, o) {
+  const m = AP.PROP.HALF; let h = 0;
+  for (const b of roomSolids(room)) {
+    if (b.obj === o) continue;
+    const ov = (o.x - m) < b.x1 && (o.x + m) > b.x0 && (o.y - m) < b.y1 && (o.y + m) > b.y0;
+    if (ov && b.top <= o.z + 0.02 && b.top > h) h = b.top;
+  }
+  return h;
+}
+
+/* Gravedad de los OBJETOS: si quedan en el aire (p. ej. tras empujarlos fuera de una
+   plataforma), caen hasta su superficie de apoyo. Se llama una vez por frame. */
+function updateObjects(room, dt) {
+  for (const o of room.objects) {
+    const s = objSupport(room, o);
+    if (o.z > s + 1e-3 || o.vz) {
+      o.vz = (o.vz || 0) - CFG.GRAVITY * dt;
+      o.z += o.vz * dt;
+      if (o.z <= s) { o.z = s; o.vz = 0; }
+    }
+  }
 }
 
 /* player.update() — Modelo de control TIPO TANQUE (fiel a Alien 8 / Knight Lore):
@@ -400,15 +437,16 @@ function interact(room) {
 const world = buildWorld();
 let room = world.rooms[world.start];
 
-/* Transición flip-screen: al cruzar un borde con salida, cambia de sala y
-   reaparece por el borde opuesto conservando la coordenada perpendicular. */
+/* Transición flip-screen: al cruzar un borde con salida, cambia de sala y reaparece
+   por el borde opuesto, RECENTRANDO la coordenada perpendicular en la PUERTA de la sala
+   destino (su centro). Así funciona aunque las salas tengan tamaños distintos. */
 function checkExits() {
   const e = room.exits;
-  let key = null;
-  if (player.x >= room.w && e.xp)      { key = e.xp; player.x = 0.2; }
-  else if (player.x < 0 && e.xm)       { key = e.xm; player.x = world.rooms[e.xm].w - 0.2; }
-  else if (player.y >= room.h && e.yp) { key = e.yp; player.y = 0.2; }
-  else if (player.y < 0 && e.ym)       { key = e.ym; player.y = world.rooms[e.ym].h - 0.2; }
+  let key = null, R = null;
+  if (player.x >= room.w && e.xp)      { key = e.xp; R = world.rooms[key]; player.x = 0.2;        player.y = R.h / 2; }
+  else if (player.x < 0 && e.xm)       { key = e.xm; R = world.rooms[key]; player.x = R.w - 0.2;  player.y = R.h / 2; }
+  else if (player.y >= room.h && e.yp) { key = e.yp; R = world.rooms[key]; player.y = 0.2;        player.x = R.w / 2; }
+  else if (player.y < 0 && e.ym)       { key = e.ym; R = world.rooms[key]; player.y = R.h - 0.2;  player.x = R.w / 2; }
   if (key) {
     room = world.rooms[key];
     player.z = 0; player.vz = 0; player.vx = 0; player.vy = 0;
