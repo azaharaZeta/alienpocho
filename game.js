@@ -37,35 +37,74 @@ function buildWorld() {
   const I = AP.INKS, I2 = AP.INK2;   // primario y secundario por sala
   const rooms = {};
 
-  // Los OBJETOS (circuitos) son ahora cajas FÍSICAS que arrancan en el SUELO (z:0):
-  // se empujan, se sube uno encima y se apilan. Se cogen/sueltan mirándolos de
-  // frente y se llevan a su zócalo. (Los puzzles por sala se rediseñarán para
-  // explotar estas mecánicas; de momento están en celdas despejadas y accesibles.)
-  rooms["0,0"] = makeRoom({ ink: I[0], ink2: I2[0], name: "ENTRADA", exits: { xp: "1,0", yp: "0,1" },
+  // MUNDO de salas de TODOS los tamaños (w,h ∈ [3,13], w+h ≤ 16), conectadas en árbol.
+  // Cada salida tiene su recíproca en la sala destino. 4 circuitos + 4 zócalos (a juego por
+  // forma) repartidos para que el juego sea completable. Suelo z:0 = accesible andando.
+
+  // ENTRADA — cuadrada 8×8 (inicio).
+  rooms["0,0"] = makeRoom({ ink: I[0], ink2: I2[0], name: "ENTRADA", w: 8, h: 8,
+    exits: { xp: "1,0" },
     blocks: [ { x: 2, y: 2, z: 0, h: 1 } ],
-    objects: [ { x: 2.5, y: 2.5, z: 1, shape: "cube" } ],     // intercambiado: ahora sobre la plataforma
-    sockets:  [ { cx: 3, cy: 5, z: 0, shape: "cylinder", active: false } ] });   // intercambiado: en el suelo
+    objects: [ { x: 3.5, y: 5.5, z: 0, shape: "cube" } ],
+    sockets:  [ { cx: 6, cy: 5, z: 0, shape: "cube", active: false } ] });
 
-  rooms["1,0"] = makeRoom({ ink: I[2], ink2: I2[2], name: "REACTOR", exits: { xm: "0,0", yp: "1,1", xp: "2,0" },
-    blocks: [ { x: 5, y: 1, z: 0, h: 1 }, { x: 5, y: 2, z: 0, h: 2 }, { x: 5, y: 3, z: 0, h: 3 } ],
-    objects: [ { x: 5.5, y: 3.5, z: 3, shape: "pyramid" } ],   // intercambiado: arriba de la escalera
-    sockets:  [ { cx: 2, cy: 2, z: 0, shape: "cube", active: false } ] });   // intercambiado: en el suelo
+  // GALERÍA — pasillo ANCHO máximo 13×3.
+  rooms["1,0"] = makeRoom({ ink: I[2], ink2: I2[2], name: "GALERIA", w: 13, h: 3,
+    exits: { xm: "0,0", xp: "2,0", yp: "1,1" },
+    blocks: [ { x: 4, y: 1, z: 0, h: 1 }, { x: 9, y: 1, z: 0, h: 2 } ] });
 
-  rooms["0,1"] = makeRoom({ ink: I[3], ink2: I2[3], name: "BODEGA", exits: { ym: "0,0", xp: "1,1" },
-    blocks: [ { x: 2, y: 3, z: 0, h: 1 }, { x: 4, y: 3, z: 0, h: 2 } ],
-    objects: [ { x: 2.5, y: 3.5, z: 1, shape: "dome" } ],     // intercambiado: sobre el escalón h1
-    sockets:  [ { cx: 2, cy: 6, z: 0, shape: "pyramid", active: false } ] });   // intercambiado: en el suelo
+  // CELDA — mini sala 3×3.
+  rooms["2,0"] = makeRoom({ ink: I[3], ink2: I2[3], name: "CELDA", w: 3, h: 3,
+    exits: { xm: "1,0", xp: "3,0", ym: "2,-1" },
+    objects: [ { x: 1.5, y: 1.5, z: 0, shape: "pyramid" } ],
+    sockets:  [ { cx: 1, cy: 0, z: 0, shape: "pyramid", active: false } ] });
 
-  rooms["1,1"] = makeRoom({ ink: I[4], ink2: I2[4], name: "PUENTE", exits: { xm: "0,1", ym: "1,0" },
-    blocks: [ { x: 2, y: 4, z: 0, h: 1 }, { x: 4, y: 4, z: 0, h: 1 }, { x: 4, y: 6, z: 0, h: 2 } ],
-    objects: [ { x: 4.5, y: 4.5, z: 1, shape: "cylinder" } ],   // intercambiado: sobre la piedra
-    sockets:  [ { cx: 2, cy: 2, z: 0, shape: "dome", active: false } ],   // intercambiado: en el suelo
-    hazards:  [ { cx: 3, cy: 4 }, { cx: 4, cy: 5 } ] });
+  // TORRE — pasillo LARGO máximo 3×13.
+  rooms["3,0"] = makeRoom({ ink: I[4], ink2: I2[4], name: "TORRE", w: 3, h: 13,
+    exits: { xm: "2,0", yp: "3,1" },
+    blocks: [ { x: 1, y: 4, z: 0, h: 1 }, { x: 1, y: 8, z: 0, h: 2 } ] });
 
-  // PASILLO — sala RECTANGULAR (12×4) de demo, colgando de REACTOR por la derecha.
-  rooms["2,0"] = makeRoom({ ink: I[5], ink2: I2[5], name: "PASILLO", w: 12, h: 4,
-    exits: { xm: "1,0" },
-    blocks: [ { x: 5, y: 1, z: 0, h: 1 }, { x: 8, y: 2, z: 0, h: 2 } ] });
+  // NAVE — rectangular ancha 10×6.
+  rooms["3,1"] = makeRoom({ ink: I[5], ink2: I2[5], name: "NAVE", w: 10, h: 6,
+    exits: { ym: "3,0", xp: "4,1" },
+    blocks: [ { x: 5, y: 2, z: 0, h: 1 }, { x: 7, y: 4, z: 0, h: 2 } ],
+    objects: [ { x: 2.5, y: 2.5, z: 0, shape: "dome" } ],
+    sockets:  [ { cx: 8, cy: 4, z: 0, shape: "dome", active: false } ] });
+
+  // CONDUCTO — pasillo LARGO 4×12.
+  rooms["1,1"] = makeRoom({ ink: I[1], ink2: I2[1], name: "CONDUCTO", w: 4, h: 12,
+    exits: { ym: "1,0" },
+    blocks: [ { x: 1, y: 3, z: 0, h: 1 }, { x: 2, y: 7, z: 0, h: 1 }, { x: 1, y: 9, z: 0, h: 2 } ] });
+
+  // NICHO — mini sala 3×3 (rama trasera).
+  rooms["2,-1"] = makeRoom({ ink: I[1], ink2: I2[1], name: "NICHO", w: 3, h: 3,
+    exits: { yp: "2,0" },
+    blocks: [ { x: 1, y: 1, z: 0, h: 1 } ] });
+
+  // BODEGA — rectangular alta 6×10 (final).
+  rooms["4,1"] = makeRoom({ ink: I[0], ink2: I2[0], name: "BODEGA", w: 6, h: 10,
+    exits: { xm: "3,1" },
+    blocks: [ { x: 3, y: 4, z: 0, h: 1 }, { x: 2, y: 6, z: 0, h: 2 } ],
+    objects: [ { x: 2.5, y: 2.5, z: 0, shape: "cylinder" } ],
+    sockets:  [ { cx: 3, cy: 7, z: 0, shape: "cylinder", active: false } ] });
+
+  // PLANO CENITAL coherente: coloca cada sala pegada a su vecina ALINEANDO la puerta
+  // (centro con centro, igual que el recentrado de checkExits), partiendo de la inicial.
+  // Da posiciones de mundo (wx,wy) — un floorplan sin solapes — para el minimapa real.
+  (function layout() {
+    rooms["0,0"].wx = 0; rooms["0,0"].wy = 0;
+    const seen = new Set(["0,0"]), q = ["0,0"];
+    while (q.length) {
+      const r = rooms[q.shift()];
+      for (const [dir, t] of Object.entries(r.exits)) {
+        const n = rooms[t]; if (!n || seen.has(t)) continue; seen.add(t); q.push(t);
+        if (dir === "xp")      { n.wx = r.wx + r.w;  n.wy = r.wy + r.h / 2 - n.h / 2; }
+        else if (dir === "xm") { n.wx = r.wx - n.w;  n.wy = r.wy + r.h / 2 - n.h / 2; }
+        else if (dir === "yp") { n.wy = r.wy + r.h;  n.wx = r.wx + r.w / 2 - n.w / 2; }
+        else if (dir === "ym") { n.wy = r.wy - n.h;  n.wx = r.wx + r.w / 2 - n.w / 2; }
+      }
+    }
+  })();
 
   return { rooms, start: "0,0" };
 }

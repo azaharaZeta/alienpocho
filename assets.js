@@ -64,9 +64,10 @@ const AP = (() => {
   // para el fondo y el frente:
   //   hole=true  → abre un hueco negro en la pared (puertas del fondo).
   //   hole=false → solo el marco 3D, dejando ver la sala (puertas del frente).
-  // `fixed` es el borde (0 o n); el marco se mete un poco HACIA DENTRO.
+  // `fixed` es el borde (0 o n); el marco se dibuja HACIA FUERA de la rejilla (sobresale del
+  // borde, no hacia dentro) → evita conflictos de isométrica con bloques/objetos del borde.
   const DOOR = { T: 0.34, POST_W: 0.40, LINTEL_H: 0.46 };
-  const doorInset = (fixed) => (fixed < 0.5) ? [fixed, fixed + DOOR.T] : [fixed - DOOR.T, fixed];
+  const doorInset = (fixed) => (fixed < 0.5) ? [fixed - DOOR.T, fixed] : [fixed, fixed + DOOR.T];
   // Ranura de panel: línea NEGRA (recodo iso) + filo claro encima = bisel.
   function _groove(ctx, p, x0, y0, x1, y1, z, col) {
     edgeLine(ctx, p, x0, y0, x1, y1, z + 0.03, lighten(col, 0.4), 1);  // filo claro = bisel

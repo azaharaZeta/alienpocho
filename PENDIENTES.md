@@ -36,8 +36,8 @@ investigación del original: [RESEARCH.md](RESEARCH.md).
 - Mejorar estéticamente los bloques-cubo. Las esquinas hacerlas más pronunciadas, y transparentes.
 - Añadirle manitas al robot
 - Mejorar las puertas, darles formas más trabajadas.
-- Habitaciones rectangulares (pasillos)
 - Esta es gorda: Convertir el juego en un roguelike. Cada run, mapa random, ubicaciones random.
+- Intercambiar las posiciones de botón de avanzar y de salto
 
 ## 🧭 Direcciones posibles (ideas, sin orden ni obligación)
 > Antes esto era un "roadmap por fases". Ahora son ideas a tomar (o no) cuando apetezca.
