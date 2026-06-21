@@ -149,9 +149,9 @@
   </div>
   <button id="fsbtn" aria-label="pantalla completa" title="Pantalla completa">⛶</button>
 
-<script src="engine.js?v=39"></script>
-<script src="assets.js?v=39"></script>
-<script src="game.js?v=39"></script>
+<script src="engine.js?v=42"></script>
+<script src="assets.js?v=42"></script>
+<script src="game.js?v=42"></script>
 <script>
 "use strict";
 
@@ -247,7 +247,9 @@ let P = AP.projector(ORIGIN.x, ORIGIN.y, POPT);   // proyector iso (se recalcula
 function projectorFor(r) {
   const TW = CFG.TILE_W, TH = CFG.TILE_H;
   const ox = CFG.W / 2 - (r.w - r.h) * TW / 4;   // centra el ancho del rombo
-  const oy = 134 - (r.w + r.h) * TH / 4;          // centro vertical del rombo fijo (≈ el de 8×8)
+  // Centro vertical fijo (≈ el de 8×8), BAJADO 20px: la escena ocupa 20px más abajo,
+  // comiéndose la banda negra inferior (= "ui inferior" 20px más baja/corta).
+  const oy = 134 - (r.w + r.h) * TH / 4 + 20;
   return AP.projector(ox, oy, POPT);
 }
 
@@ -467,8 +469,10 @@ function drawHUD() {
   // SEPARACIÓN grid↔HUD = 2× el saliente de las puertas (que ahora sobresalen del borde):
   // así, aún con las puertas por fuera, queda un hueco negro entre la rejilla y el marcador.
   const GAP = Math.round(AP.DOOR.T * CFG.TILE_W);   // hueco = ancho iso de la puerta
-  // Vértice de la "V" justo bajo el PICO del rombo (mismo x): el pico de la sala y el del
-  // marco coinciden siempre (también en salas rectangulares).
+  // Vértice de la "V" bajo el PICO del rombo (mismo x), desplazado GAP hacia abajo: así los
+  // raíles quedan PARALELOS a los bordes frontales de la sala (pendiente ±0.5) pero offset
+  // GAP por debajo → nunca pisan el suelo y prolongan su silueta. (La escena se bajó 20px en
+  // projectorFor, por eso todo el marco cae más abajo, sin tocar nombre/mapa ni iconos.)
   const vx = Math.round(fc.x);
   const vy = Math.round(fc.y) + GAP;
   const leftTopY = vy - 0.5 * (vx - 6), rightTopY = vy - 0.5 * ((W - 6) - vx);   // aristas a ±0.5
@@ -482,7 +486,7 @@ function drawHUD() {
 
   // Iconos del marcador en la franja INFERIOR, por DEBAJO del vértice de la "V": así
   // ninguna arista los cruza, aunque el pico se vaya a una esquina (salas rectangulares).
-  const hudY = 216, slotCy = 224;
+  const hudY = 224, slotCy = 229;   // bajados para ALINEARSE con el título "ALIEN POCHO" (y≈224)
   // ── Zona izquierda: CIRCUITOS — marco cuadrado + objeto dentro ──
   drawCarrySlot(34, slotCy, game.carried, ink, ink2);
   ctx.fillStyle = ink2; ctx.font = "bold 16px 'Courier New', monospace";
