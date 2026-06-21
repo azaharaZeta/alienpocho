@@ -11,15 +11,24 @@
   header { padding: 18px 6% 4px; }
   h1 { font-size: 17px; letter-spacing: 3px; margin: 0 0 6px; }
   .note { font-size: 12px; color: #8fb8c8; max-width: 70ch; line-height: 1.5; margin: 0 0 10px; }
+  .back { display: inline-block; font-size: 11px; color: #8fb8c8; text-decoration: none;
+    border: 1px solid var(--dim); border-radius: 6px; padding: 3px 9px; margin-bottom: 10px; }
+  .back:hover { color: var(--ink); border-color: var(--ink); }
   h2 { font-size: 12px; letter-spacing: 2px; color: var(--ink); margin: 22px 0 8px;
     border-bottom: 1px solid var(--dim); padding-bottom: 5px; }
   main { padding: 0 6% 60px; }
 
-  /* Paleta: parejas primario/secundario por sala */
-  .palette { display: flex; flex-wrap: wrap; gap: 10px; margin: 6px 0 4px; }
-  .pal { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 10px; color: #8fb8c8; }
+  /* Selector de paleta de sala (cabecera): cada pareja primario/secundario es un BOTÓN */
+  .palrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 6px 0 4px; }
+  .palrow-lbl { font-size: 11px; color: #8fb8c8; }
+  .palette { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pal { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 10px;
+    color: #8fb8c8; background: none; border: none; cursor: pointer; font-family: inherit; padding: 2px; }
   .pal .pair { display: flex; border: 1px solid #234; border-radius: 5px; overflow: hidden; }
   .pal .pair span { width: 26px; height: 20px; display: block; }
+  .pal:hover { color: var(--ink); }
+  .pal.sel { color: #fff; }
+  .pal.sel .pair { border-color: #fff; }
 
   /* Rejilla de miniaturas */
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
@@ -55,15 +64,16 @@
 </head>
 <body>
   <header>
+    <a class="back" href="index.html">‹ volver al juego</a>
     <h1>ALIEN POCHO · CATÁLOGO DE ASSETS</h1>
     <p class="note">
       Líneas sobre negro, contornos negros, teselado. Cada sala usa <b>DOS tintas</b>
       (definidas en <code>src/palette.js</code>): una <b style="color:var(--ink)">PRIMARIA</b>
       (suelo, paredes, bloques, robot) y una <b style="color:var(--ink2)">SECUNDARIA</b>
-      complementaria (circuitos, zócalos, textos del HUD). Pulsa un asset para verlo en grande
-      y probar cómo cambia con la paleta de cada sala.
+      complementaria (circuitos, zócalos, textos del HUD). Pulsa un asset para verlo en grande;
+      elige la <b>paleta de sala</b> y se recolorea TODO el catálogo.
     </p>
-    <div class="palette" id="palette"></div>
+    <div class="palrow"><span class="palrow-lbl">paleta de sala:</span><div class="palette" id="palette"></div></div>
   </header>
   <main id="catalog"></main>
 
@@ -137,43 +147,45 @@ function drawView(ctx, anchorX, anchorY, view, ink, ink2, TILE) {
   view.draw(ctx, p, ink, ink2);
 }
 
-/* ---------- Paleta (cabecera) ---------- */
-const palDiv = document.getElementById("palette");
-INKS.forEach((ink, i) => {
-  const d = document.createElement("div"); d.className = "pal";
-  d.innerHTML = `<div class="pair"><span style="background:${ink}"></span><span style="background:${INK2[i]}"></span></div>${NAMES[i] || i}`;
-  palDiv.appendChild(d);
-});
+/* ---------- Estado global de PALETA (afecta a miniaturas y overlay) ---------- */
+let palIdx = 0;
 
-/* ---------- Miniaturas agrupadas ---------- */
+/* ---------- Miniatura de un asset (con la paleta global) ---------- */
+function renderThumb(canvas, item) {
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#000"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  drawView(ctx, canvas.width / 2, canvas.height * 0.58, item.views[0], INKS[palIdx], INK2[palIdx], 38);
+}
+
+/* ---------- Catálogo de miniaturas agrupadas ---------- */
 const catalog = document.getElementById("catalog");
+const thumbs = [];   // {canvas, item} → para recolorear al cambiar de paleta
 for (const g of GROUPS) {
   const h = document.createElement("h2"); h.textContent = g.title; catalog.appendChild(h);
   const grid = document.createElement("div"); grid.className = "grid"; catalog.appendChild(grid);
   for (const item of g.items) {
     const tile = document.createElement("button"); tile.className = "tile";
     const cv = document.createElement("canvas"); cv.width = 150; cv.height = 120;
-    const ctx = cv.getContext("2d");
-    ctx.fillStyle = "#000"; ctx.fillRect(0, 0, cv.width, cv.height);
-    drawView(ctx, cv.width / 2, cv.height * 0.58, item.views[0], INKS[0], INK2[0], 38);
+    renderThumb(cv, item);
     tile.appendChild(cv);
     const nm = document.createElement("span"); nm.className = "name"; nm.textContent = item.name; tile.appendChild(nm);
     if (item.badge) { const b = document.createElement("span"); b.className = "badge"; b.textContent = item.badge; tile.appendChild(b); }
     tile.addEventListener("click", () => openOverlay(item));
     grid.appendChild(tile);
+    thumbs.push({ canvas: cv, item });
   }
 }
 
-/* ---------- Overlay grande + selector de paleta ---------- */
+/* ---------- Overlay grande (con la paleta global) ---------- */
 const overlay = document.getElementById("overlay");
 const bigCanvas = document.getElementById("bigCanvas");
 const bigTitle = document.getElementById("bigTitle");
 const swatches = document.getElementById("swatches");
-let curItem = null, palIdx = 0;
+let curItem = null;
 
 function renderBig() {
-  const views = curItem.views, n = views.length;
-  const colW = 240, H = 360;
+  if (!curItem) return;
+  const views = curItem.views, n = views.length, colW = 240, H = 360;
   bigCanvas.width = n * colW; bigCanvas.height = H;
   const c = bigCanvas.getContext("2d");
   c.fillStyle = "#000"; c.fillRect(0, 0, bigCanvas.width, H);
@@ -184,33 +196,39 @@ function renderBig() {
     c.fillText(v.label, colW * (i + 0.5), H - 20);
   });
 }
-
-function openOverlay(item) {
-  curItem = item;
-  bigTitle.textContent = item.name;
-  renderBig();
-  overlay.classList.add("open");
-}
+function openOverlay(item) { curItem = item; bigTitle.textContent = item.name; renderBig(); overlay.classList.add("open"); }
 function closeOverlay() { overlay.classList.remove("open"); }
-
-// Selector de paleta dentro del overlay (demuestra "el color cambia por sala")
-INKS.forEach((ink, i) => {
-  const b = document.createElement("button");
-  b.innerHTML = `<span style="background:${ink}"></span><span style="background:${INK2[i]}"></span>`;
-  b.title = NAMES[i] || i;
-  if (i === palIdx) b.classList.add("sel");
-  b.addEventListener("click", () => {
-    palIdx = i;
-    [...swatches.querySelectorAll("button")].forEach(x => x.classList.remove("sel"));
-    b.classList.add("sel");
-    renderBig();
-  });
-  swatches.appendChild(b);
-});
-
 document.getElementById("closeBtn").addEventListener("click", closeOverlay);
 overlay.addEventListener("click", (e) => { if (e.target === overlay) closeOverlay(); });
 addEventListener("keydown", (e) => { if (e.key === "Escape") closeOverlay(); });
+
+/* ---------- SELECTOR DE PALETA: en la cabecera (principal) + copia en el overlay ----------
+   Ambos llaman a setPalette → recolorea TODO (miniaturas + overlay) y sincroniza la selección. */
+const palDiv = document.getElementById("palette");
+function setPalette(i) {
+  palIdx = i;
+  [...palDiv.querySelectorAll(".pal")].forEach((el, k) => el.classList.toggle("sel", k === i));
+  [...swatches.querySelectorAll("button")].forEach((el, k) => el.classList.toggle("sel", k === i));
+  thumbs.forEach(t => renderThumb(t.canvas, t.item));
+  renderBig();   // si el overlay está abierto, también se recolorea
+}
+// Cabecera: parejas grandes con nombre (selector principal)
+INKS.forEach((ink, i) => {
+  const b = document.createElement("button"); b.className = "pal" + (i === palIdx ? " sel" : "");
+  b.title = NAMES[i] || i;
+  b.innerHTML = `<div class="pair"><span style="background:${ink}"></span><span style="background:${INK2[i]}"></span></div>${NAMES[i] || i}`;
+  b.addEventListener("click", () => setPalette(i));
+  palDiv.appendChild(b);
+});
+// Overlay: copia compacta del selector
+INKS.forEach((ink, i) => {
+  const b = document.createElement("button");
+  b.title = NAMES[i] || i;
+  if (i === palIdx) b.classList.add("sel");
+  b.innerHTML = `<span style="background:${ink}"></span><span style="background:${INK2[i]}"></span>`;
+  b.addEventListener("click", () => setPalette(i));
+  swatches.appendChild(b);
+});
 </script>
 </body>
 </html>
