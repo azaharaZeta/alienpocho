@@ -4,11 +4,19 @@ Solo tareas **por hacer**. Sin históricos ni cosas ya resueltas.
 Contexto y diseño: [GDD.md](GDD.md) · investigación del original: [RESEARCH.md](RESEARCH.md).
 
 ## Ficheros (orientación)
-- `index.html` — juego (motor, físicas, salas, HUD, controles táctiles).
-- `assets.js` — biblioteca de dibujo `AP.*` (monocromo, una tinta por sala).
+- `engine.js` — MOTOR iso genérico `ENGINE.*` (proyección, `box`/`poly`/`honeycomb`,
+  `darken`/`lighten` y el painter `depthSort`). Sin nada específico del juego.
+- `assets.js` — biblioteca de dibujo `AP.*` (monocromo, una tinta por sala); usa `ENGINE`.
+- `game.js` — SIMULACIÓN: salas/`buildWorld`, entidades (`player`+`entities[]`), física,
+  estado `game`, `interact`, `checkExits`, `resetGame`. Lee `CFG`/`ctx`/`P`/`pressed`/`held`
+  de la shell; expone sus símbolos como globales del realm.
+- `index.html` — PRESENTACIÓN + shell: `CFG`, input, proyector, `render`, HUD, pantallas,
+  bucle `loop`, controles táctiles.
 - `assets-demo.html` — catálogo visual de assets.
+- Carga de scripts: `engine.js` → `assets.js` → `game.js` → bloque inline de `index.html`.
+  (Se comparten globales léxicos entre scripts del mismo realm: igual que `ENGINE`/`AP`.)
 - Pruebas: `python3 -m http.server 8123` (`.claude/launch.json`).
-  Debug: `window.__pocho = { player, room, world }` desde la consola.
+  Debug: `window.__pocho = { player, entities, game, room, world }` desde la consola.
 
 ## 🐞 Bugs conocidos
 - (ninguno pendiente ahora mismo)
@@ -16,6 +24,10 @@ Contexto y diseño: [GDD.md](GDD.md) · investigación del original: [RESEARCH.m
 ## 🔜 Roadmap
 
 ### Fase 6 — Peligros, enemigos y vidas
+> Infra lista: el jugador ya es una ENTIDAD en `entities[]` (con `update`/`addDraws`).
+> Pinchos y enemigos se añaden como entidades nuevas que implementen esos dos métodos;
+> el bucle las actualiza y el painter las ordena solo. Verificar mecánicas con fuentes
+> de *Alien 8* antes de fijar valores (daño, invulnerabilidad, patrón de patrulla).
 - **Pinchos letales**: hoy decorativos (`room.hazards` + `AP.spikes`). Tocarlos = perder
   vida. Ya hay pinchos colocados en PUENTE.
 - **Enemigos**: patrulla simple (ida/vuelta o ciclo de celdas); contacto = perder vida.
@@ -37,7 +49,8 @@ Contexto y diseño: [GDD.md](GDD.md) · investigación del original: [RESEARCH.m
 - Cachear las paredes: `honeycomb` se recalcula cada frame ([assets.js](assets.js)); si
   crece el nº de salas/paredes, dibujarlas a un canvas offscreen.
 - Afinar a gusto `CFG.JUMP_*` / `CFG.WALK` (distancias/alturas de salto y velocidad).
-- (Opcional) extraer `game.js` (rooms/physics/entities) como se hizo con `assets.js`.
+- Separación por capas COMPLETA: `engine.js` (motor) · `assets.js` (dibujo) ·
+  `game.js` (simulación) · `index.html` (presentación + shell).
 - Añadir un `CLAUDE.md` breve (arranque, mapa de ficheros, reglas "no romper").
 - Robustez móvil: la orientación se fuerza con `transform: rotate(90deg)`; probar en
   dispositivo real.

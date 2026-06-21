@@ -9,7 +9,8 @@
       "Skill(update-config:*)",
       "mcp__Claude_Preview__preview_start",
       "WebFetch(domain:retrospec.sgn.net)",
-      "WebFetch(domain:www.funspot.it)"
+      "WebFetch(domain:www.funspot.it)",
+      "Bash(rm -f /tmp/depthtest.js /tmp/fixtest.js)"
     ]
   }
 }

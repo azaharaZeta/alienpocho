@@ -84,7 +84,9 @@
     </div>
   </div>
 
-<script src="assets.js"></script>
+<script src="engine.js?v=8"></script>
+<script src="assets.js?v=8"></script>
+<script src="game.js?v=8"></script>
 <script>
 "use strict";
 
@@ -144,18 +146,8 @@ const CONTROLS = {
 // arriba queda una banda fina para el título y abajo el marco estilo Alien 8.
 const ORIGIN = { x: CFG.W / 2, y: 66 };
 
-/* =========================================================================
-   ISO — proyección mundo (x,y,z) -> pantalla y métrica de profundidad
-   ========================================================================= */
-const iso = {
-  toScreen(x, y, z) {
-    return {
-      x: ORIGIN.x + (x - y) * (CFG.TILE_W / 2),
-      y: ORIGIN.y + (x + y) * (CFG.TILE_H / 2) - z * CFG.BLOCK_H
-    };
-  },
-  depth(x, y, z) { return x + y + z; }
-};
+/* La proyección iso real la aporta AP.projector (ver `P` más abajo), compartida
+   con assets.js para que dibujo y lógica usen exactamente la misma geometría. */
 
 /* =========================================================================
    INPUT — estado de teclado
@@ -168,85 +160,6 @@ addEventListener("keydown", e => {
 });
 addEventListener("keyup", e => { keys[e.code] = false; });
 
-/* =========================================================================
-   ROOMS / WORLD — varias habitaciones conectadas (flip-screen)
-   Cada sala: su color (ink), bloques, circuitos, zócalos y SALIDAS a salas
-   vecinas. exits = { xm, xp, ym, yp } → clave de la sala al cruzar ese borde:
-     xm: x<0 (atrás-izq)   xp: x≥w (frente-dcha)
-     ym: y<0 (atrás-dcha)  yp: y≥h (frente-izq)
-   ========================================================================= */
-function makeRoom(o) {
-  const w = 8, h = 8;
-  const blocks = o.blocks || [];
-  const solid = new Set();
-  for (const b of blocks)
-    if (b.x >= 0 && b.x < w && b.y >= 0 && b.y < h) solid.add(b.x + "," + b.y);
-  return { w, h, blocks, solid, circuits: o.circuits || [], sockets: o.sockets || [],
-           hazards: o.hazards || [], ink: o.ink, exits: o.exits || {}, name: o.name || "" };
-}
-
-function buildWorld() {
-  const I = AP.INKS;   // [azul, oliva, magenta, verde, naranja, violeta]
-  const rooms = {};
-
-  // ENTRADA — intro suave: un salto a una plataforma para coger el cubo.
-  rooms["0,0"] = makeRoom({ ink: I[0], name: "ENTRADA", exits: { xp: "1,0", yp: "0,1" },
-    blocks: [ { x: 2, y: 2, z: 0, h: 1 } ],
-    circuits: [ { cx: 2, cy: 2, z: 1, shape: "cube", taken: false } ],
-    sockets:  [ { cx: 6, cy: 5, shape: "cylinder", active: false } ] });
-
-  // REACTOR — reto de ESCALADA: escalera 1→2→3, circuito arriba del todo.
-  rooms["1,0"] = makeRoom({ ink: I[2], name: "REACTOR", exits: { xm: "0,0", yp: "1,1" },
-    blocks: [ { x: 5, y: 1, z: 0, h: 1 }, { x: 5, y: 2, z: 0, h: 2 }, { x: 5, y: 3, z: 0, h: 3 } ],
-    circuits: [ { cx: 5, cy: 3, z: 3, shape: "pyramid", taken: false } ],
-    sockets:  [ { cx: 6, cy: 5, shape: "cube", active: false } ] });   // zona despejada (no tras la puerta yp)
-
-  // BODEGA — reto de SALTO DE HUECO+ALTURA: escalón h1, hueco, y plataforma h2.
-  rooms["0,1"] = makeRoom({ ink: I[3], name: "BODEGA", exits: { ym: "0,0", xp: "1,1" },
-    blocks: [ { x: 2, y: 3, z: 0, h: 1 }, { x: 4, y: 3, z: 0, h: 2 } ],
-    circuits: [ { cx: 4, cy: 3, z: 2, shape: "dome", taken: false } ],
-    sockets:  [ { cx: 6, cy: 6, shape: "pyramid", active: false } ] });
-
-  // PUENTE — reto de PUENTE DE PIEDRAS sobre pinchos hasta una plataforma alta.
-  rooms["1,1"] = makeRoom({ ink: I[4], name: "PUENTE", exits: { xm: "0,1", ym: "1,0" },
-    blocks: [ { x: 2, y: 4, z: 0, h: 1 }, { x: 4, y: 4, z: 0, h: 1 }, { x: 4, y: 6, z: 0, h: 2 } ],
-    circuits: [ { cx: 4, cy: 6, z: 2, shape: "cylinder", taken: false } ],
-    sockets:  [ { cx: 6, cy: 2, shape: "dome", active: false } ],
-    hazards:  [ { cx: 3, cy: 4 }, { cx: 4, cy: 5 } ] });
-
-  return { rooms, start: "0,0" };
-}
-
-/* =========================================================================
-   ENTITIES — el jugador (robot Pocho)
-   ========================================================================= */
-const player = {
-  x: 1.5, y: 6.5, z: 0,        // posición
-  vz: 0, vx: 0, vy: 0,         // velocidades (vx,vy solo durante el salto)
-  onGround: true,
-  facing: 3,                   // 0:+x  1:+y  2:-x  3:-y  (mira a -y = NE)
-  turnTimer: 0,                // tiempo restante de la animación de giro
-  walkPhase: 0,                // fase de la animación de caminar
-  moving: false,
-  jumpPending: false,          // salto "cargándose" (decidiendo corto/largo)
-  jumpPendTime: 0,
-  jdx: 0, jdy: 0,              // dirección fijada al iniciar el salto
-  face: "NE"
-};
-
-/* Las 4 direcciones de mirada, alineadas a los ejes del suelo */
-const DIRS = [
-  { dx: 1, dy: 0, face: "SE" },   // 0: +x  (abajo-derecha)
-  { dx: 0, dy: 1, face: "SW" },   // 1: +y  (abajo-izquierda)
-  { dx: -1, dy: 0, face: "NW" },  // 2: -x  (arriba-izquierda)
-  { dx: 0, dy: -1, face: "NE" }   // 3: -y  (arriba-derecha)
-];
-
-/* Dimensiones del sprite del robot (en celdas): semi-ancho (lado a lado),
-   semi-fondo (frente-atrás) y alto. Usadas TANTO al dibujar COMO al ordenar
-   por profundidad, para que la oclusión cuadre con lo que se ve. */
-const ROBOT = { WID: 0.50, DEP: 0.33, H: 1.50 };
-
 /* Detección de flancos de teclado (pulsación nueva este frame) */
 const prevKeys = Object.create(null);
 function edge(code) { return keys[code] && !prevKeys[code]; }
@@ -256,281 +169,79 @@ const held    = (action) => CONTROLS[action].some(c => keys[c]);
 const pressed = (action) => CONTROLS[action].some(c => edge(c));
 
 /* =========================================================================
-   PHYSICS — movimiento con colisiones (eje separado para deslizar)
-   ========================================================================= */
-/* ¿Está la coord. dentro del HUECO de la puerta? Vano estrecho: el robot (semiancho
-   ~0.5) pasa con un poco de margen. Coincide con el hueco visual entre postes. */
-const DOOR_HALF = 0.72;
-function inDoor(coord, n) { return Math.abs(coord - n / 2) <= DOOR_HALF; }
-
-/* ¿Cae fuera del suelo? Solo se puede cruzar un borde si tiene salida Y por el
-   HUECO de su puerta; el resto del borde es pared sólida (no se atraviesa). */
-function outOfBounds(room, fx, fy) {
-  if (fx < 0)        return !(room.exits.xm && inDoor(fy, room.h));
-  if (fx >= room.w)  return !(room.exits.xp && inDoor(fy, room.h));
-  if (fy < 0)        return !(room.exits.ym && inDoor(fx, room.w));
-  if (fy >= room.h)  return !(room.exits.yp && inDoor(fx, room.w));
-  return false;
-}
-
-/* Solape de la caja del jugador (en planta) con la celda de un bloque */
-function overlapsFootprint(bl, x, y) {
-  const r = CFG.PRAD;
-  return (x - r) < (bl.x + 1) && (x + r) > bl.x &&
-         (y - r) < (bl.y + 1) && (y + r) > bl.y;
-}
-
-/* ¿El movimiento horizontal a (nx,ny) choca, con los pies a feetZ?
-   Un bloque solo bloquea si su cima queda POR ENCIMA del pie (no se sube
-   andando: hay que SALTAR). Bloques al nivel del pie o por debajo son
-   pisables/transitables. */
-function blocksHoriz(room, nx, ny, feetZ) {
-  const r = CFG.PRAD;
-  if (outOfBounds(room, nx - r, ny - r) || outOfBounds(room, nx + r, ny - r) ||
-      outOfBounds(room, nx - r, ny + r) || outOfBounds(room, nx + r, ny + r)) return true;
-  for (const bl of room.blocks) {
-    const top = bl.z + bl.h;
-    if (top > feetZ + CFG.STEP && overlapsFootprint(bl, nx, ny)) return true;
-  }
-  return false;
-}
-
-/* Altura de la superficie de apoyo bajo el jugador: el suelo (0) o la cima
-   del bloque más alto que esté a la altura del pie o por debajo. */
-function supportHeight(room, x, y, feetZ) {
-  let h = 0;
-  for (const bl of room.blocks) {
-    const top = bl.z + bl.h;
-    if (top <= feetZ + CFG.STEP && top > h && overlapsFootprint(bl, x, y)) h = top;
-  }
-  return h;
-}
-
-/* Modelo de control TIPO TANQUE (fiel a Alien 8 / Knight Lore):
-   - girar 90° a izquierda/derecha (siempre alineado a los ejes del suelo)
-   - avanzar en línea recta en la dirección que se mira
-   - saltar en la dirección que se mira; dos tipos: corto/bajo y largo/alto */
-function updatePlayer(room, dt) {
-  // Tras la victoria, el juego se detiene: cualquier acción reinicia la partida.
-  if (game.won) {
-    if (pressed("jump") || pressed("use") || pressed("forward")) resetGame();
-    for (const k in keys) prevKeys[k] = keys[k];
-    return;
-  }
-  const turnLeft  = pressed("turnLeft");
-  const turnRight = pressed("turnRight");
-  const forward   = held("forward");
-  const jumpNow   = pressed("jump");
-  const jumpHeld  = held("jump");
-
-  // Giro en curso o salto cargándose → bloquea otras acciones
-  if (player.turnTimer > 0) player.turnTimer -= dt;
-  const busy = player.turnTimer > 0;
-
-  // --- Inicio de salto: queda "pendiente" mientras se decide corto/largo ---
-  if (player.onGround && !busy && !player.jumpPending && jumpNow) {
-    player.jumpPending = true;
-    player.jumpPendTime = 0;
-    player.jdx = DIRS[player.facing].dx;
-    player.jdy = DIRS[player.facing].dy;
-  }
-  const locked = busy || player.jumpPending;
-
-  // --- Giro de 90° (solo en el suelo, si no está bloqueado) ---
-  if (player.onGround && !locked) {
-    if (turnLeft)       { player.facing = (player.facing + 3) % 4; player.turnTimer = CFG.TURN_TIME; }
-    else if (turnRight) { player.facing = (player.facing + 1) % 4; player.turnTimer = CFG.TURN_TIME; }
-  }
-  const dir = DIRS[player.facing];
-  player.face = dir.face;
-
-  // --- Resolución del salto de un botón (tap = bajo/corto, mantener = alto/largo) ---
-  if (player.jumpPending) {
-    player.jumpPendTime += dt;
-    const launch = (J) => {
-      player.vz = J.vz;
-      player.vx = player.jdx * J.vh;
-      player.vy = player.jdy * J.vh;
-      player.onGround = false;
-      player.jumpPending = false;
-    };
-    if (!jumpHeld) launch(CFG.JUMP_LOW);                            // soltó pronto → corto/bajo
-    else if (player.jumpPendTime >= CFG.JUMP_TAP_TIME) launch(CFG.JUMP_HIGH); // mantenido → largo/alto
-  }
-
-  // --- Avance recto en el suelo ---
-  player.moving = false;
-  if (player.onGround && !locked && forward) {
-    const step = CFG.WALK * dt;
-    const nx = player.x + dir.dx * step;
-    const ny = player.y + dir.dy * step;
-    if (!blocksHoriz(room, nx, ny, player.z)) {
-      player.x = nx; player.y = ny; player.moving = true;
-      player.walkPhase += dt * 12;
-    }
-  }
-
-  // --- Desplazamiento horizontal en el aire (impulso del salto) ---
-  // Si el avance choca con un bloque a la altura actual del pie, NO anulamos la
-  // velocidad: simplemente no avanzamos ese eje este frame y reintentamos. Así,
-  // al pegarte a un bloque y saltar, el arco te sube por encima de su cima y, al
-  // superarla, el avance se reanuda y aterrizas ENCIMA (como en el Alien 8 real).
-  if (!player.onGround && (player.vx !== 0 || player.vy !== 0)) {
-    const nx = player.x + player.vx * dt;
-    const ny = player.y + player.vy * dt;
-    if (!blocksHoriz(room, nx, player.y, player.z)) player.x = nx;
-    if (!blocksHoriz(room, player.x, ny, player.z)) player.y = ny;
-  }
-
-  // --- Gravedad / eje Z ---
-  player.vz -= CFG.GRAVITY * dt;
-  let nz = player.z + player.vz * dt;
-  const support = supportHeight(room, player.x, player.y, player.z);
-  // Solo se aterriza BAJANDO (vz<=0). Si subiendo se roza el borde de un bloque,
-  // no se "engancha": completa el arco por encima y cae encima, ya adelantado.
-  if (nz <= support && player.vz <= 0) {
-    nz = support;
-    player.vz = 0; player.vx = 0; player.vy = 0;
-    player.onGround = true;
-  } else {
-    player.onGround = false;
-  }
-  player.z = nz;
-
-  // --- Recoger / colocar circuito ---
-  if (pressed("use")) interact(room);
-
-  // Guardar estado de teclas para la detección de flancos del próximo frame
-  for (const k in keys) prevKeys[k] = keys[k];
-}
-
-/* Cerca en planta (2D) Y a la misma ALTURA (hay que subir a la plataforma) */
-function nearCell(cx, cy, z) {
-  return Math.hypot(player.x - (cx + 0.5), player.y - (cy + 0.5)) < 0.8 &&
-         Math.abs(player.z - (z || 0)) < 0.6;
-}
-
-/* Recoger un circuito, o colocar el que llevas en un zócalo de su misma forma */
-function interact(room) {
-  if (game.won) return;
-  if (game.carried) {
-    for (const s of room.sockets) {
-      if (!s.active && s.shape === game.carried && nearCell(s.cx, s.cy, s.z)) {
-        s.active = true; game.carried = null; game.circuits++;
-        if (game.circuits >= game.circuitsTotal) game.won = true;
-        return;
-      }
-    }
-    return; // llevas algo pero no hay zócalo compatible al lado
-  }
-  for (const c of room.circuits) {
-    if (!c.taken && nearCell(c.cx, c.cy, c.z)) { c.taken = true; game.carried = c.shape; return; }
-  }
-}
-
-/* =========================================================================
    RENDER — suelo + (cubos y jugador) ordenados por profundidad + HUD
+   (La SIMULACIÓN —salas, física, entidades, estado— vive en game.js.)
    ========================================================================= */
 const ctx = document.getElementById("game").getContext("2d");
 const P = AP.projector(ORIGIN.x, ORIGIN.y,    // proyector iso para los assets
   { TILE_W: CFG.TILE_W, TILE_H: CFG.TILE_H, BLOCK_H: CFG.BLOCK_H });
 
-function polygon(pts, fill, stroke) {
-  ctx.beginPath();
-  ctx.moveTo(pts[0].x, pts[0].y);
-  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-  ctx.closePath();
-  if (fill)   { ctx.fillStyle = fill; ctx.fill(); }
-  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke(); }
-}
+/* (Los assets de dibujo —suelo, cubos, robot, sombra…— viven en assets.js:
+   AP.floor / AP.cube / AP.flatWall / AP.robot / AP.shadow / etc.) */
 
-/* (Los assets de dibujo —suelo, cubos, robot, sombra…— viven ahora en
-   assets.js: AP.floor / AP.cube / AP.wall / AP.robot / AP.shadow / etc.) */
-
-/* Orden de pintado: técnica CLÁSICA de tile iso (como el motor Filmation).
-   Clave = celda en diagonal (cx+cy) como PRIMARIO y altura (z) como secundario.
-   Es un ORDEN TOTAL → sin ciclos ni ambigüedades:
-   - una celda con menor (x+y) está más al fondo → se pinta antes;
-   - dentro de la misma celda, lo más bajo (menor z) se pinta antes.
-   El jugador se asigna a su celda central (huella de colisión), y su z continua
-   lo intercala correctamente con los bloques (p. ej. al subirse encima de uno).
-   El multiplicador grande garantiza que la diagonal domina sobre la altura. */
-const DIAG = 1000;
-function sortKey(it) { return it.diag * DIAG + it.z; }
+/* El ORDEN DE PINTADO (painter por cajas) vive ahora en engine.js → ENGINE.depthSort. */
 
 function render(room) {
   ctx.fillStyle = CFG.COL.bg;
   ctx.fillRect(0, 0, CFG.W, CFG.H);
 
-  const ink = room.ink, WH = 2.2;
+  const ink = room.ink, WH = 2.2, D = AP.DOOR;
   const doorSpan = (n) => [n / 2 - 1.12, n / 2 + 1.12]; // vano estrecho (hueco ~1.44 celdas)
 
-  // 1) Suelo (siempre al fondo, z=0)
+  // 1) Suelo (plano en z=0, nunca ocluye → pre-pase al fondo)
   for (let y = 0; y < room.h; y++)
     for (let x = 0; x < room.w; x++)
       AP.floor(ctx, P, x, y, ink);
 
-  // 1b) Paredes del fondo (siempre detrás). Si hay salida, abre una PUERTA con marco.
+  // 1b) Paredes/puertas del FONDO (siempre detrás de todo → pre-pase)
   AP.flatWall(ctx, P, "x", 0, 0, room.w, WH, ink);                       // borde y=0 (atrás-dcha)
   if (room.exits.ym) { const [s0, s1] = doorSpan(room.w); AP.door(ctx, P, "x", 0, s0, s1, WH, ink, true); }
   AP.flatWall(ctx, P, "y", 0, 0, room.h, WH, ink);                       // borde x=0 (atrás-izq)
   if (room.exits.xm) { const [s0, s1] = doorSpan(room.h); AP.door(ctx, P, "y", 0, s0, s1, WH, ink, true); }
 
-  // 2) Dibujables: cada cubo en su celda (diagonal = cx+cy)
-  const items = [];
+  // 2) Objetos como CAJAS para el pintor topológico
+  const draws = [];
+  const box3 = (x0, y0, z0, x1, y1, z1, draw) => draws.push({ x0, y0, z0, x1, y1, z1, draw });
+
+  // bloques (un cubo por capa)
   for (const bl of room.blocks)
     for (let k = 0; k < bl.h; k++) {
       const z = bl.z + k;
-      items.push({ kind: "cube", cx: bl.x, cy: bl.y, cz: z, diag: bl.x + bl.y, z, wall: !!bl.wall });
+      box3(bl.x, bl.y, z, bl.x + 1, bl.y + 1, z + 1, () => AP.cube(ctx, P, bl.x, bl.y, z, ink));
     }
-
-  // Diagonal del jugador = MÁX entre su celda central y la de cualquier bloque
-  // sobre el que se apoya/está por encima (su huella solapa y su cima ≤ sus pies).
-  // Así, al pisar el borde de un bloque, NUNCA queda ese bloque dibujado encima.
-  let robotDiag = Math.floor(player.x) + Math.floor(player.y);
-  for (const bl of room.blocks)
-    if (overlapsFootprint(bl, player.x, player.y) && (bl.z + bl.h) <= player.z + CFG.STEP)
-      robotDiag = Math.max(robotDiag, bl.x + bl.y);
-
-  // El jugador se dibuja por ENCIMA de todo lo de su misma diagonal (cosas que
-  // tiene al lado) pero DETRÁS de lo de diagonales mayores (lo realmente delante).
-  // z = DIAG-1 lo coloca al final de la banda de su diagonal.
-  items.push({ kind: "player", diag: robotDiag, z: DIAG - 1 });
-
-  // Pinchos (peligros), zócalos y circuitos por recoger — a su altura (oz)
+  // pinchos / zócalos / circuitos sueltos (a su altura oz)
   for (const hz of room.hazards)
-    items.push({ kind: "spike", x: hz.cx + 0.5, y: hz.cy + 0.5, diag: hz.cx + hz.cy, oz: 0, z: 0.04 });
-  for (const s of room.sockets)
-    items.push({ kind: "socket", shape: s.shape, active: s.active,
-                 x: s.cx + 0.5, y: s.cy + 0.5, diag: s.cx + s.cy, oz: s.z || 0, z: (s.z || 0) + 0.05 });
-  for (const c of room.circuits)
-    if (!c.taken) items.push({ kind: "circuit", shape: c.shape,
-                 x: c.cx + 0.5, y: c.cy + 0.5, diag: c.cx + c.cy, oz: c.z || 0, z: (c.z || 0) + 0.1 });
+    box3(hz.cx + 0.2, hz.cy + 0.2, 0, hz.cx + 0.8, hz.cy + 0.8, 0.5,
+         () => AP.spikes(ctx, P, hz.cx + 0.5, hz.cy + 0.5, 0, ink));
+  for (const s of room.sockets) { const oz = s.z || 0;
+    box3(s.cx + 0.16, s.cy + 0.16, oz, s.cx + 0.84, s.cy + 0.84, oz + 0.4,
+         () => AP.socket(ctx, P, s.cx + 0.5, s.cy + 0.5, oz, s.shape, s.active, ink)); }
+  // objetos físicos (circuitos transportables): caja de profundidad = su sólido.
+  for (const o of room.objects) { const m = AP.PROP.HALF;
+    box3(o.x - m, o.y - m, o.z, o.x + m, o.y + m, o.z + AP.PROP.H,
+         () => AP.prop(ctx, P, o.x, o.y, o.z, o.shape, ink)); }
 
-  // 3) Pintar de atrás (menor x+y) a delante, y de abajo a arriba
-  items.sort((a, b) => sortKey(a) - sortKey(b));
-  for (const it of items) {
-    if (it.kind === "cube") {
-      AP.cube(ctx, P, it.cx, it.cy, it.cz, ink);
-    } else if (it.kind === "spike") {
-      AP.spikes(ctx, P, it.x, it.y, it.oz, ink);
-    } else if (it.kind === "socket") {
-      AP.socket(ctx, P, it.x, it.y, it.oz, it.shape, it.active, ink);
-    } else if (it.kind === "circuit") {
-      AP.circuit(ctx, P, it.x, it.y, it.oz, it.shape, ink);
-    } else {
-      const gz = supportHeight(room, player.x, player.y, player.z);
-      AP.shadow(ctx, P, player.x, player.y, gz);
-      AP.robot(ctx, P, player.x, player.y, player.z, player.facing, ink,
-               { moving: player.moving, walkPhase: player.walkPhase });
-      // Circuito que lleva encima (flotando sobre la cabeza)
-      if (game.carried) AP.circuit(ctx, P, player.x, player.y, player.z + 1.6, game.carried, ink);
-    }
+  // entidades (jugador y, en Fase 6, pinchos/enemigos): cada una añade su caja al orden.
+  for (const e of entities) e.addDraws(draws, room);
+
+  // puertas del FRENTE descompuestas en piezas (2 postes + dintel) → entran en el orden
+  // como cualquier objeto, así el robot se intercala solo al cruzar (postes con z hasta
+  // el dintel para que el dintel siempre quede por encima).
+  if (room.exits.yp) {
+    const [s0, s1] = doorSpan(room.w), h = room.h, zL = WH - D.LINTEL_H;
+    box3(s0, h - D.T, 0, s0 + D.POST_W, h, zL, () => AP.doorPost(ctx, P, "x", h, s0, s0 + D.POST_W, WH, ink));
+    box3(s1 - D.POST_W, h - D.T, 0, s1, h, zL, () => AP.doorPost(ctx, P, "x", h, s1 - D.POST_W, s1, WH, ink));
+    box3(s0, h - D.T, zL, s1, h, WH, () => AP.doorLintel(ctx, P, "x", h, s0, s1, WH, ink));
+  }
+  if (room.exits.xp) {
+    const [s0, s1] = doorSpan(room.h), w = room.w, zL = WH - D.LINTEL_H;
+    box3(w - D.T, s0, 0, w, s0 + D.POST_W, zL, () => AP.doorPost(ctx, P, "y", w, s0, s0 + D.POST_W, WH, ink));
+    box3(w - D.T, s1 - D.POST_W, 0, w, s1, zL, () => AP.doorPost(ctx, P, "y", w, s1 - D.POST_W, s1, WH, ink));
+    box3(w - D.T, s0, zL, w, s1, WH, () => AP.doorLintel(ctx, P, "y", w, s0, s1, WH, ink));
   }
 
-  // Puertas del FRENTE: solo el marco (se ve la sala a través), delante de todo
-  if (room.exits.yp) { const [s0, s1] = doorSpan(room.w); AP.door(ctx, P, "x", room.h, s0, s1, WH, ink, false); }
-  if (room.exits.xp) { const [s0, s1] = doorSpan(room.h); AP.door(ctx, P, "y", room.w, s0, s1, WH, ink, false); }
+  // 3) Ordenar topológicamente y pintar
+  for (const it of ENGINE.depthSort(draws, P)) it.draw();
 
   drawHUD();
   if (game.won) drawWinBanner();
@@ -548,9 +259,6 @@ function drawWinBanner() {
   ctx.fillText("pulsa un boton para volver a jugar", CFG.W / 2, CFG.H / 2 + 12);
   ctx.textAlign = "left"; ctx.textBaseline = "top";
 }
-
-/* Estado de partida (placeholders hasta las fases 5-7) */
-const game = { state: "title", lives: 3, circuits: 0, circuitsTotal: 4, carried: null, lightYears: 9999, won: false };
 
 /* --- Helpers de HUD --- */
 // Barra vertical segmentada (las "esquineras" del marco original Alien 8)
@@ -713,40 +421,8 @@ function drawTitleScreen(now) {
 
 /* =========================================================================
    MAIN — bucle de juego con requestAnimationFrame + delta-time
+   (world/room/checkExits/resetGame y la física viven en game.js.)
    ========================================================================= */
-const world = buildWorld();
-let room = world.rooms[world.start];
-
-/* Transición flip-screen: al cruzar un borde con salida, cambia de sala y
-   reaparece por el borde opuesto conservando la coordenada perpendicular. */
-function checkExits() {
-  const e = room.exits;
-  let key = null;
-  if (player.x >= room.w && e.xp)      { key = e.xp; player.x = 0.2; }
-  else if (player.x < 0 && e.xm)       { key = e.xm; player.x = world.rooms[e.xm].w - 0.2; }
-  else if (player.y >= room.h && e.yp) { key = e.yp; player.y = 0.2; }
-  else if (player.y < 0 && e.ym)       { key = e.ym; player.y = world.rooms[e.ym].h - 0.2; }
-  if (key) {
-    room = world.rooms[key];
-    player.z = 0; player.vz = 0; player.vx = 0; player.vy = 0;
-    player.onGround = true; player.jumpPending = false;
-  }
-}
-
-/* Reinicia la partida desde cero (tras victoria; servirá también para game over). */
-function resetGame() {
-  const fresh = buildWorld();
-  world.rooms = fresh.rooms;                 // salas nuevas (circuitos/zócalos sin tocar)
-  room = world.rooms[world.start];
-  Object.assign(player, {
-    x: 1.5, y: 6.5, z: 0, vz: 0, vx: 0, vy: 0, onGround: true,
-    facing: 3, turnTimer: 0, walkPhase: 0, moving: false,
-    jumpPending: false, jumpPendTime: 0, jdx: 0, jdy: 0, face: "NE"
-  });
-  game.lives = 3; game.circuits = 0; game.carried = null;
-  game.lightYears = 9999; game.won = false;
-}
-
 let last = performance.now();
 function loop(now) {
   const dt = Math.min(0.05, (now - last) / 1000);
@@ -756,20 +432,22 @@ function loop(now) {
     if (pressed("jump") || pressed("use") || pressed("forward")) {
       resetGame(); game.state = "playing";
     }
-    for (const k in keys) prevKeys[k] = keys[k];   // flancos también en el título
     drawTitleScreen(now);
   } else {
-    updatePlayer(room, dt);
+    for (const e of entities) e.update(room, dt);
     checkExits();
     if (!game.won) game.lightYears = Math.max(0, game.lightYears - dt * 6); // cuenta atrás (cosmética por ahora)
     render(room);
   }
+  // Snapshot de teclas para los flancos del próximo frame: UNA sola vez por frame,
+  // tras actualizar todas las entidades (en título y en juego).
+  for (const k in keys) prevKeys[k] = keys[k];
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
 
 /* API mínima para pruebas automáticas */
-window.__pocho = { player, get room() { return room; }, world };
+window.__pocho = { player, entities, game, get room() { return room; }, world };
 </script>
 
 <script>

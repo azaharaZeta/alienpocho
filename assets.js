@@ -3,7 +3,7 @@
    -----------------------------------------------------------------------------
    MONOCROMO de verdad: cada sala usa UN solo color de tinta sobre negro, y las
    formas se definen con CONTORNOS NEGROS (teselado limpio). El color cambia por
-   pantalla. Las caras en sombra se "oscurecen" con tramado (dither) negro.
+   pantalla. Las caras en sombra se "oscurecen" con sombreado plano (darken).
    - Paredes: PLANAS y teseladas (panal), no cubos.
    - Puertas/arcos: GRANDES y abiertos.
    - Bloques: figuras con bordes "mordidos" (chaflanes), no cubos exactos.
@@ -12,114 +12,14 @@
    ============================================================================= */
 const AP = (() => {
 
-  const BLACK = "#000000";
+  // Primitivas genéricas del motor (proyección, cajas, panal, painter…).
+  // En navegador `ENGINE` es un global léxico (engine.js se carga antes); en Node se requiere.
+  const ENG = (typeof ENGINE !== "undefined") ? ENGINE : require("./engine.js");
+  const { BLACK, darken, lighten, projector, poly, facePt, edgeLine, box, honeycomb } = ENG;
+
   // Colores de tinta por pantalla (como las distintas salas del original)
   const INKS = ["#36c8ff", "#d7d98a", "#e070c5", "#79e6a6", "#ff9d5c", "#b9a6ff"];
   const ROBOT_INK = "#6fd0ff";   // el robot siempre azul claro
-
-  /* ---- utilidades de color ---- */
-  function darken(hex, f) {
-    const n = parseInt(hex.slice(1), 16);
-    const r = Math.round(((n >> 16) & 255) * f);
-    const g = Math.round(((n >> 8) & 255) * f);
-    const b = Math.round((n & 255) * f);
-    return `rgb(${r},${g},${b})`;
-  }
-
-  /* ---- proyección iso: p(x,y,z) -> {x,y} ---- */
-  function projector(ox, oy, opt = {}) {
-    const TW = opt.TILE_W ?? 32, TH = opt.TILE_H ?? 16, BH = opt.BLOCK_H ?? 16;
-    const p = (x, y, z = 0) => ({ x: ox + (x - y) * (TW / 2), y: oy + (x + y) * (TH / 2) - z * BH });
-    p.TW = TW; p.TH = TH; p.BH = BH; return p;
-  }
-
-  /* ---- patrones de tramado (dither) en caché ---- */
-  const _pat = {};
-  function dither(ctx, kind) {
-    if (_pat[kind]) return _pat[kind];
-    const c = document.createElement("canvas"); c.width = c.height = 2;
-    const x = c.getContext("2d"); x.fillStyle = BLACK;
-    if (kind === "half") { x.fillRect(0, 0, 1, 1); x.fillRect(1, 1, 1, 1); }
-    else { x.fillRect(0, 0, 1, 1); }   // "quarter"
-    return (_pat[kind] = ctx.createPattern(c, "repeat"));
-  }
-
-  /* ---- helpers de dibujo ---- */
-  function poly(ctx, pts, fill, stroke, lw = 1) {
-    ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
-    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-    ctx.closePath();
-    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
-    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); }
-  }
-  function ditherPoly(ctx, pts, kind) {
-    ctx.save();
-    ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
-    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-    ctx.closePath(); ctx.clip();
-    const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
-    const x0 = Math.floor(Math.min(...xs)), y0 = Math.floor(Math.min(...ys));
-    ctx.fillStyle = dither(ctx, kind);
-    ctx.fillRect(x0, y0, Math.ceil(Math.max(...xs)) - x0, Math.ceil(Math.max(...ys)) - y0);
-    ctx.restore();
-  }
-  function facePt(L, u, v) {
-    return {
-      x: (L[0].x * (1 - u) + L[1].x * u) * (1 - v) + (L[3].x * (1 - u) + L[2].x * u) * v,
-      y: (L[0].y * (1 - u) + L[1].y * u) * (1 - v) + (L[3].y * (1 - u) + L[2].y * u) * v
-    };
-  }
-
-  // Línea horizontal que recorre las DOS caras frontales (+x y +y) de una caja de
-  // huella [x0,y0]-[x1,y1] a la altura z. Sigue la perspectiva iso (recodo en la
-  // arista delantera). Útil para ranuras de panel sobre postes/dinteles.
-  function edgeLine(ctx, p, x0, y0, x1, y1, z, col, lw) {
-    const a = p(x1, y0, z), b = p(x1, y1, z), c = p(x0, y1, z);
-    ctx.strokeStyle = col; ctx.lineWidth = lw || 1;
-    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(c.x, c.y); ctx.stroke();
-  }
-
-  // Caja iso: tinta de la sala con SOMBREADO PLANO suave (caras un poco más
-  // oscuras, mismo tono) y contornos negros. Limpio, sin puntos.
-  function box(ctx, p, x0, y0, x1, y1, z0, z1, col) {
-    const A = p(x0, y0, z1), B = p(x1, y0, z1), C = p(x1, y1, z1), D = p(x0, y1, z1);
-    const Bb = p(x1, y0, z0), Cb = p(x1, y1, z0), Db = p(x0, y1, z0);
-    poly(ctx, [A, B, C, D], col, BLACK);                  // techo (iluminado)
-    poly(ctx, [B, C, Cb, Bb], darken(col, 0.62), BLACK);  // cara derecha (+x): sombra
-    poly(ctx, [D, C, Cb, Db], darken(col, 0.82), BLACK);  // cara izquierda (+y): media
-  }
-
-  // Panal HEXAGONAL sobre una cara plana [TL,TR,BR,BL]: hexágonos que teselan
-  // perfectos (separados por líneas negras), proyectados sobre el plano de la
-  // pared. R = radio del hexágono en píxeles. Se recorta a la cara.
-  function honeycomb(ctx, L, R) {
-    const o = L[0];
-    const uxx = L[1].x - o.x, uxy = L[1].y - o.y;   // vector ancho
-    const vxx = L[3].x - o.x, vxy = L[3].y - o.y;   // vector alto
-    const wPx = Math.hypot(uxx, uxy), hPx = Math.hypot(vxx, vxy);
-    const eux = uxx / wPx, euy = uxy / wPx;          // unitarios en coord. de cara
-    const evx = vxx / hPx, evy = vxy / hPx;
-    const toS = (a, b) => ({ x: o.x + eux * a + evx * b, y: o.y + euy * a + evy * b });
-    ctx.save();
-    ctx.beginPath(); ctx.moveTo(L[0].x, L[0].y);
-    for (let i = 1; i < 4; i++) ctx.lineTo(L[i].x, L[i].y);
-    ctx.closePath(); ctx.clip();
-    ctx.strokeStyle = BLACK; ctx.lineWidth = 1;
-    const colS = Math.sqrt(3) * R, rowS = 1.5 * R;   // hexágonos "pointy-top"
-    for (let b = 0, j = 0; b <= hPx + R; b += rowS, j++) {
-      const off = (j & 1) ? colS / 2 : 0;
-      for (let a = -colS; a <= wPx + colS; a += colS) {
-        ctx.beginPath();
-        for (let k = 0; k < 6; k++) {
-          const ang = Math.PI / 180 * (60 * k + 90);
-          const s = toS(a + off + Math.cos(ang) * R, b + Math.sin(ang) * R);
-          if (k === 0) ctx.moveTo(s.x, s.y); else ctx.lineTo(s.x, s.y);
-        }
-        ctx.closePath(); ctx.stroke();
-      }
-    }
-    ctx.restore();
-  }
 
   /* =====================  ASSETS  ===================== */
 
@@ -160,35 +60,37 @@ const AP = (() => {
   //   hole=true  → abre un hueco negro en la pared (puertas del fondo).
   //   hole=false → solo el marco 3D, dejando ver la sala (puertas del frente).
   // `fixed` es el borde (0 o n); el marco se mete un poco HACIA DENTRO.
-  const DOOR_T = 0.34, POST_W = 0.40, LINTEL_H = 0.46;
+  const DOOR = { T: 0.34, POST_W: 0.40, LINTEL_H: 0.46 };
+  const doorInset = (fixed) => (fixed < 0.5) ? [fixed, fixed + DOOR.T] : [fixed - DOOR.T, fixed];
+  // Ranura de panel: línea NEGRA (recodo iso) + filo claro encima = bisel.
+  function _groove(ctx, p, x0, y0, x1, y1, z, col) {
+    edgeLine(ctx, p, x0, y0, x1, y1, z + 0.03, lighten(col, 0.4), 1);  // filo claro = bisel
+    edgeLine(ctx, p, x0, y0, x1, y1, z, BLACK, 1);                     // ranura negra
+  }
+  // Hueco negro de la puerta (solo puertas de FONDO)
+  function doorHole(ctx, p, axis, fixed, a0, a1, H, col) {
+    const w = DOOR.POST_W, l = H - DOOR.LINTEL_H;
+    if (axis === "x") poly(ctx, [p(a0 + w, fixed, l), p(a1 - w, fixed, l), p(a1 - w, fixed, 0), p(a0 + w, fixed, 0)], BLACK, null);
+    else              poly(ctx, [p(fixed, a0 + w, l), p(fixed, a1 - w, l), p(fixed, a1 - w, 0), p(fixed, a0 + w, 0)], BLACK, null);
+  }
+  // Un POSTE (huella a lo largo del eje del vano: [s0,s1]); con ranuras sci-fi.
+  function doorPost(ctx, p, axis, fixed, s0, s1, H, col) {
+    const [d0, d1] = doorInset(fixed), zG = [H * 0.26, H * 0.5, H * 0.74];
+    if (axis === "x") { box(ctx, p, s0, d0, s1, d1, 0, H, col); for (const z of zG) _groove(ctx, p, s0, d0, s1, d1, z, col); }
+    else              { box(ctx, p, d0, s0, d1, s1, 0, H, col); for (const z of zG) _groove(ctx, p, d0, s0, d1, s1, z, col); }
+  }
+  // El DINTEL (viga superior) con su ranura.
+  function doorLintel(ctx, p, axis, fixed, a0, a1, H, col) {
+    const [d0, d1] = doorInset(fixed), z0 = H - DOOR.LINTEL_H;
+    if (axis === "x") { box(ctx, p, a0, d0, a1, d1, z0, H, col); _groove(ctx, p, a0, d0, a1, d1, z0 + 0.10, col); }
+    else              { box(ctx, p, d0, a0, d1, a1, z0, H, col); _groove(ctx, p, d0, a0, d1, a1, z0 + 0.10, col); }
+  }
+  // Puerta completa (las de FONDO se dibujan como unidad: hueco + postes + dintel).
   function door(ctx, p, axis, fixed, a0, a1, H, col, hole) {
-    const inset = (fixed < 0.5) ? [fixed, fixed + DOOR_T] : [fixed - DOOR_T, fixed];
-    const d0 = inset[0], d1 = inset[1];
-    const hi = darken(col, 1);   // mismo tono (luz) para el filo iluminado del bisel
-    const Bx = (x0, y0, x1, y1, z0, z1) => box(ctx, p, x0, y0, x1, y1, z0, z1, col);
-    const zPost = [H * 0.26, H * 0.5, H * 0.74];
-    // Ranura de panel: línea NEGRA (recodo iso) + un filo claro justo encima = bisel.
-    const groove = (x0, y0, x1, y1, z) => {
-      edgeLine(ctx, p, x0, y0, x1, y1, z + 0.03, hi, 1);   // brillo
-      edgeLine(ctx, p, x0, y0, x1, y1, z, BLACK, 1);       // hendidura
-    };
-    if (axis === "x") {
-      if (hole) poly(ctx, [p(a0 + POST_W, fixed, H - LINTEL_H), p(a1 - POST_W, fixed, H - LINTEL_H),
-                           p(a1 - POST_W, fixed, 0), p(a0 + POST_W, fixed, 0)], BLACK, null);
-      Bx(a0, d0, a0 + POST_W, d1, 0, H);          // poste izquierdo
-      Bx(a1 - POST_W, d0, a1, d1, 0, H);          // poste derecho
-      Bx(a0, d0, a1, d1, H - LINTEL_H, H);        // dintel
-      for (const z of zPost) { groove(a0, d0, a0 + POST_W, d1, z); groove(a1 - POST_W, d0, a1, d1, z); }
-      groove(a0, d0, a1, d1, H - LINTEL_H + 0.10);   // ranura del dintel
-    } else {
-      if (hole) poly(ctx, [p(fixed, a0 + POST_W, H - LINTEL_H), p(fixed, a1 - POST_W, H - LINTEL_H),
-                           p(fixed, a1 - POST_W, 0), p(fixed, a0 + POST_W, 0)], BLACK, null);
-      Bx(d0, a0, d1, a0 + POST_W, 0, H);
-      Bx(d0, a1 - POST_W, d1, a1, 0, H);
-      Bx(d0, a0, d1, a1, H - LINTEL_H, H);
-      for (const z of zPost) { groove(d0, a0, d1, a0 + POST_W, z); groove(d0, a1 - POST_W, d1, a1, z); }
-      groove(d0, a0, d1, a1, H - LINTEL_H + 0.10);
-    }
+    if (hole) doorHole(ctx, p, axis, fixed, a0, a1, H, col);
+    doorPost(ctx, p, axis, fixed, a0, a0 + DOOR.POST_W, H, col);
+    doorPost(ctx, p, axis, fixed, a1 - DOOR.POST_W, a1, H, col);
+    doorLintel(ctx, p, axis, fixed, a0, a1, H, col);
   }
 
   // Columna delgada
@@ -202,7 +104,7 @@ const AP = (() => {
     if (shape === "cube") {
       box(ctx, p, x - r, y - r, x + r, y + r, z, z + 0.5, col);
     } else if (shape === "pyramid") {
-      const ap = p(x, y, z + 0.62);
+      const ap = p(x, y, z + 0.5);   // medio bloque, como el resto de objetos
       const b1 = p(x - r, y - r, z), b2 = p(x + r, y - r, z), b3 = p(x + r, y + r, z), b4 = p(x - r, y + r, z);
       // Orden de pintado atrás→delante: las dos caras TRASERAS (-x,-y) primero y
       // las dos FRONTALES (+x,+y, que comparten la arista delantera b3) encima.
@@ -213,7 +115,7 @@ const AP = (() => {
     } else if (shape === "dome") {
       // Semiesfera de CRISTAL transparente: relleno muy tenue (se ve a través), aro de
       // base completo (trasera visible), contorno del casquete y brillo especular.
-      const rr = 0.34, c = p(x, y, z), rx = rr * p.TW / 2, ry = rr * p.TH / 2, dh = rx * 1.1;
+      const rr = 0.34, c = p(x, y, z), rx = rr * p.TW / 2, ry = rr * p.TH / 2, dh = 0.5 * p.BH;   // alto = medio bloque
       const cap = () => {
         ctx.beginPath(); ctx.moveTo(c.x - rx, c.y);
         ctx.bezierCurveTo(c.x - rx, c.y - dh, c.x + rx, c.y - dh, c.x + rx, c.y);
@@ -233,6 +135,14 @@ const AP = (() => {
       ctx.strokeStyle = BLACK; ctx.lineWidth = 1; ctx.stroke();
       ctx.beginPath(); ctx.ellipse(topC.x, topC.y, rx, ry, 0, 0, Math.PI * 2); ctx.fillStyle = col; ctx.fill(); ctx.strokeStyle = BLACK; ctx.stroke();
     }
+  }
+
+  // OBJETO FÍSICO transportable: SE DIBUJA COMO LA FIGURA DEL CIRCUITO (sin base ni
+  // pedestal). Es SÓLIDO en el juego (se empuja, se sube uno encima, se apila); su
+  // caja física —HALF/H— se ajusta al tamaño visible de la figura.
+  const PROP = { HALF: 0.28, H: 0.5 };   // todos los objetos miden MEDIO bloque de alto
+  function prop(ctx, p, x, y, z, shape, col) {
+    circuit(ctx, p, x, y, z, shape, col);
   }
 
   // Zócalo / pedestal
@@ -323,9 +233,10 @@ const AP = (() => {
   }
 
   return {
-    INKS, ROBOT_INK, DIRS, ROBOT, BLACK, darken,
-    projector, poly, box, honeycomb, facePt,
-    floor, cube, flatWall, door, pillar, circuit, socket, spikes, plant, drone, robot, shadow
+    INKS, ROBOT_INK, DIRS, ROBOT, BLACK, DOOR, darken, lighten,
+    projector, poly, box, honeycomb, facePt, edgeLine,
+    floor, cube, flatWall, door, doorHole, doorPost, doorLintel,
+    pillar, circuit, prop, PROP, socket, spikes, plant, drone, robot, shadow
   };
 })();
 
