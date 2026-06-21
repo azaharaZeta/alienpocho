@@ -11,9 +11,12 @@
 <meta name="theme-color" content="#000000">
 <title>Alien Pocho</title>
 <style>
+  /* Paleta de UI por sala: --ui = primario (tinta de la sala), --ui2 = secundario.
+     JS las actualiza al cambiar de sala (applyRoomTheme). Defaults = look anterior. */
+  :root { --ui: #6fdede; --ui-dim: #0a8a8a; --ui2: #b9a6ff; --ui2-dim: #8b76c4; }
   html, body {
     margin: 0; padding: 0; height: 100%;
-    background: #000; color: #36c8ff;
+    background: #000; color: var(--ui);
     font-family: "Courier New", monospace;
     overflow: hidden;
     -webkit-user-select: none; user-select: none;
@@ -29,8 +32,8 @@
   #screen {
     position: relative; flex: 0 0 auto;
     height: min(96dvh, 62vw); aspect-ratio: 4 / 3;
-    background: #000; border: 2px solid #0a5a5a; border-radius: 7px;
-    box-shadow: 0 0 34px rgba(0, 210, 210, 0.22), inset 0 0 0 1px rgba(0,0,0,0.6);
+    background: #000; border: 2px solid var(--ui-dim); border-radius: 7px;
+    box-shadow: 0 0 34px color-mix(in srgb, var(--ui) 28%, transparent), inset 0 0 0 1px rgba(0,0,0,0.6);
   }
   #game {
     image-rendering: pixelated; image-rendering: crisp-edges;
@@ -52,23 +55,23 @@
   .pad.row { flex-direction: row; gap: clamp(16px, 4vh, 34px); }
   .btn {
     width: clamp(46px, 12vh, 88px); height: clamp(46px, 12vh, 88px);
-    border-radius: 50%; border: 2px solid #0a8a8a; background: rgba(0,40,46,0.55);
-    color: #6fdede; font-size: clamp(20px, 5vh, 34px); line-height: 1;
+    border-radius: 50%; border: 2px solid var(--ui-dim); background: rgba(0,0,0,0.45);
+    color: var(--ui); font-size: clamp(20px, 5vh, 34px); line-height: 1;
     display: flex; align-items: center; justify-content: center;
     touch-action: none; cursor: pointer; user-select: none;
   }
   /* Iconos SVG de los botones: heredan el color del botón (igual que los glifos). */
   .btn svg { width: 1.25em; height: 1.25em; display: block; pointer-events: none; }
-  .btn.big { border-color: #18b6b6; color: #bdf7f7; }
-  .btn.jump { border-color: #8b76c4; color: #b9a6ff; }
-  .btn.on { background: #0a5a5a; color: #fff; }
-  .btn.jump.on { background: #352a55; color: #fff; }
+  .btn.big { border-color: var(--ui); color: var(--ui); }
+  .btn.jump { border-color: var(--ui2-dim); color: var(--ui2); }   /* saltar = secundario */
+  .btn.on { background: var(--ui-dim); color: #fff; }
+  .btn.jump.on { background: var(--ui2-dim); color: #fff; }
   /* Botón de PANTALLA COMPLETA (esquina). Solo en táctil; se oculta por JS si el
      navegador no soporta la Fullscreen API o si ya se abrió como app (standalone). */
   #fsbtn {
     position: fixed; top: 6px; right: 6px; z-index: 10; display: none;
     width: 34px; height: 34px; padding: 0; border-radius: 8px;
-    border: 1px solid #0a8a8a; background: rgba(0,40,46,0.55); color: #6fdede;
+    border: 1px solid var(--ui-dim); background: rgba(0,0,0,0.5); color: var(--ui);
     font-size: 18px; line-height: 1; cursor: pointer;
     align-items: center; justify-content: center;
   }
@@ -146,9 +149,9 @@
   </div>
   <button id="fsbtn" aria-label="pantalla completa" title="Pantalla completa">⛶</button>
 
-<script src="engine.js?v=18"></script>
-<script src="assets.js?v=18"></script>
-<script src="game.js?v=18"></script>
+<script src="engine.js?v=25"></script>
+<script src="assets.js?v=25"></script>
+<script src="game.js?v=25"></script>
 <script>
 "use strict";
 
@@ -244,11 +247,30 @@ const P = AP.projector(ORIGIN.x, ORIGIN.y,    // proyector iso para los assets
 
 /* El ORDEN DE PINTADO (painter por cajas) vive ahora en engine.js → ENGINE.depthSort. */
 
+/* TEMA DE UI POR SALA: vuelca el primario/secundario de la sala a variables CSS, así los
+   botones táctiles y los textos del HUD adoptan los colores de la sala actual. */
+let _themeRoom = null;
+function applyRoomTheme(r) {
+  const ink = r.ink, ink2 = r.ink2 || ink, s = document.documentElement.style;
+  s.setProperty("--ui",      ink);
+  s.setProperty("--ui-dim",  ENGINE.darken(ink, 0.5));
+  s.setProperty("--ui2",     ink2);
+  s.setProperty("--ui2-dim", ENGINE.darken(ink2, 0.5));
+}
+
+/* PALETA DEL MENÚ: aleatoria en cada carga (una de las parejas primario/secundario de
+   las salas). Todo el juego usa SOLO colores de la paleta activa (+ negro y sus sombras). */
+const menuPalette = (() => {
+  const k = Math.floor(Math.random() * AP.INKS.length);
+  return { ink: AP.INKS[k], ink2: AP.INK2[k] };
+})();
+
 function render(room) {
+  if (room !== _themeRoom) { applyRoomTheme(room); _themeRoom = room; }
   ctx.fillStyle = CFG.COL.bg;
   ctx.fillRect(0, 0, CFG.W, CFG.H);
 
-  const ink = room.ink, WH = 3.6, D = AP.DOOR;   // pared alta: ~3 filas de hexágonos (sin desbordar)
+  const ink = room.ink, ink2 = room.ink2 || ink, WH = 3.6, D = AP.DOOR;   // pared alta: ~3 filas de hexágonos
   const doorSpan = (n) => [n / 2 - 1.12, n / 2 + 1.12]; // vano estrecho (hueco ~1.44 celdas)
 
   // 1) Suelo (plano en z=0, nunca ocluye → pre-pase al fondo)
@@ -278,11 +300,11 @@ function render(room) {
          () => AP.spikes(ctx, P, hz.cx + 0.5, hz.cy + 0.5, 0, ink));
   for (const s of room.sockets) { const oz = s.z || 0;
     box3(s.cx + 0.16, s.cy + 0.16, oz, s.cx + 0.84, s.cy + 0.84, oz + 0.4,
-         () => AP.socket(ctx, P, s.cx + 0.5, s.cy + 0.5, oz, s.shape, s.active, ink)); }
-  // objetos físicos (circuitos transportables): caja de profundidad = su sólido.
+         () => AP.socket(ctx, P, s.cx + 0.5, s.cy + 0.5, oz, s.shape, s.active, ink2)); }
+  // objetos físicos (circuitos transportables): se dibujan en el SECUNDARIO de la sala.
   for (const o of room.objects) { const m = AP.PROP.HALF;
     box3(o.x - m, o.y - m, o.z, o.x + m, o.y + m, o.z + AP.PROP.H,
-         () => AP.prop(ctx, P, o.x, o.y, o.z, o.shape, ink)); }
+         () => AP.prop(ctx, P, o.x, o.y, o.z, o.shape, ink2)); }
 
   // entidades (jugador y, en Fase 6, pinchos/enemigos): cada una añade su caja al orden.
   for (const e of entities) e.addDraws(draws, room);
@@ -312,13 +334,14 @@ function render(room) {
 
 /* Banner de victoria (provisional; la pantalla final llega en la Fase 8) */
 function drawWinBanner() {
+  const ink = room.ink, ink2 = room.ink2 || ink;
   ctx.fillStyle = "rgba(0,0,0,0.55)";
   ctx.fillRect(0, CFG.H / 2 - 22, CFG.W, 44);
-  ctx.fillStyle = CFG.COL.hudBright;
+  ctx.fillStyle = ink2;   // título en secundario (de la sala)
   ctx.font = "14px 'Courier New', monospace";
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
   ctx.fillText("¡MISION COMPLETA!", CFG.W / 2, CFG.H / 2 - 4);
-  ctx.fillStyle = CFG.COL.hud; ctx.font = "8px 'Courier New', monospace";
+  ctx.fillStyle = ink; ctx.font = "8px 'Courier New', monospace";   // subtítulo en primario
   ctx.fillText("pulsa un boton para volver a jugar", CFG.W / 2, CFG.H / 2 + 12);
   ctx.textAlign = "left"; ctx.textBaseline = "top";
 }
@@ -331,23 +354,23 @@ function drawSegBar(cx, y0, y1, col) {
 }
 // Casilla del objeto que llevas: marco cuadrado centrado en (cx,cy); si hay objeto,
 // se dibuja centrado y RECORTADO dentro del marco (sea cual sea su forma).
-function drawCarrySlot(cx, cy, shape, ink) {
+function drawCarrySlot(cx, cy, shape, frameCol, circuitCol) {
   const s = 11;                                   // semilado del marco
-  ctx.strokeStyle = ink; ctx.lineWidth = 1;
+  ctx.strokeStyle = frameCol; ctx.lineWidth = 1;
   ctx.strokeRect(cx - s + 0.5, cy - s + 0.5, s * 2 - 1, s * 2 - 1);
   if (!shape) return;
   ctx.save();
   ctx.beginPath(); ctx.rect(cx - s + 1, cy - s + 1, s * 2 - 2, s * 2 - 2); ctx.clip();
-  AP.circuit(ctx, AP.projector(cx, cy + 4), 0, 0, 0, shape, ink);   // base baja → centra el cubo
+  AP.circuit(ctx, AP.projector(cx, cy + 4), 0, 0, 0, shape, circuitCol);   // circuito en SECUNDARIO
   ctx.restore();
 }
 // Mini robot (icono de vidas) — estilo LÍNEA, CENTRADO en (cx,cy) para alinearlo con
 // el número. Más grande, a juego con la tipografía del marcador.
-function drawMiniRobot(cx, cy) {
-  const C = CFG.COL;
+function drawMiniRobot(cx, cy, col) {
+  col = col || CFG.COL.hud;
   const w = 14, h = 11, x = cx - w / 2, yTop = cy - h / 2;
   ctx.save();
-  ctx.strokeStyle = C.hud; ctx.fillStyle = C.hud;
+  ctx.strokeStyle = col; ctx.fillStyle = col;
   ctx.lineWidth = 1.2; ctx.lineJoin = "round"; ctx.lineCap = "round";
   // antena + bolita
   ctx.beginPath(); ctx.moveTo(cx, yTop); ctx.lineTo(cx, yTop - 3.5); ctx.stroke();
@@ -369,9 +392,11 @@ function drawHUD() {
   const C = CFG.COL, W = CFG.W;
   ctx.textBaseline = "top";
 
+  const ink2 = room.ink2 || C.roomName;   // secundario de la sala para los TEXTOS del HUD
+
   // ── Sala actual (arriba-derecha) ──
   if (room && room.name) {
-    ctx.textAlign = "right"; ctx.fillStyle = C.roomName; ctx.font = "11px 'Courier New', monospace";
+    ctx.textAlign = "right"; ctx.fillStyle = ink2; ctx.font = "11px 'Courier New', monospace";
     ctx.fillText(room.name, W - 8, 4); ctx.textAlign = "left";
   }
 
@@ -389,14 +414,14 @@ function drawHUD() {
   ctx.stroke();
 
   // ── Zona izquierda (dentro del marco): CIRCUITOS — marco cuadrado + objeto dentro ──
-  drawCarrySlot(36, 204, game.carried, ink);
-  ctx.fillStyle = C.hudBright; ctx.font = "bold 16px 'Courier New', monospace";
+  drawCarrySlot(36, 204, game.carried, ink, ink2);
+  ctx.fillStyle = ink2; ctx.font = "bold 16px 'Courier New', monospace";
   ctx.fillText(game.circuits + "/" + game.circuitsTotal, 54, 196);
 
   // ── Zona derecha (dentro del marco): VIDAS — carita alineada con el número ──
-  ctx.fillStyle = C.hudBright; ctx.font = "bold 16px 'Courier New', monospace";
+  ctx.fillStyle = ink2; ctx.font = "bold 16px 'Courier New', monospace";
   ctx.textAlign = "right"; ctx.fillText("×" + game.lives, W - 26, 196); ctx.textAlign = "left";
-  drawMiniRobot(W - 58, 204);   // centrado y a la misma altura que el número
+  drawMiniRobot(W - 58, 204, ink2);   // centrado y a la misma altura que el número
 
   // ── Título "ALIEN POCHO" abajo-centro, partido por el pico del marco ──
   drawTitle(vx, vy);
@@ -419,7 +444,7 @@ function drawTitle(vx, vy) {
   ctx.lineWidth = 3; ctx.strokeStyle = ink; ctx.fillStyle = ink;
   draw();
   ctx.shadowBlur = 0;                                  // núcleo nítido y brillante
-  ctx.lineWidth = 2; ctx.strokeStyle = ink; ctx.fillStyle = C.hudBright;
+  ctx.lineWidth = 2; ctx.strokeStyle = ink; ctx.fillStyle = ENGINE.lighten(ink, 0.6);
   draw();
   ctx.letterSpacing = "0px";
   ctx.restore();
@@ -430,64 +455,64 @@ function drawTitle(vx, vy) {
    ========================================================================= */
 // Marco grande estilo panel de nave: doble borde, línea segmentada, corchetes de
 // esquina y remaches. Todo a base de rectángulos → look pixel-art al escalar.
-function drawSciFiFrame(x, y, w, h) {
-  const C = CFG.COL;
+function drawSciFiFrame(x, y, w, h, pal) {
+  const ink = pal.ink, ink2 = pal.ink2, dim = ENGINE.darken(ink, 0.45);
   const R = (xx, yy, ww, hh, col) => { ctx.fillStyle = col; ctx.fillRect(xx, yy, ww, hh); };
-  // borde exterior grueso (cian)
-  R(x, y, w, 3, C.hud); R(x, y + h - 3, w, 3, C.hud);
-  R(x, y, 3, h, C.hud); R(x + w - 3, y, 3, h, C.hud);
-  // línea interior segmentada (tenue)
+  // borde exterior grueso (PRIMARIO)
+  R(x, y, w, 3, ink); R(x, y + h - 3, w, 3, ink);
+  R(x, y, 3, h, ink); R(x + w - 3, y, 3, h, ink);
+  // línea interior segmentada (primario tenue)
   const ix = x + 7, iy = y + 7, iw = w - 14, ih = h - 14;
-  for (let i = 0; i <= iw; i += 7) { R(ix + i, iy, 4, 1, C.hudDim); R(ix + i, iy + ih, 4, 1, C.hudDim); }
-  for (let j = 0; j <= ih; j += 7) { R(ix, iy + j, 1, 4, C.hudDim); R(ix + iw, iy + j, 1, 4, C.hudDim); }
-  // corchetes de esquina (acento)
+  for (let i = 0; i <= iw; i += 7) { R(ix + i, iy, 4, 1, dim); R(ix + i, iy + ih, 4, 1, dim); }
+  for (let j = 0; j <= ih; j += 7) { R(ix, iy + j, 1, 4, dim); R(ix + iw, iy + j, 1, 4, dim); }
+  // corchetes de esquina + remaches (SECUNDARIO)
   const L = 18, t = 3;
-  R(x, y, L, t, C.accent);                 R(x, y, t, L, C.accent);                  // sup-izq
-  R(x + w - L, y, L, t, C.accent);         R(x + w - t, y, t, L, C.accent);          // sup-der
-  R(x, y + h - t, L, t, C.accent);         R(x, y + h - L, t, L, C.accent);          // inf-izq
-  R(x + w - L, y + h - t, L, t, C.accent); R(x + w - t, y + h - L, t, L, C.accent);  // inf-der
-  // remaches en mitad de cada lado
-  R(x + w / 2 - 2, y, 4, 3, C.accent); R(x + w / 2 - 2, y + h - 3, 4, 3, C.accent);
-  R(x, y + h / 2 - 2, 3, 4, C.accent); R(x + w - 3, y + h / 2 - 2, 3, 4, C.accent);
+  R(x, y, L, t, ink2);                 R(x, y, t, L, ink2);                  // sup-izq
+  R(x + w - L, y, L, t, ink2);         R(x + w - t, y, t, L, ink2);          // sup-der
+  R(x, y + h - t, L, t, ink2);         R(x, y + h - L, t, L, ink2);          // inf-izq
+  R(x + w - L, y + h - t, L, t, ink2); R(x + w - t, y + h - L, t, L, ink2);  // inf-der
+  R(x + w / 2 - 2, y, 4, 3, ink2); R(x + w / 2 - 2, y + h - 3, 4, 3, ink2);
+  R(x, y + h / 2 - 2, 3, 4, ink2); R(x + w - 3, y + h / 2 - 2, 3, 4, ink2);
 }
 
 function drawTitleScreen(now) {
-  const C = CFG.COL, W = CFG.W, H = CFG.H;
-  ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H);
+  const W = CFG.W, H = CFG.H, ink = menuPalette.ink, ink2 = menuPalette.ink2;
+  const core = ENGINE.lighten(ink, 0.6);   // núcleo neón = primario muy aclarado (de la paleta)
+  ctx.fillStyle = CFG.COL.bg; ctx.fillRect(0, 0, W, H);
 
   const m = 12;
-  ctx.fillStyle = "rgba(0,28,32,0.55)"; ctx.fillRect(m, m, W - 2 * m, H - 2 * m);
-  drawSciFiFrame(m, m, W - 2 * m, H - 2 * m);
+  ctx.fillStyle = "rgba(0,0,0,0.55)"; ctx.fillRect(m, m, W - 2 * m, H - 2 * m);
+  drawSciFiFrame(m, m, W - 2 * m, H - 2 * m, menuPalette);
 
-  // Logo "ALIEN POCHO" en dos líneas, estilo neón (glow + núcleo blanco)
+  // Logo "ALIEN POCHO" en dos líneas, estilo neón (glow primario + núcleo aclarado)
   const neon = (txt, cy, size) => {
     ctx.save();
     ctx.font = "bold " + size + "px 'Courier New', monospace";
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.letterSpacing = "3px"; ctx.lineJoin = "round";
-    ctx.shadowColor = C.hud; ctx.shadowBlur = 8;
-    ctx.lineWidth = 4; ctx.strokeStyle = C.hud; ctx.fillStyle = C.hud;
+    ctx.shadowColor = ink; ctx.shadowBlur = 8;
+    ctx.lineWidth = 4; ctx.strokeStyle = ink; ctx.fillStyle = ink;
     ctx.strokeText(txt, W / 2, cy); ctx.fillText(txt, W / 2, cy);
-    ctx.shadowBlur = 0; ctx.lineWidth = 2; ctx.strokeStyle = C.hud; ctx.fillStyle = C.hudBright;
+    ctx.shadowBlur = 0; ctx.lineWidth = 2; ctx.strokeStyle = ink; ctx.fillStyle = core;
     ctx.strokeText(txt, W / 2, cy); ctx.fillText(txt, W / 2, cy);
     ctx.letterSpacing = "0px"; ctx.restore();
   };
   neon("ALIEN", 56, 34);
   neon("POCHO", 92, 34);
 
-  // Mascota robot centrada
+  // Mascota robot centrada (primario de la paleta)
   const pm = AP.projector(W / 2, 150);
   AP.shadow(ctx, pm, 0, 0, 0);
-  AP.robot(ctx, pm, 0, 0, 0, 0, C.hud, {});
+  AP.robot(ctx, pm, 0, 0, 0, 0, ink, {});
 
-  // Créditos (lo que pidió Azahara)
+  // Créditos
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillStyle = C.hudBright; ctx.font = "12px 'Courier New', monospace";
+  ctx.fillStyle = core; ctx.font = "12px 'Courier New', monospace";
   ctx.fillText("Hecho por Azahara con Claude Code 4.8", W / 2, 178);
 
-  // Prompt parpadeante
+  // Prompt parpadeante (secundario)
   if (Math.floor(now / 500) % 2 === 0) {
-    ctx.fillStyle = C.accent; ctx.font = "bold 12px 'Courier New', monospace";
+    ctx.fillStyle = ink2; ctx.font = "bold 12px 'Courier New', monospace";
     ctx.fillText("PULSA UN BOTON PARA EMPEZAR", W / 2, 204);
   }
   ctx.textAlign = "left"; ctx.textBaseline = "top";
@@ -502,6 +527,7 @@ function loop(now) {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
   if (game.state === "title") {
+    applyRoomTheme(menuPalette);   // botones + borde de pantalla con la paleta (aleatoria) del menú
     // Cualquier acción (incluye botones táctiles) arranca la partida.
     if (pressed("jump") || pressed("use") || pressed("forward")) {
       resetGame(); game.state = "playing";
@@ -518,6 +544,7 @@ function loop(now) {
   for (const k in keys) prevKeys[k] = keys[k];
   requestAnimationFrame(loop);
 }
+applyRoomTheme(menuPalette);     // tema inicial = paleta (aleatoria) del menú
 requestAnimationFrame(loop);
 
 /* API mínima para pruebas automáticas */

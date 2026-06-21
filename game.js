@@ -26,36 +26,36 @@ function makeRoom(o) {
   for (const b of blocks)
     if (b.x >= 0 && b.x < w && b.y >= 0 && b.y < h) solid.add(b.x + "," + b.y);
   return { w, h, blocks, solid, objects: o.objects || [], sockets: o.sockets || [],
-           hazards: o.hazards || [], ink: o.ink, exits: o.exits || {}, name: o.name || "" };
+           hazards: o.hazards || [], ink: o.ink, ink2: o.ink2, exits: o.exits || {}, name: o.name || "" };
 }
 
 function buildWorld() {
-  const I = AP.INKS;   // [azul, oliva, magenta, verde, naranja, violeta]
+  const I = AP.INKS, I2 = AP.INK2;   // primario y secundario por sala
   const rooms = {};
 
   // Los OBJETOS (circuitos) son ahora cajas FÍSICAS que arrancan en el SUELO (z:0):
   // se empujan, se sube uno encima y se apilan. Se cogen/sueltan mirándolos de
   // frente y se llevan a su zócalo. (Los puzzles por sala se rediseñarán para
   // explotar estas mecánicas; de momento están en celdas despejadas y accesibles.)
-  rooms["0,0"] = makeRoom({ ink: I[0], name: "ENTRADA", exits: { xp: "1,0", yp: "0,1" },
+  rooms["0,0"] = makeRoom({ ink: I[0], ink2: I2[0], name: "ENTRADA", exits: { xp: "1,0", yp: "0,1" },
     blocks: [ { x: 2, y: 2, z: 0, h: 1 } ],
-    objects: [ { x: 3.5, y: 5.5, z: 0, shape: "cube" } ],
-    sockets:  [ { cx: 2, cy: 2, z: 1, shape: "cylinder", active: false } ] });   // en lo alto del bloque
+    objects: [ { x: 2.5, y: 2.5, z: 1, shape: "cube" } ],     // intercambiado: ahora sobre la plataforma
+    sockets:  [ { cx: 3, cy: 5, z: 0, shape: "cylinder", active: false } ] });   // intercambiado: en el suelo
 
-  rooms["1,0"] = makeRoom({ ink: I[2], name: "REACTOR", exits: { xm: "0,0", yp: "1,1" },
+  rooms["1,0"] = makeRoom({ ink: I[2], ink2: I2[2], name: "REACTOR", exits: { xm: "0,0", yp: "1,1" },
     blocks: [ { x: 5, y: 1, z: 0, h: 1 }, { x: 5, y: 2, z: 0, h: 2 }, { x: 5, y: 3, z: 0, h: 3 } ],
-    objects: [ { x: 2.5, y: 5.5, z: 0, shape: "pyramid" } ],
-    sockets:  [ { cx: 5, cy: 3, z: 3, shape: "cube", active: false } ] });   // arriba de la escalera
+    objects: [ { x: 5.5, y: 3.5, z: 3, shape: "pyramid" } ],   // intercambiado: arriba de la escalera
+    sockets:  [ { cx: 2, cy: 2, z: 0, shape: "cube", active: false } ] });   // intercambiado: en el suelo
 
-  rooms["0,1"] = makeRoom({ ink: I[3], name: "BODEGA", exits: { ym: "0,0", xp: "1,1" },
+  rooms["0,1"] = makeRoom({ ink: I[3], ink2: I2[3], name: "BODEGA", exits: { ym: "0,0", xp: "1,1" },
     blocks: [ { x: 2, y: 3, z: 0, h: 1 }, { x: 4, y: 3, z: 0, h: 2 } ],
-    objects: [ { x: 2.5, y: 6.5, z: 0, shape: "dome" } ],
-    sockets:  [ { cx: 2, cy: 3, z: 1, shape: "pyramid", active: false } ] });   // sobre el escalón h1
+    objects: [ { x: 2.5, y: 3.5, z: 1, shape: "dome" } ],     // intercambiado: sobre el escalón h1
+    sockets:  [ { cx: 2, cy: 6, z: 0, shape: "pyramid", active: false } ] });   // intercambiado: en el suelo
 
-  rooms["1,1"] = makeRoom({ ink: I[4], name: "PUENTE", exits: { xm: "0,1", ym: "1,0" },
+  rooms["1,1"] = makeRoom({ ink: I[4], ink2: I2[4], name: "PUENTE", exits: { xm: "0,1", ym: "1,0" },
     blocks: [ { x: 2, y: 4, z: 0, h: 1 }, { x: 4, y: 4, z: 0, h: 1 }, { x: 4, y: 6, z: 0, h: 2 } ],
-    objects: [ { x: 2.5, y: 2.5, z: 0, shape: "cylinder" } ],
-    sockets:  [ { cx: 4, cy: 4, z: 1, shape: "dome", active: false } ],   // sobre una piedra del puente
+    objects: [ { x: 4.5, y: 4.5, z: 1, shape: "cylinder" } ],   // intercambiado: sobre la piedra
+    sockets:  [ { cx: 2, cy: 2, z: 0, shape: "dome", active: false } ],   // intercambiado: en el suelo
     hazards:  [ { cx: 3, cy: 4 }, { cx: 4, cy: 5 } ] });
 
   return { rooms, start: "0,0" };
@@ -334,7 +334,7 @@ player.addDraws = function (draws, room) {
       AP.shadow(ctx, P, player.x, player.y, gz);
       AP.robot(ctx, P, player.x, player.y, player.z, player.facing, ink,
                { moving: player.moving, walkPhase: player.walkPhase });
-      if (game.carried) AP.circuit(ctx, P, player.x, player.y, player.z + 1.6, game.carried, ink);
+      if (game.carried) AP.circuit(ctx, P, player.x, player.y, player.z + 1.6, game.carried, room.ink2 || ink);
     }
   });
 };

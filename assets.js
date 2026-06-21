@@ -17,8 +17,13 @@ const AP = (() => {
   const ENG = (typeof ENGINE !== "undefined") ? ENGINE : require("./engine.js");
   const { BLACK, darken, lighten, projector, poly, facePt, edgeLine, box, honeycomb } = ENG;
 
-  // Colores de tinta por pantalla (como las distintas salas del original)
+  // Colores de tinta por pantalla (PRIMARIO de cada sala) + su SECUNDARIO (textos del HUD
+  // y botón de saltar). CRITERIO: el secundario es el COMPLEMENTARIO del primario (tono
+  // opuesto en la rueda, hue+180°) en versión clara/neón → contrasta como acento sin chillar.
+  //          azul/cian   amarillo-ol  magenta    verde      naranja    violeta
   const INKS = ["#36c8ff", "#d7d98a", "#e070c5", "#79e6a6", "#ff9d5c", "#b9a6ff"];
+  const INK2 = ["#ffd27a", "#aab0ff", "#86eaa0", "#f59ad6", "#79d0ff", "#d8e68a"];
+  //            ámbar       azul-viol   verde      rosa       cian       amarillo-verd
   const ROBOT_INK = "#6fd0ff";   // el robot siempre azul claro
 
   /* =====================  ASSETS  ===================== */
@@ -242,7 +247,7 @@ const AP = (() => {
   }
 
   return {
-    INKS, ROBOT_INK, DIRS, ROBOT, BLACK, DOOR, darken, lighten,
+    INKS, INK2, ROBOT_INK, DIRS, ROBOT, BLACK, DOOR, darken, lighten,
     projector, poly, box, honeycomb, facePt, edgeLine,
     floor, cube, flatWall, door, doorHole, doorPost, doorLintel,
     pillar, circuit, prop, PROP, socket, spikes, plant, drone, robot, shadow
