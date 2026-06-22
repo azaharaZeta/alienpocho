@@ -18,7 +18,7 @@
 
 import { ENGINE } from "./engine.js";
 import { INKS, INK2, ROBOT_INK } from "./palette.js";
-import { DOOR, PROP, ROBOT, SOCKET } from "./config.js";
+import { DOOR, PROP, ROBOT, SOCKET, ASSET_USE_PNG } from "./config.js";
 
 export const AP = (() => {
 
@@ -28,6 +28,49 @@ export const AP = (() => {
 
   // Paletas (INKS/INK2/ROBOT_INK desde palette.js) y geometría compartida (DOOR/PROP/ROBOT/
   // SOCKET desde config.js): su FUENTE vive fuera; aquí solo se usan y se reexportan en AP.
+
+  /* ===================== SPRITES EXTERNOS (flujo PNG/SVG, ver docs/ASSETS.md) =====================
+     Los assets fijos MIGRADOS se dibujan desde un fichero (PNG editado si ASSET_USE_PNG y existe;
+     si no, su SVG generado) teñido por sala. Si no está migrado o aún no cargó, drawSprite devuelve
+     false y el llamador pinta el VECTOR de siempre (degradado elegante + funciona en Node/tests).
+     minX/minY = offset del bbox respecto al punto de referencia P(coords) del asset (lo calcula
+     tools/gen-svg.mjs); w/h = tamaño nativo del sprite. */
+  const SPRITES = {
+    cube:         { minX: -17, minY: -17, w: 34, h: 34 },
+    prop_cube:    { minX:  -9, minY: -13, w: 18, h: 18 },
+    prop_pyramid: { minX:  -9, minY:  -9, w: 18, h: 14 },
+    spikes:       { minX:  -7, minY: -10, w: 14, h: 11 },
+    plant:        { minX:  -4, minY: -11, w:  8, h: 13 },
+  };
+  const _spr = {};   // name → { neutral: canvas|null, tints: { col: canvas } }
+  function _rasterTo(def, img) {
+    const c = document.createElement("canvas"); c.width = def.w; c.height = def.h;
+    c.getContext("2d").drawImage(img, 0, 0, def.w, def.h); return c;
+  }
+  function _loadSprite(name, def, s) {
+    const load = (url, onfail) => { const img = new Image(); img.onload = () => { s.neutral = _rasterTo(def, img); }; img.onerror = onfail || null; img.src = url; };
+    if (ASSET_USE_PNG) load("/assets/png/" + name + ".png", () => load("/assets/svg/" + name + ".svg"));
+    else load("/assets/svg/" + name + ".svg");
+  }
+  function _tintSprite(neutral, col) {   // gris·col por multiply (== darken(col,f)), remáscara al alfa
+    const c = document.createElement("canvas"); c.width = neutral.width; c.height = neutral.height;
+    const x = c.getContext("2d");
+    x.drawImage(neutral, 0, 0);
+    x.globalCompositeOperation = "multiply"; x.fillStyle = col; x.fillRect(0, 0, c.width, c.height);
+    x.globalCompositeOperation = "destination-in"; x.drawImage(neutral, 0, 0);
+    x.globalCompositeOperation = "source-over";
+    return c;
+  }
+  // Dibuja el sprite externo de `name` teñido a `col`, anclado en ref+(minX,minY). false → usa vector.
+  function drawSprite(name, ctx, ref, col) {
+    if (typeof document === "undefined") return false;        // Node (tests/generador): vector
+    const def = SPRITES[name]; if (!def) return false;        // no migrado: vector
+    let s = _spr[name]; if (!s) { s = _spr[name] = { neutral: null, tints: {} }; _loadSprite(name, def, s); }
+    if (!s.neutral) return false;                             // aún cargando: vector
+    let t = s.tints[col]; if (!t) t = s.tints[col] = _tintSprite(s.neutral, col);
+    ctx.drawImage(t, Math.round(ref.x + def.minX), Math.round(ref.y + def.minY));
+    return true;
+  }
 
   /* =====================  ASSETS  ===================== */
 
@@ -39,6 +82,7 @@ export const AP = (() => {
 
   // Bloque: caja con BORDES MORDIDOS (pequeños chaflanes negros en las esquinas)
   function cube(ctx, p, cx, cy, cz, col) {
+    if (drawSprite("cube", ctx, p(cx, cy, cz), col)) return;
     box(ctx, p, cx, cy, cx + 1, cy + 1, cz, cz + 1, col);
     const t = cz + 1;
     const corners = [p(cx, cy, t), p(cx + 1, cy, t), p(cx + 1, cy + 1, t), p(cx, cy + 1, t)];
@@ -149,6 +193,7 @@ export const AP = (() => {
   // pedestal). Es SÓLIDO en el juego (se empuja, se sube uno encima, se apila); su
   // caja física —HALF/H— se ajusta al tamaño visible de la figura.
   function prop(ctx, p, x, y, z, shape, col) {
+    if (drawSprite("prop_" + shape, ctx, p(x, y, z), col)) return;
     circuit(ctx, p, x, y, z, shape, col);
   }
 
@@ -167,6 +212,7 @@ export const AP = (() => {
 
   // Pinchos (peligro): roseta de púas
   function spikes(ctx, p, x, y, z, col) {
+    if (drawSprite("spikes", ctx, p(x, y, z), col)) return;
     const n = 8, rin = 0.07, rout = 0.27, w = 0.1;
     for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2;
@@ -180,6 +226,7 @@ export const AP = (() => {
 
   // Planta decorativa (abanico de hojas)
   function plant(ctx, p, x, y, z, col) {
+    if (drawSprite("plant", ctx, p(x, y, z), col)) return;
     for (let i = 0; i < 6; i++) {
       const a = (i / 6) * Math.PI * 2;
       const lx = x + Math.cos(a) * 0.16, ly = y + Math.sin(a) * 0.16;
@@ -264,6 +311,7 @@ export const AP = (() => {
     INKS, INK2, ROBOT_INK, DIRS, ROBOT, BLACK, DOOR, darken, lighten,
     projector, poly, box, honeycomb, facePt, edgeLine,
     floor, cube, flatWall, door, doorHole, doorPost, doorLintel,
-    pillar, circuit, prop, PROP, socket, spikes, plant, drone, robot, shadow
+    pillar, circuit, prop, PROP, socket, spikes, plant, drone, robot, shadow,
+    SPRITES   // registro de sprites migrados {name:{minX,minY,w,h}} (lo usa el catálogo)
   };
 })();

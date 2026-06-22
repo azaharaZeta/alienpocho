@@ -45,27 +45,31 @@
 </head>
 <body>
   <a class="back" href="../assets-demo.html">‹ catálogo</a> &nbsp; <a class="back" href="../index.html">‹ juego</a>
-  <h1>objeto del juego → PNG · tool de assets</h1>
+  <h1>SVG → PNG · tool de assets</h1>
   <p class="note">
-    Coge un objeto REAL del juego (lo dibuja su propia función de <code>src/assets.js</code>, así
-    NUNCA difiere del juego) a su <b>resolución nativa</b> y lo exporta a <b>PNG de tamaño de juego</b>
-    para que tú lo edites/mejores. Se renderiza con tinta <b>blanca</b> → silueta neutra en grises (el
-    juego luego la tiñe por sala). Todas las vistas grandes son un <b>zoom pixelado</b> (nearest-neighbor)
-    del render nativo — nunca un re-render del vector. (Modo <b>SVG libre</b> para proponer assets nuevos.)
+    Carga un <b>SVG real</b> de <code>assets/svg/</code> (listados del <code>manifest.json</code> — la tool
+    refleja los ficheros que existen, sin lista a mano), lo previsualiza teñido en las paletas y lo exporta
+    a <b>PNG de tamaño de juego</b> para que tú lo edites; el juego luego lo tiñe por sala. Las vistas
+    grandes son <b>zoom pixelado</b> del render nativo. (Modo <b>SVG libre</b> para bocetar sin fichero;
+    los SVG de los assets del juego se generan con <code>tools/gen-svg.mjs</code>.)
   </p>
 
   <div class="layout">
     <div>
       <div class="ctrls">
-        <label>objeto <select id="obj"></select></label>
+        <label>asset SVG <select id="obj"></select></label>
       </div>
       <div id="svgWrap">
-        <label style="font-size:12px;color:#8aa0a8">SVG (propuesta de asset nuevo, a resolución de juego):</label>
+        <label style="font-size:12px;color:#8aa0a8">SVG (fuente, a resolución de juego — editable):</label>
         <textarea id="svg"></textarea>
         <div class="ctrls">
           <label>w <input type="number" id="w" value="34"></label>
           <label>h <input type="number" id="h" value="34"></label>
+          <button id="copy">Copiar SVG</button>
         </div>
+        <p class="note" style="font-size:12px;margin:2px 0 0">Los SVG viven en <code>assets/svg/</code>.
+          Edita aquí para previsualizar; para <b>persistir</b>, cópialo y dímelo (yo lo escribo en el
+          fichero) o edítalo en tu editor.</p>
       </div>
       <div class="ctrls">
         <label>zoom de vista
@@ -109,35 +113,28 @@ import { AP } from "../src/assets.js";
 import { POPT } from "../src/config.js";
 import { INKS } from "../src/palette.js";
 
-/* ====== Objetos REALES del juego: cada uno se dibuja con su función de assets.js, a
-   RESOLUCIÓN DE JUEGO (POPT: TILE 34×17, bloque 17). w,h = lienzo nativo; ox,oy = origen
-   del proyector para que quepa; draw(ctx,P,col) = la llamada a AP.* (col blanco → neutro). */
-const OBJECTS = {
-  cube: { label: "Cubo (bloque)", w: 34, h: 34, ox: 17, oy: 17,
-          draw: (ctx, P, col) => AP.cube(ctx, P, 0, 0, 0, col) },
-  // ej:  pillar: { label:"Columna", w:34, h:51, ox:17, oy:34, draw:(c,P,col)=>AP.pillar(c,P,0,0,2,col) }
-};
 const NAMES = ["cian", "oliva", "magenta", "ámbar", "azul", "verde"];
 
 const $ = id => document.getElementById(id);
 const objEl = $("obj"), svgWrap = $("svgWrap"), svgEl = $("svg"), wEl = $("w"), hEl = $("h"),
       zoomEl = $("zoom"), errEl = $("err");
 
-for (const k of Object.keys(OBJECTS)) objEl.add(new Option(OBJECTS[k].label, k));
-objEl.add(new Option("— SVG libre (asset nuevo) —", "__svg"));
+// Los SVG-fichero se leen del manifiesto → la tool refleja los ficheros REALES de assets/svg/,
+// sin lista hardcodeada. (Los SVG de los assets del juego se generan con tools/gen-svg.mjs.)
+const SVG_FILES = {};   // "s:<file>" → { name, file, w, h }
 
 let nativeCanvas = null, nativeW = 0, nativeH = 0;
 
-/* Render del objeto a RESOLUCIÓN DE JUEGO (1×), con su función de assets.js. */
-function renderObject(key, col) {
-  const o = OBJECTS[key];
-  const c = document.createElement("canvas"); c.width = o.w; c.height = o.h;
-  const x = c.getContext("2d");
-  o.draw(x, AP.projector(o.ox, o.oy, POPT), col);
-  return c;
+/* Carga el manifiesto de SVG-ficheros y los añade al selector (objetos · SVG-ficheros · libre). */
+async function loadManifest() {
+  try {
+    const list = await (await fetch("/assets/svg/manifest.json?cb=" + Date.now())).json();
+    for (const e of list) { const key = "s:" + e.file; SVG_FILES[key] = e; objEl.add(new Option("SVG: " + e.name, key)); }
+  } catch (e) { /* aún no hay manifiesto: nada que añadir */ }
+  objEl.add(new Option("— SVG libre (boceto sin fichero) —", "__svg"));
 }
 
-/* SVG libre → raster a resolución de juego (w×h, 1×). */
+/* SVG → raster a resolución de juego (w×h, 1×). */
 function rasterizeSVG(svgText, w, h) {
   return new Promise((res, rej) => {
     let doc; try { doc = new DOMParser().parseFromString(svgText, "image/svg+xml"); } catch (e) { return rej(e); }
@@ -173,64 +170,66 @@ function zoomView(src, z) {
 
 async function renderAll() {
   errEl.textContent = "";
-  const key = objEl.value, zoom = +zoomEl.value;
-  const isSVG = key === "__svg";
-  svgWrap.style.display = isSVG ? "block" : "none";
-
-  if (isSVG) {
-    nativeW = +wEl.value; nativeH = +hEl.value;
-    try { nativeCanvas = await rasterizeSVG(svgEl.value, nativeW, nativeH); }
-    catch (e) { errEl.textContent = "⚠ " + e.message; return; }
-  } else {
-    const o = OBJECTS[key]; nativeW = o.w; nativeH = o.h;
-    nativeCanvas = renderObject(key, "#ffffff");
-  }
+  const zoom = +zoomEl.value;
+  svgWrap.style.display = "block";
+  nativeW = +wEl.value; nativeH = +hEl.value;
+  try { nativeCanvas = await rasterizeSVG(svgEl.value, nativeW, nativeH); }
+  catch (e) { errEl.textContent = "⚠ " + e.message; return; }
   $("sizeNote").innerHTML = "PNG exportado = <b>" + nativeW + "×" + nativeH + "</b> px (tamaño de juego).";
 
   showCanvas($("box1"), zoomView(nativeCanvas, 1));
   showCanvas($("boxN"), zoomView(nativeCanvas, zoom));
 
-  // teñidos: objetos del juego = dibujo directo en cada tinta (100% fiel); SVG = multiply.
   const tints = $("tints"); tints.innerHTML = "";
   INKS.forEach((ink, i) => {
     const cell = document.createElement("div"); cell.className = "cell";
-    const tinted = isSVG ? tint(nativeCanvas, ink) : renderObject(key, ink);
-    cell.appendChild(zoomView(tinted, 3));
+    cell.appendChild(zoomView(tint(nativeCanvas, ink), 3));
     cell.appendChild(Object.assign(document.createElement("div"), { textContent: NAMES[i] || i }));
     tints.appendChild(cell);
   });
 
-  drawGrid(key, isSVG);
+  drawGrid();
 }
 
-/* Rejilla a resolución de juego (suelo + objeto reales), mostrada con zoom pixelado por CSS. */
-function drawGrid(key, isSVG) {
+/* Rejilla a resolución de juego: suelo real (AP.floor) + el SVG teñido encima (anclaje aprox). */
+function drawGrid() {
   const Z = 5, g = $("grid"); g.width = 80; g.height = 80;
   g.style.width = (80 * Z) + "px"; g.style.height = (80 * Z) + "px";
   const x = g.getContext("2d"); x.clearRect(0, 0, 80, 80);
   const P = AP.projector(33, 40, POPT);
   AP.floor(x, P, 0, 0, INKS[0]);
-  if (isSVG) { const a = P(0, 0, 1); x.drawImage(tint(nativeCanvas, INKS[0]), Math.round(a.x - 17), Math.round(a.y)); }
-  else OBJECTS[key].draw(x, P, INKS[0]);
+  if (nativeCanvas) { const a = P(0, 0, 1); x.drawImage(tint(nativeCanvas, INKS[0]), Math.round(a.x - nativeW / 2), Math.round(a.y)); }
 }
 
-objEl.addEventListener("change", renderAll);
+objEl.addEventListener("change", async () => {
+  const key = objEl.value;
+  if (key.startsWith("s:")) {                          // traer el .svg del fichero al textarea (editable)
+    const e = SVG_FILES[key];
+    try { svgEl.value = await (await fetch("/assets/svg/" + e.file + "?cb=" + Date.now())).text(); }
+    catch (err) { errEl.textContent = "⚠ no se pudo cargar " + e.file; }
+    wEl.value = e.w || 34; hEl.value = e.h || 34;
+  }
+  renderAll();
+});
 zoomEl.addEventListener("change", renderAll);
+$("copy").addEventListener("click", () => navigator.clipboard && navigator.clipboard.writeText(svgEl.value));
 $("render").addEventListener("click", renderAll);
 svgEl.addEventListener("input", () => { clearTimeout(window._t); window._t = setTimeout(renderAll, 250); });
 [wEl, hEl].forEach(el => el.addEventListener("change", renderAll));
 $("dl").addEventListener("click", () => {
   if (!nativeCanvas) return;                      // se exporta el NATIVO (tamaño de juego), no el zoom
+  const k = objEl.value;
+  const base = k.startsWith("s:") ? k.slice(2).replace(/\.svg$/, "") : (k === "__svg" ? "asset" : k);
   nativeCanvas.toBlob(b => {
     const a = document.createElement("a");
     a.href = URL.createObjectURL(b);
-    a.download = (objEl.value === "__svg" ? "asset" : objEl.value) + "_" + nativeW + "x" + nativeH + ".png";
+    a.download = base + "_" + nativeW + "x" + nativeH + ".png";
     a.click(); URL.revokeObjectURL(a.href);
   });
 });
 
-svgEl.value = `<svg viewBox="0 0 34 34" xmlns="http://www.w3.org/2000/svg">\n  <!-- propuesta de asset NUEVO aquí -->\n</svg>`;
-renderAll();
+svgEl.value = `<svg viewBox="0 0 34 34" xmlns="http://www.w3.org/2000/svg">\n  <!-- boceto de asset nuevo aquí -->\n</svg>`;
+loadManifest().then(() => objEl.dispatchEvent(new Event("change")));   // carga el primer SVG del manifiesto
 </script>
 </body>
 </html>

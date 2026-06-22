@@ -63,6 +63,11 @@ export const ORIGIN = { x: CFG.W / 2, y: 66 };
 // Opciones del proyector iso, derivadas del tamaño de tesela (compartidas dibujo/lógica).
 export const POPT = { TILE_W: CFG.TILE_W, TILE_H: CFG.TILE_H, BLOCK_H: CFG.BLOCK_H };
 
+// ASSETS: parámetro GLOBAL del flujo de sprites (ver docs/ASSETS.md). Si true, los assets
+// migrados (sprites fijos) usan el PNG editado de assets/png/ si existe; si no, su SVG de
+// assets/svg/. Si false, siempre el SVG. (Los no migrados siguen en vector procedural.)
+export const ASSET_USE_PNG = true;
+
 /* =========================================================================
    GEOMETRÍA COMPARTIDA — fuente ÚNICA de las medidas que usan A LA VEZ el dibujo
    (assets.js) y la física (physics.js). Antes estaban duplicadas a mano en ambos

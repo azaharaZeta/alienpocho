@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Cubo (bloque)",
+    "file": "cube.svg",
+    "w": 34,
+    "h": 34
+  },
+  {
+    "name": "Prop cubo",
+    "file": "prop_cube.svg",
+    "w": 18,
+    "h": 18
+  },
+  {
+    "name": "Prop pirámide",
+    "file": "prop_pyramid.svg",
+    "w": 18,
+    "h": 14
+  },
+  {
+    "name": "Pinchos",
+    "file": "spikes.svg",
+    "w": 14,
+    "h": 11
+  },
+  {
+    "name": "Planta",
+    "file": "plant.svg",
+    "w": 8,
+    "h": 13
+  },
+  {
+    "name": "Ejemplo (marca de suelo)",
+    "file": "example.svg",
+    "w": 34,
+    "h": 34
+  }
+]

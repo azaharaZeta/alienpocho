@@ -9,7 +9,7 @@ docs/
 # Pruebas (oráculo de no-regresión; corre en Node, no se sirve en el navegador)
 test/
 
-# Tools de autoría de assets (prototipador SVG→PNG) y los SVG "propuesta": NO van a producción.
-# A producción solo viajarían los PNG finales (en assets/png/) que el juego use de verdad.
+# Tools de autoría de assets (prototipador SVG→PNG, generador): NO van a producción.
+# OJO: assets/svg/ SÍ se publica — el juego carga esos SVG en runtime como fuente/fallback de
+# los sprites migrados (cuando no hay PNG). Solo assets/png/ y assets/svg/ viajan; tools/ no.
 tools/
-assets/svg/

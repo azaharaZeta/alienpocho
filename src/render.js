@@ -18,33 +18,6 @@ import { game, world, room } from "./game.js";
 
 let _themeRoom = null;
 
-/* ─ PNG del bloque-cubo (flujo svg2png): el bloque se dibuja con un PNG editado a mano (silueta
-   neutra 34×34 en `assets/png/cube.png`) teñido por sala (multiply, conserva el sombreado) en vez
-   del vector. Anclado igual que AP.cube (esquina trasera-superior). FLAG TEMPORAL mientras probamos:
-   `window.__cubePng` (true por defecto); ponlo a false en consola para comparar con el vector. */
-const cubePng = new Image(); cubePng.src = "/assets/png/cube.png";
-let cubePngReady = false; cubePng.onload = () => { cubePngReady = true; };
-if (typeof window !== "undefined" && window.__cubePng === undefined) window.__cubePng = true;
-const _cubeTint = {};
-function tintedCubePng(ink) {
-  if (_cubeTint[ink]) return _cubeTint[ink];
-  const c = document.createElement("canvas"); c.width = cubePng.width; c.height = cubePng.height;
-  const x = c.getContext("2d");
-  x.drawImage(cubePng, 0, 0);
-  x.globalCompositeOperation = "multiply"; x.fillStyle = ink; x.fillRect(0, 0, c.width, c.height);
-  x.globalCompositeOperation = "destination-in"; x.drawImage(cubePng, 0, 0);
-  x.globalCompositeOperation = "source-over";
-  return (_cubeTint[ink] = c);
-}
-function drawCube(P, bx, by, z, ink) {
-  if (window.__cubePng && cubePngReady) {
-    const a = P(bx, by, z + 1);                  // esquina trasera-superior = anclaje del sprite
-    ctx.drawImage(tintedCubePng(ink), Math.round(a.x - 17), Math.round(a.y));
-  } else {
-    AP.cube(ctx, P, bx, by, z, ink);
-  }
-}
-
 export function render(room) {
   if (room !== _themeRoom) { applyRoomTheme(room); _themeRoom = room; }
   setProjector(room);                     // proyector centrado para el tamaño de esta sala
@@ -73,7 +46,7 @@ export function render(room) {
   for (const bl of room.blocks)
     for (let k = 0; k < bl.h; k++) {
       const z = bl.z + k;
-      box3(bl.x, bl.y, z, bl.x + 1, bl.y + 1, z + 1, () => drawCube(P, bl.x, bl.y, z, ink));
+      box3(bl.x, bl.y, z, bl.x + 1, bl.y + 1, z + 1, () => AP.cube(ctx, P, bl.x, bl.y, z, ink));
     }
   // pinchos / zócalos / circuitos sueltos (a su altura oz)
   for (const hz of room.hazards)

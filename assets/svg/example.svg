@@ -1,0 +1,6 @@
+<svg viewBox="0 0 34 34" xmlns="http://www.w3.org/2000/svg">
+  <!-- EJEMPLO de asset SVG-fichero (plano, z=0): marca de suelo. En grises para que el juego
+       lo tiña por sala (multiply). Bórralo/reemplázalo cuando haya assets de verdad. -->
+  <path d="M17 8.5 L34 17 L17 25.5 L0 17 Z" fill="none" stroke="#cccccc" stroke-width="1.5"/>
+  <path d="M17 14 L23 17 L17 20 L11 17 Z" fill="#888888"/>  
+</svg>

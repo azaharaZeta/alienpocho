@@ -10,7 +10,8 @@
 > **sin orden ni compromiso**. El orden de exploración lo decide la usuaria sobre la marcha.
 
 Solo cosas **por hacer** o **por explorar**. Contexto y diseño: [GDD.md](GDD.md) ·
-investigación del original: [RESEARCH.md](RESEARCH.md).
+investigación del original: [RESEARCH.md](RESEARCH.md) · flujo de assets (SVG/render→PNG→teñido):
+[ASSETS.md](ASSETS.md).
 
 ## Ficheros (orientación)
 > Refactor de estructura COMPLETO (Fases 0-5 de [ASSESSMENT.md](ASSESSMENT.md)): ES modules
@@ -57,7 +58,8 @@ investigación del original: [RESEARCH.md](RESEARCH.md).
 - Mejorar el mapa: zonas un poco más claras, bordes ok. 
 - **COMPLETADA** _(3 parejas base en `palette.js`; las paletas 3-5 son las 0-2 invertidas, primario↔secundario)_ — Las paletas cian, oliva, magenta, con sus secundarios,  son practicamente simétricas a las  paletas verde, naranja, violeta. Ver si tiene sentido unificar colores (que las tres últimas paletas sean simplemente las primeras paletas, invertidas
 - Existe la posibilidad de crear una tool que fabrique ficheros png a partir de svg? Podríamos usar svg para que claude prototipara dibujos, y poder revisarlos en un visor de assets svg, y exportarlos a ficheros png a petición mía, para usarlos como assets binarios en la aplicación. Investigar esto.
-  - En el svg2png también quiero ver el código fuente del svg, poder editarlo, ver el resultado, descargarlo, e incluso grabar el cambio del svg en el fichero `assets.js` (esto no sé si es posible). _(Nota Claude: hoy los assets son código de canvas procedural en `assets.js`, no SVG; "ver/editar el código fuente" del objeto sería editar su función `AP.*`; "grabar en assets.js" requeriría escritura en disco — no se puede solo desde el navegador servido por http estático; haría falta un pequeño backend/escritura local. Investigar.)_
+  - **COMPLETADA** _(resuelta en su forma mejor: los SVG viven como FICHEROS en `assets/svg/` con `manifest.json`; la tool los carga, los muestra editables, previsualiza y exporta el PNG. Persistencia: la usuaria copia/edita y Claude escribe el `.svg` — no se toca `assets.js` (sus assets son canvas procedural, no SVG); el runtime sigue siendo PNG. Ver `docs/ASSETS.md`.)_ — En el svg2png también quiero ver el código fuente del svg, poder editarlo, ver el resultado, descargarlo, e incluso grabar el cambio del svg en el fichero `assets.js` (esto no sé si es posible).
+- **Migrar sprites NO fijos a fijos.** El flujo SVG/PNG (ver `docs/ASSETS.md`) solo sirve hoy para sprites estáticos. Quedan fuera por no ser "fijos": el **robot** (animado: 4 vistas + ciclo de andar con bob y balanceo de brazos/piernas), los props **domo y cilindro** (cristal/curvos: bezier, ellipse, brillo — el teñido por multiply los altera), el **zócalo** (con estado activo/inactivo + circuito encima → 8 variantes), y los **paramétricos** (pared en panal de longitud variable, suelo, puerta de vano variable, columna de altura variable). Analizar cómo "fijar" cada uno para poder migrarlo: p. ej. el robot como hojas de sprites (un PNG por vista/fotograma) y un selector de fotograma; el domo/cilindro decidiendo si pierden el cristal; el zócalo como conjunto de sprites por estado; los paramétricos descomponiéndolos en piezas-unidad teselables (un sprite de "segmento de pared", de "poste/dintel", etc.).
 
 ## 🧭 Direcciones posibles (ideas, sin orden ni obligación)
 > Antes esto era un "roadmap por fases". Ahora son ideas a tomar (o no) cuando apetezca.
