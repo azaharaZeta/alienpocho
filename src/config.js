@@ -88,6 +88,14 @@ export const DOOR = { T: 0.34, POST_W: 0.40, LINTEL_H: 0.46, SPAN_HALF: 1.12 };
 // Zócalo: alto de la peana (sobre ella encaja el circuito al activarse).
 export const SOCKET = { BASE_H: 0.2 };
 
+// Altura (en unidades de mundo) de las paredes de TODAS las salas. GLOBAL y FIJA: siempre la
+// misma para cada habitación (no varía por sala). La usan render (paredes) y las puertas.
+export const WALL_H = 3;
+
+// Variante de TILE de pared (panal SVG, teselado horizontal + cizallado): "wall1" (1 tile,
+// hexágono pequeño) | "wall2" (2 tiles, hexágono doble). En consola: window.__wall para comparar.
+export const WALL_TILE = "wall1";
+
 // Encuadre de la escena: el proyector por sala centra el rombo verticalmente en
 // PROJECTOR_OY y baja la escena PROJECTOR_DROP px (se come la banda negra inferior).
 export const SCENE = { PROJECTOR_OY: 134, PROJECTOR_DROP: 20 };

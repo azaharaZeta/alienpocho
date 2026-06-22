@@ -30,6 +30,30 @@
     "h": 13
   },
   {
+    "name": "Pared 1 tile (panal)",
+    "file": "wall1.svg",
+    "w": 17,
+    "h": 60
+  },
+  {
+    "name": "Pared 2 tiles (panal)",
+    "file": "wall2.svg",
+    "w": 34,
+    "h": 68
+  },
+  {
+    "name": "Puerta (frente)",
+    "file": "door_front.svg",
+    "w": 45,
+    "h": 74
+  },
+  {
+    "name": "Puerta (fondo)",
+    "file": "door_back.svg",
+    "w": 44,
+    "h": 74
+  },
+  {
     "name": "Ejemplo (marca de suelo)",
     "file": "example.svg",
     "w": 34,

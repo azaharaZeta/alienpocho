@@ -9,7 +9,7 @@
    ============================================================================= */
 "use strict";
 
-import { CFG } from "./config.js";
+import { CFG, WALL_H } from "./config.js";
 import { ENGINE } from "./engine.js";
 import { AP } from "./assets.js";
 import { ctx, P, setProjector, applyRoomTheme } from "./view.js";
@@ -24,7 +24,7 @@ export function render(room) {
   ctx.fillStyle = CFG.COL.bg;
   ctx.fillRect(0, 0, CFG.W, CFG.H);
 
-  const ink = room.ink, ink2 = room.ink2 || ink, WH = 3.6, D = AP.DOOR;   // pared alta: ~3 filas de hexágonos
+  const ink = room.ink, ink2 = room.ink2 || ink, WH = WALL_H, D = AP.DOOR;   // altura de pared GLOBAL (config.js)
   const doorSpan = (n) => [n / 2 - AP.DOOR.SPAN_HALF, n / 2 + AP.DOOR.SPAN_HALF]; // vano (semiancho SPAN_HALF)
 
   // 1) Suelo (plano en z=0, nunca ocluye → pre-pase al fondo)
@@ -33,9 +33,9 @@ export function render(room) {
       AP.floor(ctx, P, x, y, ink);
 
   // 1b) Paredes/puertas del FONDO (siempre detrás de todo → pre-pase)
-  AP.flatWall(ctx, P, "x", 0, 0, room.w, WH, ink);                       // borde y=0 (atrás-dcha)
+  AP.flatWall(ctx, P, "x", 0, 0, room.w, WH, ink, room.wallTile);        // borde y=0 (atrás-dcha)
   if (room.exits.ym) { const [s0, s1] = doorSpan(room.w); AP.door(ctx, P, "x", 0, s0, s1, WH, ink, true); }
-  AP.flatWall(ctx, P, "y", 0, 0, room.h, WH, ink);                       // borde x=0 (atrás-izq)
+  AP.flatWall(ctx, P, "y", 0, 0, room.h, WH, ink, room.wallTile);        // borde x=0 (atrás-izq)
   if (room.exits.xm) { const [s0, s1] = doorSpan(room.h); AP.door(ctx, P, "y", 0, s0, s1, WH, ink, true); }
 
   // 2) Objetos como CAJAS para el pintor topológico
@@ -63,20 +63,16 @@ export function render(room) {
   // entidades (jugador y, en Fase 6, pinchos/enemigos): cada una añade su caja al orden.
   for (const e of entities) e.addDraws(draws, room);
 
-  // puertas del FRENTE descompuestas en piezas (2 postes + dintel) → entran en el orden
-  // como cualquier objeto, así el robot se intercala solo al cruzar (postes con z hasta
-  // el dintel para que el dintel siempre quede por encima).
+  // puertas del FRENTE: el MARCO (sprite, vano transparente) entra en el painter como UNA caja
+  // a lo largo del borde; el robot, al cruzar, queda detrás del marco → los postes lo tapan y el
+  // vano lo deja ver (se intercala solo). hole=false → marco del frente.
   if (room.exits.yp) {
-    const [s0, s1] = doorSpan(room.w), h = room.h, zL = WH - D.LINTEL_H;
-    box3(s0, h, 0, s0 + D.POST_W, h + D.T, zL, () => AP.doorPost(ctx, P, "x", h, s0, s0 + D.POST_W, WH, ink));
-    box3(s1 - D.POST_W, h, 0, s1, h + D.T, zL, () => AP.doorPost(ctx, P, "x", h, s1 - D.POST_W, s1, WH, ink));
-    box3(s0, h, zL, s1, h + D.T, WH, () => AP.doorLintel(ctx, P, "x", h, s0, s1, WH, ink));
+    const [s0, s1] = doorSpan(room.w), h = room.h;
+    box3(s0, h, 0, s1, h + D.T, WH, () => AP.door(ctx, P, "x", h, s0, s1, WH, ink, false));
   }
   if (room.exits.xp) {
-    const [s0, s1] = doorSpan(room.h), w = room.w, zL = WH - D.LINTEL_H;
-    box3(w, s0, 0, w + D.T, s0 + D.POST_W, zL, () => AP.doorPost(ctx, P, "y", w, s0, s0 + D.POST_W, WH, ink));
-    box3(w, s1 - D.POST_W, 0, w + D.T, s1, zL, () => AP.doorPost(ctx, P, "y", w, s1 - D.POST_W, s1, WH, ink));
-    box3(w, s0, zL, w + D.T, s1, WH, () => AP.doorLintel(ctx, P, "y", w, s0, s1, WH, ink));
+    const [s0, s1] = doorSpan(room.h), w = room.w;
+    box3(w, s0, 0, w + D.T, s1, WH, () => AP.door(ctx, P, "y", w, s0, s1, WH, ink, false));
   }
 
   // 3) Ordenar topológicamente y pintar

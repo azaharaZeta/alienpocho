@@ -18,7 +18,7 @@
 
 import { ENGINE } from "./engine.js";
 import { INKS, INK2, ROBOT_INK } from "./palette.js";
-import { DOOR, PROP, ROBOT, SOCKET, ASSET_USE_PNG } from "./config.js";
+import { DOOR, PROP, ROBOT, SOCKET, ASSET_USE_PNG, WALL_TILE } from "./config.js";
 
 export const AP = (() => {
 
@@ -72,6 +72,88 @@ export const AP = (() => {
     return true;
   }
 
+  /* ── PARED por TILE (panal SVG/PNG): la pared es una TIRA de N tiles de ancho × 3 de alto, YA
+     DIBUJADA EN PERSPECTIVA en assets/svg/<variant>.svg (la genera tools/gen-walls.mjs proyectando
+     los hexágonos). El juego solo BLITTEA la tira teselada a lo largo del muro (sin transform); para
+     el muro del eje y la voltea en horizontal. N = ancho del hexágono = ancho de la celda.
+     {N, w, h, minX, minY}: tamaño del bbox y offset del bbox respecto a la esquina inf-izq (BL=P(a,fixed,0)). ── */
+  const WALL_TILES = {
+    wall1: { N: 1, w: 17, h: 60, minX: 0, minY: -51 },
+    wall2: { N: 2, w: 34, h: 68, minX: 0, minY: -51 },
+  };
+  const _wallTex = {};   // variant → { neutral: canvas|null, tints: { col: canvas } }
+  function _loadWall(variant) {
+    const def = WALL_TILES[variant], s = _wallTex[variant] = { neutral: null, tints: {} };
+    const load = (url, onfail) => { const img = new Image();
+      img.onload = () => { const c = document.createElement("canvas"); c.width = def.w; c.height = def.h;
+        c.getContext("2d").drawImage(img, 0, 0, def.w, def.h); s.neutral = c; };
+      img.onerror = onfail || null; img.src = url; };
+    if (ASSET_USE_PNG) load("/assets/png/" + variant + ".png", () => load("/assets/svg/" + variant + ".svg"));
+    else load("/assets/svg/" + variant + ".svg");
+  }
+  function _wallTexture(variant, col) {
+    if (typeof document === "undefined" || !WALL_TILES[variant]) return null;
+    let s = _wallTex[variant]; if (!s) { _loadWall(variant); s = _wallTex[variant]; }
+    if (!s.neutral) return null;
+    return s.tints[col] || (s.tints[col] = _tintSprite(s.neutral, col));
+  }
+  // Tesela la tira (ya en perspectiva) a lo largo de la cara. A=abajo-izq, B=abajo-dcha (z=0);
+  // Bt/At = arriba. nW = ancho del muro en tiles. eje "y" → se voltea en horizontal (muro espejo).
+  function fillWall(ctx, axis, A, B, Bt, At, nW, variant, col) {
+    const def = WALL_TILES[variant]; if (!def) return false;
+    const tex = _wallTexture(variant, col); if (!tex) return false;
+    const ux = (B.x - A.x) / nW, uy = (B.y - A.y) / nW;     // vector por tile a lo largo del eje
+    const flip = (axis === "y");
+    ctx.save();
+    ctx.beginPath(); ctx.moveTo(At.x, At.y); ctx.lineTo(Bt.x, Bt.y); ctx.lineTo(B.x, B.y); ctx.lineTo(A.x, A.y);
+    ctx.closePath(); ctx.clip();                            // recorta a la cara (últimas tiras parciales)
+    ctx.imageSmoothingEnabled = false;
+    for (let i = 0; i * def.N < nW + 1e-3; i++) {           // tiras de N tiles a lo largo del muro
+      const bx = A.x + i * def.N * ux, by = A.y + i * def.N * uy;   // esquina inf-izq de la tira i
+      if (!flip) ctx.drawImage(tex, Math.round(bx + def.minX), Math.round(by + def.minY));
+      else { ctx.save(); ctx.translate(2 * bx, 0); ctx.scale(-1, 1);
+        ctx.drawImage(tex, Math.round(bx + def.minX), Math.round(by + def.minY)); ctx.restore(); }
+    }
+    ctx.restore();
+    return true;
+  }
+
+  /* ── PUERTA por SPRITE (marco SVG/PNG ya en perspectiva, altura fija): la genera tools/gen-doors.mjs
+     desde AP.door. "front" = marco del frente (vano transparente → se ve al robot al cruzar); "back" =
+     marco del muro de fondo (se le añade el hueco negro detrás). El eje y se voltea en horizontal.
+     {w,h,minX,minY}: bbox del sprite y offset respecto a la esquina del vano P(a0,fixed,0). ── */
+  const DOOR_TILES = {
+    front: { w: 45, h: 74, minX: -6, minY: -51 },
+    back:  { w: 44, h: 74, minX:  0, minY: -54 },
+  };
+  const _doorTex = {};
+  function _loadDoor(variant) {
+    const def = DOOR_TILES[variant], s = _doorTex[variant] = { neutral: null, tints: {} }, file = "door_" + variant;
+    const load = (url, onfail) => { const img = new Image();
+      img.onload = () => { const c = document.createElement("canvas"); c.width = def.w; c.height = def.h;
+        c.getContext("2d").drawImage(img, 0, 0, def.w, def.h); s.neutral = c; };
+      img.onerror = onfail || null; img.src = url; };
+    if (ASSET_USE_PNG) load("/assets/png/" + file + ".png", () => load("/assets/svg/" + file + ".svg"));
+    else load("/assets/svg/" + file + ".svg");
+  }
+  function _doorTexture(variant, col) {
+    if (typeof document === "undefined") return null;
+    let s = _doorTex[variant]; if (!s) { _loadDoor(variant); s = _doorTex[variant]; }
+    if (!s.neutral) return null;
+    return s.tints[col] || (s.tints[col] = _tintSprite(s.neutral, col));
+  }
+  // Dibuja el marco de puerta desde el sprite (front/back) anclado en P(a0,fixed,0). false → vector.
+  function drawDoorSprite(ctx, p, axis, fixed, a0, a1, H, hole, col) {
+    const variant = hole ? "back" : "front", def = DOOR_TILES[variant];
+    const tex = _doorTexture(variant, col); if (!tex) return false;
+    if (hole) doorHole(ctx, p, axis, fixed, a0, a1, H, col);    // hueco negro detrás del marco
+    const ref = (axis === "x") ? p(a0, fixed, 0) : p(fixed, a0, 0);
+    const dx = Math.round(ref.x + def.minX), dy = Math.round(ref.y + def.minY);
+    if (axis === "x") ctx.drawImage(tex, dx, dy);
+    else { ctx.save(); ctx.translate(2 * ref.x, 0); ctx.scale(-1, 1); ctx.drawImage(tex, dx, dy); ctx.restore(); }
+    return true;
+  }
+
   /* =====================  ASSETS  ===================== */
 
   // Suelo: negro con rejilla tenue de la tinta de la sala
@@ -96,14 +178,18 @@ export const AP = (() => {
     }
   }
 
-  // Pared PLANA y teselada (panal). axis "x": plano en y=fixed recorriendo x.
-  function flatWall(ctx, p, axis, fixed, a0, a1, H, col) {
+  // Pared PLANA y teselada (panal). axis "x": plano en y=fixed recorriendo x. `tile` = variante de
+  // panal (por sala); si no se pasa, override de consola o el global WALL_TILE.
+  function flatWall(ctx, p, axis, fixed, a0, a1, H, col, tile) {
     let At, Bt, B, A;
     if (axis === "x") { A = p(a0, fixed, 0); B = p(a1, fixed, 0); Bt = p(a1, fixed, H); At = p(a0, fixed, H); }
     else { A = p(fixed, a0, 0); B = p(fixed, a1, 0); Bt = p(fixed, a1, H); At = p(fixed, a0, H); }
     const L = [At, Bt, B, A];
     poly(ctx, L, BLACK, BLACK);          // fondo NEGRO: lo que no sea hexágono entero queda negro
-    honeycomb(ctx, L, p.TW * 0.40, col); // hexágonos COMPLETOS (más grandes) en la tinta de la sala
+    // PANAL: tira SVG/PNG (ya en perspectiva) teselada a lo largo del muro; si no ha cargado, panal vector.
+    const variant = tile || (typeof window !== "undefined" && window.__wall) || WALL_TILE;
+    if (!fillWall(ctx, axis, A, B, Bt, At, a1 - a0, variant, col))
+      honeycomb(ctx, L, p.TW * 0.40, col);
     poly(ctx, L, null, BLACK);           // recontorno limpio
   }
 
@@ -137,8 +223,10 @@ export const AP = (() => {
     if (axis === "x") { box(ctx, p, a0, d0, a1, d1, z0, H, col); _groove(ctx, p, a0, d0, a1, d1, z0 + 0.10, col); }
     else              { box(ctx, p, d0, a0, d1, a1, z0, H, col); _groove(ctx, p, d0, a0, d1, a1, z0 + 0.10, col); }
   }
-  // Puerta completa (las de FONDO se dibujan como unidad: hueco + postes + dintel).
+  // Puerta completa: marco (postes + dintel) + hueco si es de fondo. Usa el SPRITE SVG/PNG ya en
+  // perspectiva (gen-doors.mjs); si no ha cargado, cae al vector (postes + dintel).
   function door(ctx, p, axis, fixed, a0, a1, H, col, hole) {
+    if (drawDoorSprite(ctx, p, axis, fixed, a0, a1, H, hole, col)) return;
     if (hole) doorHole(ctx, p, axis, fixed, a0, a1, H, col);
     doorPost(ctx, p, axis, fixed, a0, a0 + DOOR.POST_W, H, col);
     doorPost(ctx, p, axis, fixed, a1 - DOOR.POST_W, a1, H, col);

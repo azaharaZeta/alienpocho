@@ -33,7 +33,8 @@ export function makeRoom(o) {
     objects: (o.objects || []).map(e => ({ ...e })),
     sockets: (o.sockets || []).map(e => ({ ...e })),
     hazards: (o.hazards || []).map(e => ({ ...e })),
-    ink: o.ink, ink2: o.ink2, exits: o.exits || {}, name: o.name || ""
+    ink: o.ink, ink2: o.ink2, exits: o.exits || {}, name: o.name || "",
+    wallTile: o.wallTile   // variante de panal por sala (opcional; si undefined → global WALL_TILE)
   };
 }
 

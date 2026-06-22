@@ -92,7 +92,7 @@
 <script type="module">
 import { AP } from "./src/assets.js";
 import { INKS, INK2 } from "./src/palette.js";
-import { ASSET_USE_PNG } from "./src/config.js";   // misma prioridad PNG/SVG que el juego
+import { ASSET_USE_PNG, WALL_H } from "./src/config.js";   // misma prioridad PNG/SVG + altura de pared
 
 // 0-2: parejas base · 3-5: las mismas invertidas (ver src/palette.js)
 const NAMES = ["cian", "oliva", "magenta", "ámbar", "azul", "verde"];
@@ -112,11 +112,13 @@ const GROUPS = [
       draw: (c, p, ink) => { for (let y = 0; y < 2; y++) for (let x = 0; x < 2; x++) AP.floor(c, p, x, y, ink); } }] },
     { name: "Bloque", sprite: "cube", views: [{ label: "bloque", center: { x: .5, y: .5, z: .5 },
       draw: (c, p, ink) => { AP.floor(c, p, 0, 0, ink); AP.cube(c, p, 0, 0, 0, ink); } }] },
-    { name: "Pared (panal)", views: [{ label: "pared", center: { x: 1.25, y: 0, z: 1.1 },
-      draw: (c, p, ink) => AP.flatWall(c, p, "x", 0, 0, 2.5, 2.2, ink) }] },
-    { name: "Puerta (arco)", badge: "eje x · eje y", views: [
-      { label: "eje x", center: { x: 1.5, y: 0, z: 1.3 }, draw: (c, p, ink) => { AP.flatWall(c, p, "x", 0, -0.3, 3.3, 2.6, ink); const s = AP.DOOR.SPAN_HALF; AP.door(c, p, "x", 0, 1.5 - s, 1.5 + s, 2.6, ink, true); } },
-      { label: "eje y", center: { x: 0, y: 1.5, z: 1.3 }, draw: (c, p, ink) => { AP.flatWall(c, p, "y", 0, -0.3, 3.3, 2.6, ink); const s = AP.DOOR.SPAN_HALF; AP.door(c, p, "y", 0, 1.5 - s, 1.5 + s, 2.6, ink, true); } } ] },
+    { name: "Pared (wall1)", wallTile: "wall1", views: [{ label: "wall1 · 1 tile", center: { x: 1.25, y: 0, z: WALL_H / 2 },
+      draw: (c, p, ink) => AP.flatWall(c, p, "x", 0, 0, 2.5, WALL_H, ink, "wall1") }] },
+    { name: "Pared (wall2)", wallTile: "wall2", views: [{ label: "wall2 · 2 tiles", center: { x: 1.25, y: 0, z: WALL_H / 2 },
+      draw: (c, p, ink) => AP.flatWall(c, p, "x", 0, 0, 2.5, WALL_H, ink, "wall2") }] },
+    { name: "Puerta (arco)", badge: "eje x · eje y", files: ["door_front.svg", "door_back.svg"], views: [
+      { label: "eje x", center: { x: 1.5, y: 0, z: WALL_H / 2 }, draw: (c, p, ink) => { AP.flatWall(c, p, "x", 0, -0.3, 3.3, WALL_H, ink); const s = AP.DOOR.SPAN_HALF; AP.door(c, p, "x", 0, 1.5 - s, 1.5 + s, WALL_H, ink, true); } },
+      { label: "eje y", center: { x: 0, y: 1.5, z: WALL_H / 2 }, draw: (c, p, ink) => { AP.flatWall(c, p, "y", 0, -0.3, 3.3, WALL_H, ink); const s = AP.DOOR.SPAN_HALF; AP.door(c, p, "y", 0, 1.5 - s, 1.5 + s, WALL_H, ink, true); } } ] },
     { name: "Columna", views: [{ label: "columna", center: { x: .5, y: .5, z: 1.1 },
       draw: (c, p, ink) => { AP.floor(c, p, 0, 0, ink); AP.pillar(c, p, 0, 0, 2.2, ink); } }] },
   ] },
@@ -166,13 +168,35 @@ function drawViewGame(ctx, anchorX, anchorY, view, ink, ink2) {
 /* ---------- Estado global de PALETA (afecta a miniaturas y overlay) ---------- */
 let palIdx = 0;
 const _cmpCache = {};   // cache de siluetas SVG/PNG por sprite (definido ANTES del bucle que lo usa)
+const _fileCache = {};  // cache de siluetas de ficheros SVG sueltos (auto-descubiertos del manifiesto)
 
 /* ---------- Miniatura de un asset (con la paleta global) ---------- */
 function renderThumb(canvas, item) {
   // Assets MIGRADOS → miniatura desde el FICHERO real (igual que el popup y el juego). Evita el
   // bug de pintar el vector de fallback (la miniatura es síncrona y el sprite carga async).
+  if (item.file) { renderFileThumb(canvas, item.file, item.w, item.h); return; }   // SVG suelto (manifiesto)
   if (item.sprite && AP.SPRITES[item.sprite]) { renderSpriteThumb(canvas, item.sprite); return; }
   renderViewPixel(canvas, item.views[0], INKS[palIdx], INK2[palIdx], 84, 72, 2);   // resolución juego ×2
+}
+/* Carga (cacheada) un fichero SVG suelto a su tamaño nativo (silueta neutra). */
+function ensureFile(file, w, h, cb) {
+  if (_fileCache[file]) { cb(_fileCache[file]); return; }
+  const img = new Image();
+  img.onload = () => { const c = document.createElement("canvas"); c.width = w; c.height = h;
+    c.getContext("2d").drawImage(img, 0, 0, w, h); _fileCache[file] = c; cb(c); };
+  img.onerror = () => cb(null);
+  img.src = "/assets/svg/" + file + "?cb=" + Date.now();
+}
+/* Miniatura de un fichero SVG suelto: silueta plana teñida (primario), centrada. */
+function renderFileThumb(canvas, file, w, h) {
+  ensureFile(file, w, h, (neutral) => {
+    if (!neutral) return;
+    const z = 2, W = 84 * z, Hc = 72 * z; canvas.width = W; canvas.height = Hc;
+    const x = canvas.getContext("2d"); x.imageSmoothingEnabled = false;
+    x.fillStyle = "#000"; x.fillRect(0, 0, W, Hc);
+    const s = Math.max(1, Math.floor(Math.min(W / w, Hc / h) * 0.8));
+    x.drawImage(tintSrc(neutral, INKS[palIdx]), Math.round((W - w * s) / 2), Math.round((Hc - h * s) / 2), w * s, h * s);
+  });
 }
 /* Miniatura de un sprite migrado: se pinta desde su FICHERO, con la MISMA prioridad que el juego
    (PNG si ASSET_USE_PNG y existe; si no, el SVG), teñido y centrado. */
@@ -219,6 +243,39 @@ for (const g of GROUPS) {
     thumbs.push({ canvas: cv, item });
   }
 }
+
+// Re-render diferido: sprites y tiles de pared cargan async → repinta las miniaturas cuando estén
+// listas (si no, las recetas async como la pared se quedan con el fallback vector del 1er frame).
+setTimeout(() => thumbs.forEach(t => renderThumb(t.canvas, t.item)), 500);
+
+// AUTO desde el MANIFIESTO: añade una ficha por CADA .svg del manifiesto que no esté ya en el
+// catálogo (silueta plana). Así salen TODOS los assets, se usen o no en el juego.
+(async () => {
+  let manifest = [];
+  try { manifest = await (await fetch("/assets/svg/manifest.json?cb=" + Date.now())).json(); } catch { return; }
+  const repr = new Set();
+  for (const g of GROUPS) for (const it of g.items) {
+    if (it.sprite) repr.add(it.sprite + ".svg");
+    if (it.wallTile) repr.add(it.wallTile + ".svg");
+    if (it.files) it.files.forEach(f => repr.add(f));
+  }
+  const rest = manifest.filter(e => !repr.has(e.file));
+  if (!rest.length) return;
+  const cat = document.getElementById("catalog");
+  const h = document.createElement("h2"); h.textContent = "Otros ficheros SVG (sin uso en juego)"; cat.appendChild(h);
+  const grid = document.createElement("div"); grid.className = "grid"; cat.appendChild(grid);
+  for (const e of rest) {
+    const item = { name: e.name, file: e.file, w: e.w, h: e.h };
+    const tile = document.createElement("button"); tile.className = "tile";
+    const cv = document.createElement("canvas"); cv.width = 150; cv.height = 120;
+    renderFileThumb(cv, e.file, e.w, e.h);
+    tile.appendChild(cv);
+    const nm = document.createElement("span"); nm.className = "name"; nm.textContent = e.name; tile.appendChild(nm);
+    tile.addEventListener("click", () => openOverlay(item));
+    grid.appendChild(tile);
+    thumbs.push({ canvas: cv, item });
+  }
+})();
 
 /* ---------- Overlay grande (con la paleta global) ---------- */
 const overlay = document.getElementById("overlay");
@@ -274,8 +331,21 @@ function renderBigSprite(name) {
   });
 }
 
+/* Vista grande de un fichero SVG suelto: silueta plana teñida, a zoom pixelado. */
+function renderBigFile(item) {
+  ensureFile(item.file, item.w, item.h, (neutral) => {
+    if (!curItem || curItem.file !== item.file || !neutral) return;
+    const z = 6, W = item.w * z, Hh = item.h * z, pad = 26;
+    bigCanvas.width = W + pad * 2; bigCanvas.height = Hh + pad * 2;
+    const c = bigCanvas.getContext("2d"); c.imageSmoothingEnabled = false;
+    c.fillStyle = "#000"; c.fillRect(0, 0, bigCanvas.width, bigCanvas.height);
+    c.drawImage(tintSrc(neutral, INKS[palIdx]), pad, pad, W, Hh);
+  });
+}
+
 function renderBig() {
   if (!curItem) return;
+  if (curItem.file) { renderBigFile(curItem); return; }
   if (curItem.sprite && AP.SPRITES[curItem.sprite]) { renderBigSprite(curItem.sprite); return; }
   const views = curItem.views, n = views.length;
   const GW = 96, GH = 96, ZOOM = 3;           // celda a RESOLUCIÓN DE JUEGO + zoom pixelado entero
