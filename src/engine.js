@@ -110,40 +110,46 @@ export const ENGINE = (() => {
   }
 
   /* ---- ORDEN DE PINTADO: painter por cajas (escena isométrica correcta) ----
-     Cada objeto es una caja 3D [x0,y0,z0]–[x1,y1,z1]. Con la cámara mirando desde
-     la esquina (+,+,+), la PROFUNDIDAD de oclusión la fija la distancia en el SUELO:
-     más x o más y = más cerca (delante). La altura Z solo sube el sprite en pantalla;
-     NO acerca a la cámara, así que solo desempata cuando dos cajas comparten columna.
-     Por eso el orden es JERÁRQUICO x → y → z, no un OR simétrico de los tres ejes
-     (que se contradice en escaleras que ascienden hacia el espectador y deja pares
-     sin ordenar). `order` es decisivo y antisimétrico:
-        -1: A va antes (detrás)   +1: B va antes   0: misma columna y altura (empate).
-     Esto define un orden parcial; un orden topológico (DFS post-orden invertido) da
-     la secuencia de pintado. Devuelve las cajas ya ordenadas.
+     Cada objeto es una caja 3D [x0,y0,z0]–[x1,y1,z1]. Con la cámara en la esquina (+,+,+),
+     una caja está DETRÁS de otra cuando un PLANO perpendicular a un eje las separa y ella
+     queda del lado lejano (menor x, o menor y, o menor z). Esa relación de separación
+     (`order`, abajo) es un orden PARCIAL: solo opina cuando la oclusión es inequívoca.
+     Un orden topológico DETERMINISTA (Kahn, eligiendo por una clave canónica) lo extiende
+     a la secuencia completa de pintado. Devuelve las cajas ya ordenadas. `order`:
+        -1: A va antes (detrás)   +1: B va antes   0: ambiguo (lo zanja la clave canónica).
 
-     CLAVE anti-CICLOS: solo se ordenan los pares que SE SOLAPAN EN PANTALLA. El orden
+     DETERMINISMO: el orden es función del CONJUNTO de cajas, no del orden en que llegan
+     (antes, un DFS dependía de la inserción → el mismo escenario podía pintarse distinto y
+     causar parpadeo). Aquí Kahn emite primero las cajas SIN nadie detrás (las más al fondo)
+     eligiendo por la clave canónica → resultado estable.
+
+     CICLOS: el gating por pantalla (abajo) elimina los ciclos ESPURIOS, pero la oclusión
+     cíclica REAL (3+ cajas que se tapan en anillo) existe y NINGÚN orden la resuelve. Antes
+     el DFS la rompía de forma muda y según la inserción; ahora, si Kahn se queda sin cajas de
+     grado 0, se ROMPE el ciclo forzando la de MENOR grado de entrada (menos aristas "detrás"
+     violadas), desempatando por la clave → degradación acotada y determinista.
+
+     CLAVE anti-CICLOS espurios: solo se ordenan los pares que SE SOLAPAN EN PANTALLA. El orden
      de dos cajas que no se solapan en pantalla es irrelevante; crear aristas entre
      ellas (p. ej. el robot asomado a un borde y un cubo lejano que no tapa) mete
      aristas espurias que forman ciclos y hacen que el pintor viole un "detrás" real.
      Para gatear necesitamos el proyector `p` (TW/TH/BH); sin él, no se gatea. */
   function depthSort(boxes, p) {
     const n = boxes.length, E = 1e-6;
-    // Mismo epsilon en los tres ejes: tolera caras coplanares por float de forma simétrica.
+    // Relación de oclusión INEQUÍVOCA por SEPARACIÓN de ejes (mismo epsilon en los tres:
+    // tolera caras coplanares de forma simétrica). A está DETRÁS si cae al lado lejano de B
+    // por algún eje (x/y/z); B detrás si cae al lado lejano de A. Solo es decisiva cuando una
+    // sola dirección se cumple: si AMBAS (separación contradictoria: delante por un eje, detrás
+    // por otro) o NINGUNA (se interpenetran) el orden es AMBIGUO → 0 (sin arista) y lo zanja la
+    // clave canónica del topo-sort. Antes esto se forzaba jerárquico (x→y→z) y un desempate por
+    // centro-Z; pero decidir un par ambiguo metía aristas que falseaban un "detrás" REAL de otro
+    // par. Mejor no opinar de lo ambiguo y dejar que el orden global (Kahn + clave) lo resuelva.
     const order = (A, B) => {
-      if (A.x1 <= B.x0 + E) return -1;       // A estrictamente detrás en x
-      if (B.x1 <= A.x0 + E) return  1;       // B detrás en x
-      if (A.y1 <= B.y0 + E) return -1;       // A detrás en y
-      if (B.y1 <= A.y0 + E) return  1;       // B detrás en y
-      if (A.z1 <= B.z0 + E) return -1;       // misma huella: A más bajo → detrás
-      if (B.z1 <= A.z0 + E) return  1;       // misma huella: B más bajo → detrás
-      // Solape total (misma celda y altura): el pintor no puede ser perfecto, pero
-      // un DESEMPATE determinista evita orden indefinido (objeto saltando sobre el
-      // robot). Va último (delante) el de mayor centro Z, luego el de más profundidad.
-      const za = A.z0 + A.z1, zb = B.z0 + B.z1;
-      if (za !== zb) return za < zb ? -1 : 1;
-      const da = A.x0 + A.x1 + A.y0 + A.y1, db = B.x0 + B.x1 + B.y0 + B.y1;
-      if (da !== db) return da < db ? -1 : 1;
-      return 0;
+      const aBehind = A.x1 <= B.x0 + E || A.y1 <= B.y0 + E || A.z1 <= B.z0 + E;
+      const bBehind = B.x1 <= A.x0 + E || B.y1 <= A.y0 + E || B.z1 <= A.z0 + E;
+      if (aBehind && !bBehind) return -1;    // A detrás (inequívoco) → A se pinta antes
+      if (bBehind && !aBehind) return  1;    // B detrás (inequívoco) → B se pinta antes
+      return 0;                              // ambiguo (contradictorio o interpenetrado)
     };
     // AABB de cada caja proyectada a pantalla (los extremos caen en esquinas opuestas).
     let scr = null;
@@ -156,17 +162,42 @@ export const ENGINE = (() => {
     }
     const overlapScr = (i, j) => !scr ||
       (scr[i].x0 < scr[j].x1 && scr[i].x1 > scr[j].x0 && scr[i].y0 < scr[j].y1 && scr[i].y1 > scr[j].y0);
+    // Grafo de precedencia: adj[i] = cajas que van DESPUÉS de i (i se pinta antes = detrás).
     const adj = Array.from({ length: n }, () => []);
+    const indeg = new Array(n).fill(0);
     for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
       if (!overlapScr(i, j)) continue;       // no se tapan en pantalla → orden irrelevante
       const o = order(boxes[i], boxes[j]);
-      if (o < 0) adj[i].push(j);             // i antes que j
-      else if (o > 0) adj[j].push(i);        // j antes que i
+      if (o < 0) { adj[i].push(j); indeg[j]++; }       // i antes que j
+      else if (o > 0) { adj[j].push(i); indeg[i]++; }  // j antes que i
     }
-    const state = new Array(n).fill(0), out = [];
-    const visit = (i) => { state[i] = 1; for (const j of adj[i]) if (state[j] === 0) visit(j); state[i] = 2; out.push(i); };
-    for (let i = 0; i < n; i++) if (state[i] === 0) visit(i);
-    out.reverse();
+    // Clave canónica de DESEMPATE (orden total por geometría) que usa Kahn entre las cajas listas
+    // (las que no tienen ninguna relación de oclusión entre sí: o no se solapan en pantalla, o se
+    // INTERPENETRAN). cmp(a,b)<0 ⇒ a va antes (más al fondo). Para el caso que importa —dos cajas en
+    // el MISMO espacio, p. ej. el robot pisando la celda de un zócalo/objeto— manda primero el CENTRO-Z:
+    // la caja más BAJA (menor centro-z) se pinta antes y la más ALTA queda DELANTE (el robot, alto, tapa
+    // al zócalo/objeto bajo). Sin esto, ordenar por suelo (x0+y0) volteaba el orden según la posición
+    // sub-celda del robot (zócalo dibujándose sobre el robot al entrar por detrás de la celda). Después
+    // del centro-z, profundidad de suelo y el resto de coords solo para que el orden sea TOTAL (determinista).
+    const cmp = (a, b) => {
+      const A = boxes[a], B = boxes[b];
+      return (A.z0 + A.z1) - (B.z0 + B.z1) || (A.x0 + A.y0) - (B.x0 + B.y0)
+           || A.z0 - B.z0 || A.x0 - B.x0 || A.y0 - B.y0 || A.x1 - B.x1 || A.y1 - B.y1;
+    };
+    // Orden topológico DETERMINISTA (Kahn): cada paso emite la caja de grado 0 (sin nadie
+    // detrás) más al fondo según la clave. Si NINGUNA tiene grado 0 hay un ciclo de oclusión
+    // REAL → se rompe forzando la de MENOR grado (menos "detrás" violados), luego la clave.
+    const done = new Array(n).fill(false), out = [];
+    for (let k = 0; k < n; k++) {
+      let best = -1;
+      for (let i = 0; i < n; i++)
+        if (!done[i] && indeg[i] === 0 && (best < 0 || cmp(i, best) < 0)) best = i;
+      if (best < 0)                          // ciclo: forzar la menos restringida (determinista)
+        for (let i = 0; i < n; i++)
+          if (!done[i] && (best < 0 || indeg[i] < indeg[best] || (indeg[i] === indeg[best] && cmp(i, best) < 0))) best = i;
+      done[best] = true; out.push(best);
+      for (const j of adj[best]) if (!done[j]) indeg[j]--;
+    }
     return out.map(i => boxes[i]);
   }
 
