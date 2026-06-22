@@ -13,7 +13,7 @@ Sirve el directorio actual, así que ejecútalo desde la raíz del proyecto. Ctr
 import sys
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
-PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8123
+PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
 
 
 class NoCacheHandler(SimpleHTTPRequestHandler):
