@@ -6,6 +6,6 @@
   "description": "Puzzle-acción isométrico monocromo (homenaje a Alien 8). Vanilla JS + canvas, sin build.",
   "scripts": {
     "test": "node test/smoke.mjs && node test/painter.mjs",
-    "serve": "python3 -m http.server 8123"
+    "serve": "python3 server.py"
   }
 }

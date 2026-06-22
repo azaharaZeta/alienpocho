@@ -10,6 +10,7 @@
 "use strict";
 
 import { CFG, WALL_H } from "./config.js";
+import { socketTop } from "./physics.js";   // misma altura sólida del zócalo que la física (fuente única)
 import { ENGINE } from "./engine.js";
 import { AP } from "./assets.js";
 import { ctx, P, setProjector, applyRoomTheme } from "./view.js";
@@ -53,7 +54,7 @@ export function render(room) {
     box3(hz.cx + 0.2, hz.cy + 0.2, 0, hz.cx + 0.8, hz.cy + 0.8, 0.5,
          () => AP.spikes(ctx, P, hz.cx + 0.5, hz.cy + 0.5, 0, ink));
   for (const s of room.sockets) { const oz = s.z || 0;
-    box3(s.cx + 0.16, s.cy + 0.16, oz, s.cx + 0.84, s.cy + 0.84, oz + 0.4,
+    box3(s.cx + 0.16, s.cy + 0.16, oz, s.cx + 0.84, s.cy + 0.84, socketTop(s),
          () => AP.socket(ctx, P, s.cx + 0.5, s.cy + 0.5, oz, s.shape, s.active, ink2)); }
   // objetos físicos (circuitos transportables): se dibujan en el SECUNDARIO de la sala.
   for (const o of room.objects) { const m = AP.PROP.HALF;

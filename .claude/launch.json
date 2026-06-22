@@ -4,7 +4,7 @@
     {
       "name": "alien-pocho",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8123"],
+      "runtimeArgs": ["server.py"],
       "port": 8123
     }
   ]

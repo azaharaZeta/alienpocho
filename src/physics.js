@@ -40,19 +40,22 @@ export function objBox(o) {
    Los ZÓCALOS NO son sólidos: son la casilla-DESTINO sobre la que el robot se planta
    para soltar el circuito y activarlos (ver interact). Los PINCHOS tampoco (se saltan;
    el daño llega en Fase 6). */
-/* Cima de un zócalo ACTIVADO (peana SOCKET.BASE_H + circuito PROP.H encajado encima). */
-export function activeSocketTop(s) { return (s.z || 0) + SOCKET.BASE_H + PROP.H; }
+/* Cima SÓLIDA de un zócalo según su estado: la peana (SOCKET.BASE_H) y, si está ACTIVADO, el
+   circuito encajado encima (PROP.H). El zócalo es SÓLIDO siempre: inactivo = peana baja a la que
+   el robot SE SUBE andando (mientras SOCKET.BASE_H ≤ CFG.STEP); activo = peana + circuito. */
+export function socketTop(s) { return (s.z || 0) + SOCKET.BASE_H + (s.active ? PROP.H : 0); }
 
 export function roomSolids(room) {
   const s = [];
   for (const bl of room.blocks)
     s.push({ x0: bl.x, y0: bl.y, z0: bl.z, x1: bl.x + 1, y1: bl.y + 1, top: bl.z + bl.h });
   for (const o of room.objects) s.push(objBox(o));
-  // Un zócalo ACTIVADO (con su circuito dentro) vuelve a ser SÓLIDO: ocupa espacio y
-  // es pisable. El inactivo no (es la baldosa-destino sobre la que te plantas).
-  for (const k of room.sockets) if (k.active) {
+  // Los zócalos son SÓLIDOS (sin excepciones): el inactivo es una peana baja a la que el robot SE
+  // SUBE andando (SOCKET.BASE_H ≤ CFG.STEP); el activo suma el circuito encajado encima. Misma
+  // huella que su dibujo (AP.socket) → física y render no se contradicen.
+  for (const k of room.sockets) {
     const oz = k.z || 0;
-    s.push({ x0: k.cx + 0.16, y0: k.cy + 0.16, z0: oz, x1: k.cx + 0.84, y1: k.cy + 0.84, top: activeSocketTop(k) });
+    s.push({ x0: k.cx + 0.16, y0: k.cy + 0.16, z0: oz, x1: k.cx + 0.84, y1: k.cy + 0.84, top: socketTop(k) });
   }
   return s;
 }

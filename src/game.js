@@ -11,7 +11,7 @@
 "use strict";
 
 import { CFG, PROP } from "./config.js";
-import { canStandOn, activeSocketTop, overlapsBox, objBox } from "./physics.js";
+import { canStandOn, socketTop, overlapsBox, objBox } from "./physics.js";
 import { player } from "./player.js";
 import { buildWorld } from "./world.js";
 
@@ -36,7 +36,7 @@ export function interact(room) {
         s.active = true; game.carried = null; game.circuits++;
         if (game.circuits >= game.circuitsTotal) game.won = true;
         // el zócalo ya es sólido bajo los pies → subir encima del circuito encajado
-        player.z = activeSocketTop(s); player.vz = 0; player.onGround = true;
+        player.z = socketTop(s); player.vz = 0; player.onGround = true;   // s.active ya es true → cima activa
         return;
       }
     }

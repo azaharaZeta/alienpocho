@@ -15,7 +15,8 @@ export const CFG = {
   BLOCK_H: 17,
   WALK: 3.0,                // velocidad de avance (celdas/seg)
   PRAD: 0.32,               // radio de colisión del jugador
-  STEP: 0.08,               // altura máx. salvable andando (sin saltar)
+  STEP: 0.25,               // altura máx. (en bloques) que el robot SALVA andando, sin saltar = 25% de un bloque
+                            //   → se sube solo a superficies bajas (p. ej. la peana del zócalo); un bloque (1.0) no.
   TURN_TIME: 0.12,          // duración del giro de 90° (anim/cooldown)
   GRAVITY: 22,              // gravedad (celdas/seg^2)
   // Salto de UN botón: pulsación < JUMP_TAP_TIME => bajo/corto; si se mantiene => alto/largo.

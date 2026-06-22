@@ -49,7 +49,7 @@ Convenio de nombres: usar minúsculas y guiones en lugar de espacios para `<titu
 
 
 ## IDEAS USUARIA
-
+- revisar que no haya ñapas (excepciones hardcodeadas) en el motor isométrico ni en los assets.  
 - Refactor: Limitar el ancho y largo de las habitaciones a enter 3 y 8 solo. Centrar siempre la sala dentro del mismo marco 8x8.
 - Mejorar el mini mapa: zonas un poco más claras, bordes ok.
 - Esta es gorda: convertir el juego en un roguelike. Cada run, mapa random, ubicaciones random.

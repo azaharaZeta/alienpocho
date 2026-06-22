@@ -49,10 +49,10 @@ export const ROOMS = {
     blocks: [{ x: 4, y: 1, z: 0, h: 1 }, { x: 9, y: 1, z: 0, h: 2 }] },
 
   // CELDA — mini sala 3×3.
-  "2,0": { name: "CELDA", paletteIndex: 3, w: 3, h: 3,
+  "2,0": { name: "CELDA", paletteIndex: 3, w: 4, h: 4,
     exits: { xm: "1,0", xp: "3,0", ym: "2,-1" },
-    objects: [{ x: 1.5, y: 1.5, z: 0, shape: "pyramid" }],
-    sockets: [{ cx: 1, cy: 0, z: 0, shape: "pyramid", active: false }] },
+    objects: [{ x: 2.5, y: 2.5, z: 0, shape: "pyramid" }],
+    sockets: [{ cx: 1, cy: 1, z: 0, shape: "pyramid", active: false }] },
 
   // TORRE — pasillo LARGO máximo 3×13.
   "3,0": { name: "TORRE", paletteIndex: 4, w: 3, h: 13,

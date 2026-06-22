@@ -15,7 +15,8 @@ import { buildWorld } from "../src/world.js";
 import { START } from "../src/data/rooms.js";
 import { game, room, interact, checkExits, resetGame } from "../src/game.js";
 import { player } from "../src/player.js";
-import { updateObjects, blocksHoriz, supportHeight } from "../src/physics.js";
+import { updateObjects, blocksHoriz, supportHeight, roomSolids, socketTop } from "../src/physics.js";
+import { CFG, SOCKET } from "../src/config.js";
 
 /* ---- mini-runner sin dependencias ---- */
 let passed = 0, failed = 0;
@@ -84,6 +85,23 @@ test("apoyo: el suelo es 0 y la cima de un bloque es su altura", () => {
   const r = buildWorld().rooms["0,0"];
   assert.equal(supportHeight(r, 0.5, 0.5, 0), 0, "suelo a z=0");
   assert.equal(supportHeight(r, 2.5, 2.5, 1), 1, "cima del bloque de 1 capa = 1");
+});
+
+test("STEP permite subir a superficies bajas (peana del zócalo ≤ STEP)", () => {
+  assert.ok(SOCKET.BASE_H <= CFG.STEP, `la peana del zócalo (${SOCKET.BASE_H}) debe ser subible andando (STEP=${CFG.STEP})`);
+});
+
+test("el zócalo es SÓLIDO (no atravesable) y el robot SE SUBE a su peana andando", () => {
+  const r = buildWorld().rooms["0,0"];        // ENTRADA, zócalo inactivo en celda (6,5)
+  const sock = r.sockets[0];
+  // 1) es sólido: aparece en roomSolids con la altura de su peana
+  const solid = roomSolids(r).find(b => b.x0 > 6 && b.x0 < 7 && b.y0 > 5 && b.y0 < 6);
+  assert.ok(solid, "el zócalo inactivo está entre los sólidos (no es atravesable)");
+  assert.equal(solid.top, socketTop(sock), "su cima sólida = peana (socketTop)");
+  // 2) NO bloquea el avance (es bajo): el robot entra en su celda andando…
+  assert.equal(blocksHoriz(r, 6.5, 5.5, 0), false, "la peana baja no bloquea (se sube andando)");
+  // 3) …y queda apoyado ENCIMA de la peana, no a z=0
+  assert.equal(supportHeight(r, 6.5, 5.5, 0), SOCKET.BASE_H, "el robot se apoya sobre la peana");
 });
 
 /* ------------------------------------------------- TRANSICIÓN ENTRE SALAS --- */
