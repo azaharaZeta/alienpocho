@@ -27,9 +27,6 @@ const menuPalette = (() => {
   return { ink: INKS[k], ink2: INK2[k] };
 })();
 
-/* Link discreto del título → catálogo de assets (solo visible en el menú; ver bucle). */
-const assetsLink = document.getElementById("assetslink");
-
 /* =========================================================================
    BUCLE de juego con requestAnimationFrame + delta-time
    ========================================================================= */
@@ -37,7 +34,6 @@ let last = performance.now();
 function loop(now) {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
-  assetsLink.hidden = game.state !== "title";   // el link al catálogo solo aparece en el menú
   if (game.state === "title") {
     applyRoomTheme(menuPalette);   // botones + borde de pantalla con la paleta (aleatoria) del menú
     // Cualquier acción (incluye botones táctiles) arranca la partida.

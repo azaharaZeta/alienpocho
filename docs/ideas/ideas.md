@@ -38,6 +38,9 @@ Convenio de nombres: usar minúsculas y guiones en lugar de espacios para `<titu
 - **Vidas**: `game.lives` baja al recibir daño; reaparición con breve invulnerabilidad; Game Over a 0.
 
 
+### Técnica
+- **Precargar los assets (PNG/SVG) al arrancar**: ahora que los migrados solo se dibujan desde fichero (sin fallback procedural), mientras cargan no se dibujan → parpadeo en cada recarga. Cargar todas las imágenes antes de iniciar el bucle (o pantalla de carga breve) para que no falte nada en el primer frame.
+
 ### Presentación y pulido
 - **Pantallas** de victoria y game over con entidad propia (hoy solo banner); reutilizar el
   estilo del menú de inicio (estado `title`).
@@ -49,9 +52,13 @@ Convenio de nombres: usar minúsculas y guiones en lugar de espacios para `<titu
 
 
 ## IDEAS USUARIA
+- Cuando usamos png en lugar de svg, ¿como se decide el punto de inicio de dibujo del png? porque depende de la figura. en svg va implícito. mirar si es necesario parametrizar donde está el 0.0 de los png. (me puedo equivocar en esto, es intuición)
 - revisar que no haya ñapas (excepciones hardcodeadas) en el motor isométrico ni en los assets.  
 - Refactor: Limitar el ancho y largo de las habitaciones a enter 3 y 8 solo. Centrar siempre la sala dentro del mismo marco 8x8.
 - Mejorar el mini mapa: zonas un poco más claras, bordes ok.
 - Esta es gorda: convertir el juego en un roguelike. Cada run, mapa random, ubicaciones random.
 - Todos los objetos deberían usar la misma lógica de posicionamento, tanto si son movibles como si no. Ahora mismo creo que  los objetos se posicionan en el centro del tile, pero los bloques  van en un extremo del tile, con dibujado distinto. Implementar que algunos bloques sí sean movibles, empujándolos.
 ## 🐞 BUGS CONOCIDOS
+
+- Solo debería haber 2 formas de dibujar un asset (SVG o PNG), pero hay una 3ª: el vector procedural de `assets.js` (`AP.*`), que es a la vez la fuente de la que se generan los SVG y el fallback en runtime → puede divergir de SVG/PNG. Decidir modelo único SVG-o-PNG (o, si se mantiene el vector, guardarraíl que impida la deriva).
+- La pared se dibuja DISTINTA según el método: el SVG usa hexágonos pointy-top y el fallback `honeycomb` usa flat-top → cambia de forma al cargar el sprite.

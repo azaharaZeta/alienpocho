@@ -8,11 +8,11 @@
    con sombreado plano (darken).
    - Paredes: PLANAS y teseladas (panal), no cubos.
    - Puertas: marco 3D (postes + dintel con ranuras) que sobresale del borde.
-   - Bloques: figuras con bordes "mordidos" (chaflanes), no cubos exactos.
+   - Bloques: cubo iso simple (el dibujo bueno vive en su SVG/PNG; el vector es solo fallback).
    - El robot se pinta en la tinta que se le pasa (en juego, la PRIMARIA de la sala);
      su color por defecto (ROBOT_INK) solo se usa si no se indica ninguno.
    Uso:  AP.<asset>(ctx, p, ..., col)   con p = AP.projector(ox, oy)
-   Catálogo visual interactivo: assets-demo.html
+   Catálogo visual interactivo (tool de dev): tools/assets.html
    ============================================================================= */
 "use strict";
 
@@ -24,7 +24,7 @@ export const AP = (() => {
 
   // Primitivas genéricas del motor (proyección, cajas, panal, painter…).
   const ENG = ENGINE;
-  const { BLACK, darken, lighten, projector, poly, facePt, edgeLine, box, honeycomb } = ENG;
+  const { BLACK, darken, lighten, projector, poly, facePt, edgeLine, box } = ENG;
 
   // Paletas (INKS/INK2/ROBOT_INK desde palette.js) y geometría compartida (DOOR/PROP/ROBOT/
   // SOCKET desde config.js): su FUENTE vive fuera; aquí solo se usan y se reexportan en AP.
@@ -162,20 +162,9 @@ export const AP = (() => {
     poly(ctx, [a, b, c, d], ((cx + cy) & 1) ? darken(col, 0.10) : "#020303", darken(col, 0.30));
   }
 
-  // Bloque: caja con BORDES MORDIDOS (pequeños chaflanes negros en las esquinas)
+  // Bloque: SOLO desde fichero (PNG si existe, si no SVG). Ya migrado → sin fallback procedural.
   function cube(ctx, p, cx, cy, cz, col) {
-    if (drawSprite("cube", ctx, p(cx, cy, cz), col)) return;
-    box(ctx, p, cx, cy, cx + 1, cy + 1, cz, cz + 1, col);
-    const t = cz + 1;
-    const corners = [p(cx, cy, t), p(cx + 1, cy, t), p(cx + 1, cy + 1, t), p(cx, cy + 1, t)];
-    const ctr = p(cx + 0.5, cy + 0.5, t);
-    ctx.fillStyle = BLACK;
-    for (const k of corners) {  // "muerde" cada esquina del techo
-      const dx = (ctr.x - k.x), dy = (ctr.y - k.y), m = Math.hypot(dx, dy);
-      const ux = dx / m, uy = dy / m, s = 3;
-      poly(ctx, [k, { x: k.x + ux * s - uy * s, y: k.y + uy * s + ux * s },
-                    { x: k.x + ux * s + uy * s, y: k.y + uy * s - ux * s }], BLACK, null);
-    }
+    drawSprite("cube", ctx, p(cx, cy, cz), col);
   }
 
   // Pared PLANA y teselada (panal). axis "x": plano en y=fixed recorriendo x. `tile` = variante de
@@ -185,52 +174,23 @@ export const AP = (() => {
     if (axis === "x") { A = p(a0, fixed, 0); B = p(a1, fixed, 0); Bt = p(a1, fixed, H); At = p(a0, fixed, H); }
     else { A = p(fixed, a0, 0); B = p(fixed, a1, 0); Bt = p(fixed, a1, H); At = p(fixed, a0, H); }
     const L = [At, Bt, B, A];
-    poly(ctx, L, BLACK, BLACK);          // fondo NEGRO: lo que no sea hexágono entero queda negro
-    // PANAL: tira SVG/PNG (ya en perspectiva) teselada a lo largo del muro; si no ha cargado, panal vector.
+    poly(ctx, L, BLACK, BLACK);          // fondo NEGRO: mientras carga la imagen, el muro queda negro
+    // PANAL: tira PNG/SVG (ya en perspectiva) teselada a lo largo del muro. SOLO fichero, sin fallback.
     const variant = tile || (typeof window !== "undefined" && window.__wall) || WALL_TILE;
-    if (!fillWall(ctx, axis, A, B, Bt, At, a1 - a0, variant, col))
-      honeycomb(ctx, L, p.TW * 0.40, col);
+    fillWall(ctx, axis, A, B, Bt, At, a1 - a0, variant, col);
     poly(ctx, L, null, BLACK);           // recontorno limpio
   }
 
-  // PUERTA 3D con MARCO (postes + dintel) y un POCO de grosor. Mismo asset
-  // para el fondo y el frente:
-  //   hole=true  → abre un hueco negro en la pared (puertas del fondo).
-  //   hole=false → solo el marco 3D, dejando ver la sala (puertas del frente).
-  // `fixed` es el borde (0 o n); el marco se dibuja HACIA FUERA de la rejilla (sobresale del
-  // borde, no hacia dentro) → evita conflictos de isométrica con bloques/objetos del borde.
-  const doorInset = (fixed) => (fixed < 0.5) ? [fixed - DOOR.T, fixed] : [fixed, fixed + DOOR.T];
-  // Ranura de panel: línea NEGRA (recodo iso) + filo claro encima = bisel.
-  function _groove(ctx, p, x0, y0, x1, y1, z, col) {
-    edgeLine(ctx, p, x0, y0, x1, y1, z + 0.03, lighten(col, 0.4), 1);  // filo claro = bisel
-    edgeLine(ctx, p, x0, y0, x1, y1, z, BLACK, 1);                     // ranura negra
-  }
-  // Hueco negro de la puerta (solo puertas de FONDO)
+  // Hueco negro de la puerta de FONDO. Lo usa drawDoorSprite: lo pinta detrás del marco "back".
   function doorHole(ctx, p, axis, fixed, a0, a1, H, col) {
     const w = DOOR.POST_W, l = H - DOOR.LINTEL_H;
     if (axis === "x") poly(ctx, [p(a0 + w, fixed, l), p(a1 - w, fixed, l), p(a1 - w, fixed, 0), p(a0 + w, fixed, 0)], BLACK, null);
     else              poly(ctx, [p(fixed, a0 + w, l), p(fixed, a1 - w, l), p(fixed, a1 - w, 0), p(fixed, a0 + w, 0)], BLACK, null);
   }
-  // Un POSTE (huella a lo largo del eje del vano: [s0,s1]); con ranuras sci-fi.
-  function doorPost(ctx, p, axis, fixed, s0, s1, H, col) {
-    const [d0, d1] = doorInset(fixed), zG = [H * 0.26, H * 0.5, H * 0.74];
-    if (axis === "x") { box(ctx, p, s0, d0, s1, d1, 0, H, col); for (const z of zG) _groove(ctx, p, s0, d0, s1, d1, z, col); }
-    else              { box(ctx, p, d0, s0, d1, s1, 0, H, col); for (const z of zG) _groove(ctx, p, d0, s0, d1, s1, z, col); }
-  }
-  // El DINTEL (viga superior) con su ranura.
-  function doorLintel(ctx, p, axis, fixed, a0, a1, H, col) {
-    const [d0, d1] = doorInset(fixed), z0 = H - DOOR.LINTEL_H;
-    if (axis === "x") { box(ctx, p, a0, d0, a1, d1, z0, H, col); _groove(ctx, p, a0, d0, a1, d1, z0 + 0.10, col); }
-    else              { box(ctx, p, d0, a0, d1, a1, z0, H, col); _groove(ctx, p, d0, a0, d1, a1, z0 + 0.10, col); }
-  }
-  // Puerta completa: marco (postes + dintel) + hueco si es de fondo. Usa el SPRITE SVG/PNG ya en
-  // perspectiva (gen-doors.mjs); si no ha cargado, cae al vector (postes + dintel).
+  // PUERTA: SOLO desde fichero (PNG si existe, si no SVG). "front" = marco con vano transparente;
+  // "back" = marco del fondo + hueco negro detrás (lo añade drawDoorSprite). Ya migrada → sin fallback.
   function door(ctx, p, axis, fixed, a0, a1, H, col, hole) {
-    if (drawDoorSprite(ctx, p, axis, fixed, a0, a1, H, hole, col)) return;
-    if (hole) doorHole(ctx, p, axis, fixed, a0, a1, H, col);
-    doorPost(ctx, p, axis, fixed, a0, a0 + DOOR.POST_W, H, col);
-    doorPost(ctx, p, axis, fixed, a1 - DOOR.POST_W, a1, H, col);
-    doorLintel(ctx, p, axis, fixed, a0, a1, H, col);
+    drawDoorSprite(ctx, p, axis, fixed, a0, a1, H, hole, col);
   }
 
   // Columna delgada
@@ -281,8 +241,9 @@ export const AP = (() => {
   // pedestal). Es SÓLIDO en el juego (se empuja, se sube uno encima, se apila); su
   // caja física —HALF/H— se ajusta al tamaño visible de la figura.
   function prop(ctx, p, x, y, z, shape, col) {
-    if (drawSprite("prop_" + shape, ctx, p(x, y, z), col)) return;
-    circuit(ctx, p, x, y, z, shape, col);
+    const name = "prop_" + shape;
+    if (SPRITES[name]) { drawSprite(name, ctx, p(x, y, z), col); return; }  // cube/pyramid: migrados → PNG→SVG, sin fallback
+    circuit(ctx, p, x, y, z, shape, col);   // domo/cilindro: AÚN procedurales (pendientes de migrar)
   }
 
   // Zócalo / pedestal
@@ -298,28 +259,14 @@ export const AP = (() => {
     if (active) circuit(ctx, p, x, y, z + SOCKET.BASE_H, shape, col);
   }
 
-  // Pinchos (peligro): roseta de púas
+  // Pinchos (peligro): SOLO desde fichero (PNG→SVG). Ya migrado → sin fallback procedural.
   function spikes(ctx, p, x, y, z, col) {
-    if (drawSprite("spikes", ctx, p(x, y, z), col)) return;
-    const n = 8, rin = 0.07, rout = 0.27, w = 0.1;
-    for (let i = 0; i < n; i++) {
-      const a = (i / n) * Math.PI * 2;
-      const bl = p(x + Math.cos(a - w) * rin, y + Math.sin(a - w) * rin, z);
-      const br = p(x + Math.cos(a + w) * rin, y + Math.sin(a + w) * rin, z);
-      const tip = p(x + Math.cos(a) * rout, y + Math.sin(a) * rout, z + 0.34);
-      poly(ctx, [bl, br, tip], col, BLACK);
-    }
-    poly(ctx, [p(x - 0.06, y, z), p(x + 0.06, y, z), p(x, y, z + 0.5)], col, BLACK);
+    drawSprite("spikes", ctx, p(x, y, z), col);
   }
 
-  // Planta decorativa (abanico de hojas)
+  // Planta decorativa: SOLO desde fichero (PNG→SVG). Ya migrado → sin fallback procedural.
   function plant(ctx, p, x, y, z, col) {
-    if (drawSprite("plant", ctx, p(x, y, z), col)) return;
-    for (let i = 0; i < 6; i++) {
-      const a = (i / 6) * Math.PI * 2;
-      const lx = x + Math.cos(a) * 0.16, ly = y + Math.sin(a) * 0.16;
-      poly(ctx, [p(x, y, z), p(lx + 0.05, ly + 0.05, z + 0.1), p(lx, ly, z + 0.5)], col, BLACK);
-    }
+    drawSprite("plant", ctx, p(x, y, z), col);
   }
 
   // Dron flotante
@@ -397,8 +344,8 @@ export const AP = (() => {
 
   return {
     INKS, INK2, ROBOT_INK, DIRS, ROBOT, BLACK, DOOR, darken, lighten,
-    projector, poly, box, honeycomb, facePt, edgeLine,
-    floor, cube, flatWall, door, doorHole, doorPost, doorLintel,
+    projector, poly, box, facePt, edgeLine,
+    floor, cube, flatWall, door, doorHole,
     pillar, circuit, prop, PROP, socket, spikes, plant, drone, robot, shadow,
     SPRITES   // registro de sprites migrados {name:{minX,minY,w,h}} (lo usa el catálogo)
   };

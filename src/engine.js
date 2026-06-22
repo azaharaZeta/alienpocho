@@ -69,45 +69,6 @@ export const ENGINE = (() => {
     poly(ctx, [D, C, Cb, Db], darken(col, 0.82), BLACK);  // cara izquierda (+y): media
   }
 
-  // Panal HEXAGONAL sobre una cara plana [TL,TR,BR,BL]. Dibuja SOLO hexágonos
-  // COMPLETOS (relleno `col` + borde negro de junta); donde un hexágono no cabe entero
-  // se deja NEGRO (el fondo de la pared). Así nunca hay medias celdas ni picos sueltos.
-  // R = radio del hexágono en píxeles.
-  function honeycomb(ctx, L, R, col) {
-    const o = L[0];
-    const uxx = L[1].x - o.x, uxy = L[1].y - o.y;   // vector ancho
-    const vxx = L[3].x - o.x, vxy = L[3].y - o.y;   // vector alto
-    const wPx = Math.hypot(uxx, uxy), hPx = Math.hypot(vxx, vxy);
-    const eux = uxx / wPx, euy = uxy / wPx;          // unitarios en coord. de cara
-    const evx = vxx / hPx, evy = vxy / hPx;
-    const toS = (a, b) => ({ x: o.x + eux * a + evx * b, y: o.y + euy * a + evy * b });
-    ctx.save();
-    ctx.beginPath(); ctx.moveTo(L[0].x, L[0].y);
-    for (let i = 1; i < 4; i++) ctx.lineTo(L[i].x, L[i].y);
-    ctx.closePath(); ctx.clip();
-    ctx.fillStyle = col; ctx.strokeStyle = BLACK; ctx.lineWidth = 1;
-    // "FLAT-TOP": el hexágono se asienta en su BASE (lado plano arriba/abajo), no en un
-    // pico. Tesela en COLUMNAS desplazadas media celda en vertical.
-    const colS = 1.5 * R, rowS = Math.sqrt(3) * R, ht = rowS / 2, eps = 0.5, botCut = 3;
-    // ARRIBA: cada columna empieza con su lado plano en/bajo el borde superior → no se corta
-    // arriba (el hueco queda negro). ABAJO y LATERALES: sí se cortan (el clip recorta), pero
-    // si de un hexágono solo asomara una tira < botCut px contra el suelo, no se dibuja
-    // (evita la línea fina de 1-2px del "siguiente" hexágono al pie de la pared).
-    for (let i = 0, a = -colS; a - R < wPx + eps; a += colS, i++) {
-      if (a + R < -eps) continue;            // columna totalmente fuera por la izquierda
-      const voff = (i & 1) ? ht : 0;         // columnas alternas, bajadas media celda
-      for (let b = ht + voff; b - ht < hPx - botCut; b += rowS) {
-        ctx.beginPath();
-        for (let k = 0; k < 6; k++) {
-          const ang = Math.PI / 180 * (60 * k);
-          const s = toS(a + Math.cos(ang) * R, b + Math.sin(ang) * R);
-          if (k === 0) ctx.moveTo(s.x, s.y); else ctx.lineTo(s.x, s.y);
-        }
-        ctx.closePath(); ctx.fill(); ctx.stroke();
-      }
-    }
-    ctx.restore();
-  }
 
   /* ---- ORDEN DE PINTADO: painter por cajas (escena isométrica correcta) ----
      Cada objeto es una caja 3D [x0,y0,z0]–[x1,y1,z1]. Con la cámara en la esquina (+,+,+),
@@ -201,5 +162,5 @@ export const ENGINE = (() => {
     return out.map(i => boxes[i]);
   }
 
-  return { BLACK, darken, lighten, projector, poly, facePt, edgeLine, box, honeycomb, depthSort };
+  return { BLACK, darken, lighten, projector, poly, facePt, edgeLine, box, depthSort };
 })();

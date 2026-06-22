@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alien Pocho — Catálogo de assets</title>
+<style>
+  :root { --ink: #36c8ff; --ink2: #ffd27a; --dim: #15384a; }
+  html, body { margin: 0; background: #05080a; color: var(--ink);
+    font-family: "Courier New", monospace; }
+  header { padding: 18px 6% 4px; }
+  h1 { font-size: 17px; letter-spacing: 3px; margin: 0 0 6px; }
+  .note { font-size: 12px; color: #8fb8c8; max-width: 70ch; line-height: 1.5; margin: 0 0 10px; }
+  .back { display: inline-block; font-size: 11px; color: #8fb8c8; text-decoration: none;
+    border: 1px solid var(--dim); border-radius: 6px; padding: 3px 9px; margin-bottom: 10px; }
+  .back:hover { color: var(--ink); border-color: var(--ink); }
+  h2 { font-size: 12px; letter-spacing: 2px; color: var(--ink); margin: 22px 0 8px;
+    border-bottom: 1px solid var(--dim); padding-bottom: 5px; }
+  main { padding: 0 6% 60px; }
+
+  /* Selector de paleta de sala (cabecera): cada pareja primario/secundario es un BOTÓN */
+  .palrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 6px 0 4px; }
+  .palrow-lbl { font-size: 11px; color: #8fb8c8; }
+  .palette { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pal { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 10px;
+    color: #8fb8c8; background: none; border: none; cursor: pointer; font-family: inherit; padding: 2px; }
+  .pal .pair { display: flex; border: 1px solid #234; border-radius: 5px; overflow: hidden; }
+  .pal .pair span { width: 26px; height: 20px; display: block; }
+  .pal:hover { color: var(--ink); }
+  .pal.sel { color: #fff; font-weight: bold; }
+  .pal.sel .pair { border-color: #fff; box-shadow: 0 0 0 2px #fff, 0 0 12px rgba(255,255,255,.6); transform: translateY(-2px); }
+
+  /* Rejilla de miniaturas */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .tile { background: #000; border: 1px solid var(--dim); border-radius: 8px; padding: 6px 6px 8px;
+    cursor: pointer; color: var(--ink); display: flex; flex-direction: column; align-items: center;
+    font-family: inherit; transition: border-color .12s, transform .12s; }
+  .tile:hover { border-color: var(--ink); transform: translateY(-2px); }
+  .tile canvas { width: 100%; height: auto; image-rendering: pixelated; display: block; border-radius: 5px; }
+  .tile .name { font-size: 11px; margin-top: 5px; letter-spacing: 1px; }
+  .tile .badge { font-size: 9px; color: #7aa; }
+
+  /* Overlay grande */
+  #overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.82); display: none;
+    align-items: center; justify-content: center; z-index: 10; }
+  #overlay.open { display: flex; }
+  .modal { background: #07101a; border: 1px solid var(--ink); border-radius: 12px;
+    padding: 16px 18px 20px; max-width: 92vw; max-height: 92vh; overflow: auto;
+    box-shadow: 0 0 50px rgba(54,200,255,0.25); }
+  .modal .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 10px; }
+  .modal h3 { margin: 0; font-size: 15px; letter-spacing: 2px; color: var(--ink); }
+  .modal .close { background: none; border: 1px solid var(--dim); color: var(--ink);
+    border-radius: 6px; width: 30px; height: 30px; font-size: 18px; cursor: pointer; }
+  .modal .close:hover { border-color: var(--ink); }
+  #bigCanvas { display: block; background: #000; border-radius: 7px; max-width: 100%; height: auto;
+    image-rendering: pixelated;
+    image-rendering: auto; }
+  .swatches { display: flex; gap: 8px; margin: 12px 0 2px; align-items: center; flex-wrap: wrap; }
+  .swatches .lbl { font-size: 10px; color: #8fb8c8; margin-right: 2px; }
+  .swatches button { width: 30px; height: 22px; border-radius: 5px; border: 2px solid transparent;
+    cursor: pointer; padding: 0; display: flex; overflow: hidden; }
+  .swatches button.sel { border-color: #fff; box-shadow: 0 0 8px rgba(255,255,255,.6); }
+  .swatches button span { flex: 1; }
+
+  /* Botón "Crear SVG" (cabecera) */
+  #createBtn { background: var(--ink2); color: #000; border: none; border-radius: 6px; padding: 5px 12px;
+    font-family: inherit; font-size: 12px; cursor: pointer; margin-left: 8px; }
+  #createBtn:hover { filter: brightness(1.1); }
+  /* Popup en HORIZONTAL (tool de portátil, sin responsive): dibujos a la izq, edición a la dcha */
+  .modal-body { display: flex; gap: 20px; align-items: flex-start; }
+  .modal-body .left { flex: 0 0 auto; max-width: 56vw; }
+  .modal-body .right { flex: 0 0 auto; width: 520px; }
+  /* Cuadros informativos (dimensiones) */
+  .infoboxes { display: flex; gap: 10px; flex-wrap: wrap; margin: 0 0 12px; }
+  .infobox { border: 1px solid var(--dim); border-radius: 6px; padding: 6px 10px; min-width: 150px; background: #0a1014; }
+  .infobox .lbl { font-size: 10px; color: #8fb8c8; letter-spacing: 1px; text-transform: uppercase; }
+  .infobox .val { font-size: 15px; color: var(--ink); margin-top: 2px; }
+  /* Panel SVG del popup (ver fuente / crear / descargar) */
+  #svgPane { margin-top: 0; }
+  #svgMsg { margin: 0 0 8px; font-size: 12px; color: #8fb8c8; line-height: 1.5; }
+  #svgSrc { width: 100%; min-width: 0; height: 190px; background: #0a1014; color: #cfe;
+    border: 1px solid var(--dim); border-radius: 6px; font-family: "Courier New", monospace; font-size: 12px;
+    padding: 8px; resize: vertical; }
+  #svgSrc[readonly] { color: #9fdccf; }
+  .actions { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+  .actions button { background: var(--dim); color: #fff; border: none; border-radius: 5px; padding: 6px 12px;
+    font-family: inherit; font-size: 13px; cursor: pointer; }
+  .actions button:hover { background: var(--ink); color: #000; }
+  #cubeBtn.on { background: var(--ink2); color: #000; }
+  #cubeBtn:disabled, #regionBtn:disabled, #pointBtn:disabled { opacity: .4; cursor: not-allowed; }
+  #regionBtn.on { background: var(--ui2-dim, #4a5a3a); color: #fff; }
+  #pointBtn.on { background: var(--ink2); color: #000; }
+</style>
+</head>
+<body>
+  <header>
+    <a class="back" href="../index.html">‹ volver al juego</a>
+    <h1>ALIEN POCHO · TOOL DE ASSETS</h1>
+    <p class="note">
+      <b>Herramienta de desarrollo</b> (no pública): catálogo de TODOS los assets + visor/exportador de SVG.
+      Pulsa un asset para verlo en grande; si tiene <b>SVG</b>, muestra su código fuente (solo lectura) y
+      permite <b>descargar el PNG neutro</b> (sin color; el juego lo tiñe por sala al dibujar). Los assets
+      que se dibujan <b>proceduralmente</b> no tienen SVG (la tool lo avisa). <b>+ Crear SVG</b> abre un editor
+      con un cubo por defecto a tamaño de juego para dibujar y descargar su svg + png.
+    </p>
+    <div class="palrow">
+      <span class="palrow-lbl">paleta de sala:</span><div class="palette" id="palette"></div>
+      <button id="createBtn">+ Crear SVG</button>
+    </div>
+  </header>
+  <main id="catalog"></main>
+
+  <div id="overlay">
+    <div class="modal">
+      <div class="top">
+        <h3 id="bigTitle"></h3>
+        <button class="close" id="closeBtn" aria-label="cerrar">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="left">
+          <canvas id="bigCanvas"></canvas>
+          <div class="swatches" id="swatches"><span class="lbl">paleta de sala:</span></div>
+        </div>
+        <div class="right">
+          <div class="infoboxes">
+            <div class="infobox"><div class="lbl">Mundo · ancho×largo×alto (celdas)</div><div class="val" id="infoGU">—</div></div>
+            <div class="infobox"><div class="lbl">Imagen · ancho×alto (px)</div><div class="val" id="infoPX">—</div></div>
+          </div>
+          <div id="svgPane">
+            <div id="svgMsg"></div>
+            <textarea id="svgSrc" spellcheck="false" readonly></textarea>
+            <div class="actions">
+              <button id="cubeBtn" title="cubo-contenedor EXACTO (ancho×largo×alto), color complementario">▢ Cubo de referencia</button>
+              <button id="regionBtn" title="región estándar = unidades naturales (ceil) que cubren el asset, secundario oscuro">▣ Región estándar</button>
+              <button id="pointBtn" title="punto de anclaje iso: dónde el juego ancla el sprite (píxel −minX,−minY)">● Punto de anclaje</button>
+              <button id="dlPng">Descargar PNG (neutro)</button>
+              <button id="dlSvg" hidden>Descargar SVG</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script type="module">
+import { AP } from "../src/assets.js";
+import { INKS, INK2 } from "../src/palette.js";
+import { ASSET_USE_PNG, WALL_H, PROP, ROBOT, DOOR, SOCKET } from "../src/config.js";   // prioridad PNG/SVG + geometría (celdas)
+
+// 0-2: parejas base · 3-5: las mismas invertidas (ver src/palette.js)
+const NAMES = ["cian", "oliva", "magenta", "ámbar", "azul", "verde"];
+
+/* Cada asset = { name, badge?, views:[{label, center?, draw(ctx,p,ink,ink2)}] }.
+   La miniatura usa views[0]; el overlay muestra todas las vistas a lo grande.
+   center = punto del mundo (celda) a centrar en el lienzo (def. {0.5,0.5,0.6}). */
+const circuitItem = (name, shape) => ({ name, sprite: "prop_" + shape, views: [{ label: name, center: { x: .5, y: .5, z: .3 },
+  draw: (c, p, ink, ink2) => { AP.floor(c, p, 0, 0, ink); AP.circuit(c, p, 0.5, 0.5, 0, shape, ink2); } }] });
+const socketItem = (name, shape) => ({ name, badge: "inactivo·activo", views: [
+  { label: "inactivo", center: { x: .5, y: .5, z: .3 }, draw: (c, p, ink, ink2) => { AP.floor(c, p, 0, 0, ink); AP.socket(c, p, 0.5, 0.5, 0, shape, false, ink2); } },
+  { label: "activo",   center: { x: .5, y: .5, z: .3 }, draw: (c, p, ink, ink2) => { AP.floor(c, p, 0, 0, ink); AP.socket(c, p, 0.5, 0.5, 0, shape, true, ink2); } } ] });
+
+const GROUPS = [
+  { title: "Terreno y estructura", items: [
+    { name: "Suelo", views: [{ label: "suelo 1×1", center: { x: 0.5, y: 0.5, z: 0 },
+      draw: (c, p, ink) => AP.floor(c, p, 0, 0, ink) }] },
+    { name: "Bloque", sprite: "cube", views: [{ label: "bloque", center: { x: .5, y: .5, z: .5 },
+      draw: (c, p, ink) => { AP.floor(c, p, 0, 0, ink); AP.cube(c, p, 0, 0, 0, ink); } }] },
+    { name: "Pared (wall1)", wallTile: "wall1", views: [{ label: "wall1 · 1 tile", center: { x: 0.5, y: 0, z: WALL_H / 2 },
+      draw: (c, p, ink) => AP.flatWall(c, p, "x", 0, 0, 1, WALL_H, ink, "wall1") }] },
+    { name: "Pared (wall2)", wallTile: "wall2", views: [{ label: "wall2 · 2 tiles", center: { x: 1, y: 0, z: WALL_H / 2 },
+      draw: (c, p, ink) => AP.flatWall(c, p, "x", 0, 0, 2, WALL_H, ink, "wall2") }] },
+    { name: "Puerta (arco)", badge: "eje x · eje y", files: ["door_front.svg", "door_back.svg"],
+      box: { x: 1.5 - DOOR.SPAN_HALF, y: -DOOR.T, z: 0, w: 2 * DOOR.SPAN_HALF, l: DOOR.T, h: WALL_H },   // representativa (eje x); habilita botones
+      ref: { x: 1.5 - DOOR.SPAN_HALF, y: 0, z: 0 },
+      views: [
+      { label: "eje x", center: { x: 1.5, y: 0, z: WALL_H / 2 },
+        box: { x: 1.5 - DOOR.SPAN_HALF, y: -DOOR.T, z: 0, w: 2 * DOOR.SPAN_HALF, l: DOOR.T, h: WALL_H },
+        ref: { x: 1.5 - DOOR.SPAN_HALF, y: 0, z: 0 },   // = p(a0, fixed, 0): donde drawDoorSprite ancla el marco
+        draw: (c, p, ink) => { const s = AP.DOOR.SPAN_HALF; AP.door(c, p, "x", 0, 1.5 - s, 1.5 + s, WALL_H, ink, true); } },
+      { label: "eje y", center: { x: 0, y: 1.5, z: WALL_H / 2 },
+        box: { x: -DOOR.T, y: 1.5 - DOOR.SPAN_HALF, z: 0, w: DOOR.T, l: 2 * DOOR.SPAN_HALF, h: WALL_H },
+        ref: { x: 0, y: 1.5 - DOOR.SPAN_HALF, z: 0 },
+        draw: (c, p, ink) => { const s = AP.DOOR.SPAN_HALF; AP.door(c, p, "y", 0, 1.5 - s, 1.5 + s, WALL_H, ink, true); } } ] },
+    { name: "Columna", views: [{ label: "columna", center: { x: .5, y: .5, z: 1.1 },
+      draw: (c, p, ink) => { AP.floor(c, p, 0, 0, ink); AP.pillar(c, p, 0, 0, 2.2, ink); } }] },
+  ] },
+  { title: "Circuitos (transportables)", items: [
+    circuitItem("Cubo", "cube"), circuitItem("Pirámide", "pyramid"),
+    circuitItem("Domo", "dome"), circuitItem("Cilindro", "cylinder"),
+  ] },
+  { title: "Zócalos (destino, por forma)", items: [
+    socketItem("Zócalo cubo", "cube"), socketItem("Zócalo pirámide", "pyramid"),
+    socketItem("Zócalo domo", "dome"), socketItem("Zócalo cilindro", "cylinder"),
+  ] },
+  { title: "Peligros y decoración", items: [
+    { name: "Pinchos", sprite: "spikes", views: [{ label: "pinchos", center: { x: .5, y: .5, z: .3 }, draw: (c, p, ink) => { AP.floor(c, p, 0, 0, ink); AP.spikes(c, p, 0.5, 0.5, 0, ink); } }] },
+    { name: "Planta", sprite: "plant", views: [{ label: "planta", center: { x: .5, y: .5, z: .3 }, draw: (c, p, ink) => { AP.floor(c, p, 0, 0, ink); AP.plant(c, p, 0.5, 0.5, 0, ink); } }] },
+    { name: "Dron", views: [{ label: "dron", center: { x: .5, y: .5, z: .7 }, draw: (c, p, ink) => { AP.floor(c, p, 0, 0, ink); AP.drone(c, p, 0.5, 0.5, 0, ink); } }] },
+  ] },
+  { title: "Personaje", items: [
+    { name: "Robot Pocho", badge: "4 vistas", views: [0, 1, 2, 3].map(f => ({
+      label: ["+x", "+y", "-x", "-y"][f], center: { x: .5, y: .5, z: .8 },
+      draw: (c, p, ink) => { AP.shadow(c, p, 0.5, 0.5, 0); AP.robot(c, p, 0.5, 0.5, 0, f, ink); } })) },
+  ] },
+];
+
+/* Render PIXELART coherente: dibuja la vista a RESOLUCIÓN DE JUEGO (drawViewGame) en un lienzo
+   nativo y la amplía con zoom ENTERO nearest-neighbor. Mismo criterio que el juego (low-res +
+   escalado pixelado) y que la tool svg2png → todo coincide, nada de re-render del vector. */
+function renderViewPixel(canvas, view, ink, ink2, nw, nh, zoom) {
+  const cell = document.createElement("canvas"); cell.width = nw; cell.height = nh;
+  drawViewGame(cell.getContext("2d"), nw / 2, nh * 0.58, view, ink, ink2);
+  canvas.width = nw * zoom; canvas.height = nh * zoom;
+  const x = canvas.getContext("2d"); x.imageSmoothingEnabled = false;
+  x.fillStyle = "#000"; x.fillRect(0, 0, canvas.width, canvas.height);
+  x.drawImage(cell, 0, 0, nw * zoom, nh * zoom);
+}
+
+/* Dibuja una vista a RESOLUCIÓN DE JUEGO (POPT real: tile 34×17, bloque 17), centrada en
+   (anchorX,anchorY) de un lienzo pequeño. La vista grande del overlay es un ZOOM pixelado de
+   esto (nunca un re-render del vector a otra resolución → así coincide con el juego). */
+function drawViewGame(ctx, anchorX, anchorY, view, ink, ink2, cube) {
+  const c = view.center || { x: 0.5, y: 0.5, z: 0.6 };
+  const TW = 34, TH = 17, BH = 17;
+  const ox = anchorX - (c.x - c.y) * TW / 2;
+  const oy = anchorY - (c.x + c.y) * TH / 2 + c.z * BH;
+  const P = AP.projector(ox, oy, { TILE_W: TW, TILE_H: TH, BLOCK_H: BH });
+  view.draw(ctx, P, ink, ink2);
+  if (cube) drawRefCube(ctx, P, cube.box, cube.color);   // referencia de perspectiva (mismo proyector → alineado)
+}
+
+/* Color del cubo de referencia: COMPLEMENTARIO del color elegido (= secundario de la paleta);
+   azul brillante en modo "sin paleta". */
+const complementColor = () => palIdx < 0 ? "#3aa0ff" : curInk2();
+/* Cubo-contenedor en perspectiva iso (alambre): AABB de mundo {x,y,z,w,l,h} proyectada por P. */
+function drawRefCube(ctx, P, b, color) {
+  const X0 = b.x, Y0 = b.y, Z0 = b.z, X1 = b.x + b.w, Y1 = b.y + b.l, Z1 = b.z + b.h;
+  const v = [[X0,Y0,Z0],[X1,Y0,Z0],[X1,Y1,Z0],[X0,Y1,Z0],[X0,Y0,Z1],[X1,Y0,Z1],[X1,Y1,Z1],[X0,Y1,Z1]].map(c => P(c[0], c[1], c[2]));
+  const edges = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+  ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.globalAlpha = 0.9;
+  for (const [a, z] of edges) { ctx.beginPath(); ctx.moveTo(v[a].x, v[a].y); ctx.lineTo(v[z].x, v[z].y); ctx.stroke(); }
+  ctx.globalAlpha = 1;
+}
+
+/* Región estándar contenedora: ceil de cada dimensión (mín. 1; 0→1), alineada a celdas. Color
+   SECUNDARIO oscuro (gris en "sin paleta"). Siempre ⊇ el cubo, así que es el contenedor mayor. */
+const regionColor = () => AP.darken(curInk2(), 0.45);
+const pointColor = () => palIdx < 0 ? "#cfe9ff" : AP.lighten(curInk2(), 0.45);   // punto de anclaje: secundario BRILLANTE
+function regionOf(b) {
+  const x0 = Math.floor(b.x), x1 = Math.max(x0 + 1, Math.ceil(b.x + b.w));
+  const y0 = Math.floor(b.y), y1 = Math.max(y0 + 1, Math.ceil(b.y + b.l));
+  const z0 = Math.floor(b.z), z1 = Math.max(z0 + 1, Math.ceil(b.z + b.h));
+  return { x: x0, y: y0, z: z0, w: x1 - x0, l: y1 - y0, h: z1 - z0 };
+}
+/* BBox en pantalla de las 8 esquinas de una caja de mundo, vía proyector P. */
+function boxBBox(b, P) {
+  const X1 = b.x + b.w, Y1 = b.y + b.l, Z1 = b.z + b.h;
+  const cs = [[b.x,b.y,b.z],[X1,b.y,b.z],[X1,Y1,b.z],[b.x,Y1,b.z],[b.x,b.y,Z1],[X1,b.y,Z1],[X1,Y1,Z1],[b.x,Y1,Z1]].map(p => P(p[0],p[1],p[2]));
+  let mnx = 1e9, mny = 1e9, mxx = -1e9, mxy = -1e9;
+  for (const p of cs) { mnx = Math.min(mnx, p.x); mny = Math.min(mny, p.y); mxx = Math.max(mxx, p.x); mxy = Math.max(mxy, p.y); }
+  return { minx: mnx, miny: mny, w: mxx - mnx, h: mxy - mny };
+}
+
+/* ---------- Estado global de PALETA (afecta a miniaturas y overlay) ---------- */
+// palIdx = índice de paleta · -1 = "SIN PALETA" (neutro): teñir con blanco = silueta SIN color.
+let palIdx = 0;
+const curInk  = () => palIdx < 0 ? "#ffffff" : INKS[palIdx];
+const curInk2 = () => palIdx < 0 ? "#ffffff" : INK2[palIdx];
+const curName = () => palIdx < 0 ? "sin paleta" : (NAMES[palIdx] || palIdx);
+const _cmpCache = {};   // cache de siluetas SVG/PNG por sprite (definido ANTES del bucle que lo usa)
+const _fileCache = {};  // cache de siluetas de ficheros SVG sueltos (auto-descubiertos del manifiesto)
+
+/* ---------- Miniatura de un asset (con la paleta global) ---------- */
+function renderThumb(canvas, item) {
+  // Assets MIGRADOS → miniatura desde el FICHERO real (igual que el popup y el juego). Evita el
+  // bug de pintar el vector de fallback (la miniatura es síncrona y el sprite carga async).
+  if (item.file) { renderFileThumb(canvas, item.file, item.w, item.h); return; }   // SVG suelto (manifiesto)
+  if (item.sprite && AP.SPRITES[item.sprite]) { renderSpriteThumb(canvas, item.sprite); return; }
+  renderViewPixel(canvas, item.views[0], curInk(), curInk2(), 84, 72, 2);   // resolución juego ×2
+}
+/* Carga (cacheada) un fichero SVG suelto a su tamaño nativo (silueta neutra). */
+function ensureFile(file, w, h, cb) {
+  if (_fileCache[file]) { cb(_fileCache[file]); return; }
+  const img = new Image();
+  img.onload = () => { const c = document.createElement("canvas"); c.width = w; c.height = h;
+    c.getContext("2d").drawImage(img, 0, 0, w, h); _fileCache[file] = c; cb(c); };
+  img.onerror = () => cb(null);
+  img.src = "/assets/svg/" + file + "?cb=" + Date.now();
+}
+/* Miniatura de un fichero SVG suelto: silueta plana teñida (primario), centrada. */
+function renderFileThumb(canvas, file, w, h) {
+  ensureFile(file, w, h, (neutral) => {
+    if (!neutral) return;
+    const z = 2, W = 84 * z, Hc = 72 * z; canvas.width = W; canvas.height = Hc;
+    const x = canvas.getContext("2d"); x.imageSmoothingEnabled = false;
+    x.fillStyle = "#000"; x.fillRect(0, 0, W, Hc);
+    const s = Math.max(1, Math.floor(Math.min(W / w, Hc / h) * 0.8));
+    x.drawImage(tintSrc(neutral, curInk()), Math.round((W - w * s) / 2), Math.round((Hc - h * s) / 2), w * s, h * s);
+  });
+}
+/* Miniatura de un sprite migrado: se pinta desde su FICHERO, con la MISMA prioridad que el juego
+   (PNG si ASSET_USE_PNG y existe; si no, el SVG), teñido y centrado. */
+function renderSpriteThumb(canvas, name) {
+  const def = AP.SPRITES[name]; if (!def) return;
+  ensureSpriteSources(name, (sources) => {
+    if (!sources.length) return;
+    const png = sources.find(s => s.tag === "PNG"), svg = sources.find(s => s.tag === "SVG");
+    const chosen = (ASSET_USE_PNG && png) ? png : (svg || png);
+    const z = 2, W = 84 * z, H = 72 * z; canvas.width = W; canvas.height = H;
+    const x = canvas.getContext("2d"); x.imageSmoothingEnabled = false;
+    x.fillStyle = "#000"; x.fillRect(0, 0, W, H);
+    const ink = name.startsWith("prop_") ? curInk2() : curInk();   // circuitos en secundario (como el juego)
+    const tinted = tintSrc(chosen.neutral, ink);
+    const s = Math.max(1, Math.floor(Math.min(W / def.w, H / def.h) * 0.7));
+    x.drawImage(tinted, Math.round((W - def.w * s) / 2), Math.round((H - def.h * s) / 2), def.w * s, def.h * s);
+  });
+}
+
+/* ---------- Catálogo de miniaturas agrupadas ---------- */
+// AUTO-DESCUBRIMIENTO: cualquier sprite de AP.SPRITES sin ficha en GROUPS se añade solo (lee la
+// situación REAL del registro de sprites → los nuevos aparecen sin tocar este fichero).
+{
+  const referenced = new Set();
+  for (const g of GROUPS) for (const it of g.items) if (it.sprite) referenced.add(it.sprite);
+  const extra = Object.keys(AP.SPRITES).filter(n => !referenced.has(n));
+  if (extra.length) GROUPS.push({ title: "Otros sprites (auto · de AP.SPRITES)",
+    items: extra.map(n => ({ name: n, sprite: n, spriteOnly: true, views: [{ label: n }] })) });
+}
+
+/* Dimensiones en CELDAS de juego (ancho×largo×alto) por asset, derivadas de la geometría (config).
+   Las que faltan (SVG sueltos del manifiesto, "otros sprites") quedan sin gu → el popup muestra "—". */
+const GU = {
+  "Suelo": { w: 1, l: 1, h: 0 }, "Bloque": { w: 1, l: 1, h: 1 },
+  "Pared (wall1)": { w: 1, l: 0, h: WALL_H }, "Pared (wall2)": { w: 2, l: 0, h: WALL_H },
+  "Puerta (arco)": { w: +(DOOR.SPAN_HALF * 2).toFixed(2), l: DOOR.T, h: WALL_H },
+  "Columna": { w: 0.6, l: 0.6, h: 2.2 },
+  "Pinchos": { w: 0.54, l: 0.54, h: 0.5 }, "Planta": { w: 0.32, l: 0.32, h: 0.5 }, "Dron": { w: 0.32, l: 0.32, h: 0.28 },
+  "Robot Pocho": { w: +(ROBOT.WID * 2).toFixed(2), l: +(ROBOT.DEP * 2).toFixed(2), h: ROBOT.H },
+};
+const guProp = { w: +(PROP.HALF * 2).toFixed(2), l: +(PROP.HALF * 2).toFixed(2), h: PROP.H };   // circuitos
+const guSocket = { w: 0.68, l: 0.68, h: SOCKET.BASE_H };                                          // zócalos (peana)
+/* Caja-contenedor (AABB de mundo) por asset, en las coords donde la dibuja su `view.draw` (cube en (0,0);
+   props/zócalos/peligros/robot centrados en (0.5,0.5); columna en (0.2,0.2)). La usa el cubo de referencia. */
+const BOX = {
+  "Suelo": { x: 0, y: 0, z: 0, w: 1, l: 1, h: 0 },                 // plano (alto 0)
+  "Pared (wall1)": { x: 0, y: 0, z: 0, w: 1, l: 0, h: WALL_H },    // plano (largo/profundidad 0)
+  "Pared (wall2)": { x: 0, y: 0, z: 0, w: 2, l: 0, h: WALL_H },
+  "Bloque": { x: 0, y: 0, z: 0, w: 1, l: 1, h: 1 },
+  "Columna": { x: 0.2, y: 0.2, z: 0, w: 0.6, l: 0.6, h: 2.2 },
+  "Pinchos": { x: 0.5 - 0.27, y: 0.5 - 0.27, z: 0, w: 0.54, l: 0.54, h: 0.5 },
+  "Planta": { x: 0.5 - 0.16, y: 0.5 - 0.16, z: 0, w: 0.32, l: 0.32, h: 0.5 },
+  "Dron": { x: 0.5 - 0.16, y: 0.5 - 0.16, z: 0.6, w: 0.32, l: 0.32, h: 0.28 },
+  "Robot Pocho": { x: 0.5 - ROBOT.WID, y: 0.5 - ROBOT.DEP, z: 0, w: 2 * ROBOT.WID, l: 2 * ROBOT.DEP, h: ROBOT.H },
+};
+const boxProp = { x: 0.5 - PROP.HALF, y: 0.5 - PROP.HALF, z: 0, w: 2 * PROP.HALF, l: 2 * PROP.HALF, h: PROP.H };
+const boxSocket = { x: 0.16, y: 0.16, z: 0, w: 0.68, l: 0.68, h: SOCKET.BASE_H };
+/* Punto de anclaje ISO (coords de mundo donde el juego ancla el sprite = píxel (−minX,−minY) del PNG/SVG).
+   Dos convenciones: ESQUINA (0,0,0) para bloque/suelo/pared/columna; CENTRO-base (0.5,0.5,0) para props/
+   zócalos/peligros/robot (objetos). */
+const REF = {
+  "Suelo": { x: 0, y: 0, z: 0 }, "Bloque": { x: 0, y: 0, z: 0 }, "Columna": { x: 0, y: 0, z: 0 },
+  "Pared (wall1)": { x: 0, y: 0, z: 0 }, "Pared (wall2)": { x: 0, y: 0, z: 0 },
+  "Pinchos": { x: 0.5, y: 0.5, z: 0 }, "Planta": { x: 0.5, y: 0.5, z: 0 }, "Dron": { x: 0.5, y: 0.5, z: 0 },
+  "Robot Pocho": { x: 0.5, y: 0.5, z: 0 },
+};
+const refCenter = { x: 0.5, y: 0.5, z: 0 };   // props y zócalos: centro de la celda en el suelo
+for (const g of GROUPS) for (const it of g.items) {
+  if (GU[it.name]) it.gu = GU[it.name];
+  else if (it.sprite && it.sprite.startsWith("prop_")) it.gu = guProp;
+  else if (g.title.startsWith("Zócalos")) it.gu = guSocket;
+  if (BOX[it.name]) it.box = BOX[it.name];
+  else if (it.sprite && it.sprite.startsWith("prop_")) it.box = boxProp;
+  else if (g.title.startsWith("Zócalos")) it.box = boxSocket;
+  if (REF[it.name]) it.ref = REF[it.name];
+  else if ((it.sprite && it.sprite.startsWith("prop_")) || g.title.startsWith("Zócalos")) it.ref = refCenter;
+}
+
+const catalog = document.getElementById("catalog");
+const thumbs = [];   // {canvas, item} → para recolorear al cambiar de paleta
+for (const g of GROUPS) {
+  const h = document.createElement("h2"); h.textContent = g.title; catalog.appendChild(h);
+  const grid = document.createElement("div"); grid.className = "grid"; catalog.appendChild(grid);
+  for (const item of g.items) {
+    const tile = document.createElement("button"); tile.className = "tile";
+    const cv = document.createElement("canvas"); cv.width = 150; cv.height = 120;
+    renderThumb(cv, item);
+    tile.appendChild(cv);
+    const nm = document.createElement("span"); nm.className = "name"; nm.textContent = item.name; tile.appendChild(nm);
+    if (item.badge) { const b = document.createElement("span"); b.className = "badge"; b.textContent = item.badge; tile.appendChild(b); }
+    tile.addEventListener("click", () => openOverlay(item));
+    grid.appendChild(tile);
+    thumbs.push({ canvas: cv, item });
+  }
+}
+
+// Re-render diferido: sprites y tiles de pared cargan async → repinta las miniaturas cuando estén
+// listas (si no, las recetas async como la pared se quedan con el fallback vector del 1er frame).
+setTimeout(() => thumbs.forEach(t => renderThumb(t.canvas, t.item)), 500);
+
+// AUTO desde el MANIFIESTO: añade una ficha por CADA .svg del manifiesto que no esté ya en el
+// catálogo (silueta plana). Así salen TODOS los assets, se usen o no en el juego.
+(async () => {
+  let manifest = [];
+  try { manifest = await (await fetch("/assets/svg/manifest.json?cb=" + Date.now())).json(); } catch { return; }
+  const repr = new Set();
+  for (const g of GROUPS) for (const it of g.items) {
+    if (it.sprite) repr.add(it.sprite + ".svg");
+    if (it.wallTile) repr.add(it.wallTile + ".svg");
+    if (it.files) it.files.forEach(f => repr.add(f));
+  }
+  const rest = manifest.filter(e => !repr.has(e.file));
+  if (!rest.length) return;
+  const cat = document.getElementById("catalog");
+  const h = document.createElement("h2"); h.textContent = "Otros ficheros SVG (sin uso en juego)"; cat.appendChild(h);
+  const grid = document.createElement("div"); grid.className = "grid"; cat.appendChild(grid);
+  for (const e of rest) {
+    const item = { name: e.name, file: e.file, w: e.w, h: e.h };
+    const tile = document.createElement("button"); tile.className = "tile";
+    const cv = document.createElement("canvas"); cv.width = 150; cv.height = 120;
+    renderFileThumb(cv, e.file, e.w, e.h);
+    tile.appendChild(cv);
+    const nm = document.createElement("span"); nm.className = "name"; nm.textContent = e.name; tile.appendChild(nm);
+    tile.addEventListener("click", () => openOverlay(item));
+    grid.appendChild(tile);
+    thumbs.push({ canvas: cv, item });
+  }
+})();
+
+/* ---------- Overlay grande (con la paleta global) ---------- */
+const overlay = document.getElementById("overlay");
+const bigCanvas = document.getElementById("bigCanvas");
+const bigTitle = document.getElementById("bigTitle");
+const swatches = document.getElementById("swatches");
+let curItem = null, curMode = "view";   // "view" = asset existente · "create" = SVG nuevo editable
+let showCube = false;                    // cubo-contenedor EXACTO (ancho×largo×alto) en color complementario
+let showRegion = false;                  // región estándar = ceil de cada dim (0→1), en secundario oscuro
+let showPoint = false;                   // punto de anclaje isométrico (donde el juego ancla el sprite), secundario brillante
+
+/* Teñido (multiply) de una silueta gris a la tinta de sala — para comparar SVG vs PNG. */
+function tintSrc(src, ink) {
+  const c = document.createElement("canvas"); c.width = src.width; c.height = src.height;
+  const x = c.getContext("2d");
+  x.drawImage(src, 0, 0);
+  x.globalCompositeOperation = "multiply"; x.fillStyle = ink; x.fillRect(0, 0, c.width, c.height);
+  x.globalCompositeOperation = "destination-in"; x.drawImage(src, 0, 0);
+  return c;
+}
+/* Carga (una vez) las fuentes de un sprite migrado: SVG (siempre) + PNG (si existe), a
+   resolución de juego. Cachea las siluetas neutras por nombre (_cmpCache, declarado arriba). */
+function ensureSpriteSources(name, cb) {
+  if (_cmpCache[name]) { cb(_cmpCache[name]); return; }
+  const def = AP.SPRITES[name]; if (!def) { cb([]); return; }
+  const srcs = [["SVG", "/assets/svg/" + name + ".svg"], ["PNG", "/assets/png/" + name + ".png"]];
+  const out = []; let pending = srcs.length;
+  srcs.forEach(([tag, url], order) => {
+    const img = new Image();
+    img.onload = () => { const cv = document.createElement("canvas"); cv.width = def.w; cv.height = def.h;
+      cv.getContext("2d").drawImage(img, 0, 0, def.w, def.h); out.push({ tag, order, neutral: cv }); fin(); };
+    img.onerror = () => fin();
+    img.src = url + "?cb=" + Date.now();
+  });
+  function fin() { if (--pending === 0) { out.sort((a, b) => a.order - b.order); _cmpCache[name] = out; cb(out); } }
+}
+/* Vista grande COMPARATIVA de un sprite migrado: un panel por fuente disponible (SVG, PNG),
+   teñido y a zoom pixelado, diciendo cuál es cuál. */
+function renderBigSprite(name) {
+  const def = AP.SPRITES[name], ink = name.startsWith("prop_") ? curInk2() : curInk();
+  ensureSpriteSources(name, (sources) => {
+    if (!curItem || curItem.sprite !== name) return;       // cambió de item mientras cargaba
+    const ZOOM = 5, GW = def.w * ZOOM, GH = def.h * ZOOM, pad = 26, labelH = 34;
+    const cells = sources.length || 1, maxGW = (def.w) * ZOOM;
+    bigCanvas.width = cells * (maxGW + pad) + pad; bigCanvas.height = GH + labelH + pad;
+    const c = bigCanvas.getContext("2d");
+    c.fillStyle = "#000"; c.fillRect(0, 0, bigCanvas.width, bigCanvas.height);
+    c.imageSmoothingEnabled = false;
+    if (!sources.length) { c.fillStyle = "#889"; c.font = "14px 'Courier New', monospace"; c.fillText("(sin ficheros)", 20, 30); return; }
+    sources.forEach((s, i) => {
+      const x = pad + i * (maxGW + pad);
+      c.drawImage(tintSrc(s.neutral, ink), x, pad, def.w * ZOOM, GH);
+      c.fillStyle = ink; c.font = "bold 16px 'Courier New', monospace"; c.textAlign = "center"; c.textBaseline = "top";
+      c.fillText(s.tag, x + def.w * ZOOM / 2, pad + GH + 12);   // etiqueta DEBAJO de la imagen (no la tapa)
+    });
+    c.textBaseline = "alphabetic";
+  });
+}
+
+/* Vista grande de un fichero SVG suelto: silueta plana teñida, a zoom pixelado. */
+function renderBigFile(item) {
+  ensureFile(item.file, item.w, item.h, (neutral) => {
+    if (!curItem || curItem.file !== item.file || !neutral) return;
+    const z = 6, W = item.w * z, Hh = item.h * z, pad = 26;
+    bigCanvas.width = W + pad * 2; bigCanvas.height = Hh + pad * 2;
+    const c = bigCanvas.getContext("2d"); c.imageSmoothingEnabled = false;
+    c.fillStyle = "#000"; c.fillRect(0, 0, bigCanvas.width, bigCanvas.height);
+    c.drawImage(tintSrc(neutral, curInk()), pad, pad, W, Hh);
+  });
+}
+
+/* Render por VISTAS (px de juego + zoom NN). Si el asset tiene CAJA, el marco se dimensiona SIEMPRE al
+   cubo-contenedor (constante: igual se muestre o no el cubo) y se AMPLÍA para que el cubo (y el asset
+   dentro) ocupe casi toda la ventana, dejando un pequeño margen. El cubo se dibuja sólo si withCube.
+   Sin caja → tamaño fijo previo (96×96 ×3). */
+function renderViews(item, withCube, withRegion, withPoint) {
+  const views = item.views, n = views.length, box = item.box;
+  const TW = 34, TH = 17, BH = 17, P0 = AP.projector(0, 0, { TILE_W: TW, TILE_H: TH, BLOCK_H: BH });
+  // box/ref PUEDEN ser POR VISTA (la puerta: eje x / eje y con orientaciones distintas).
+  const vbox = v => v.box || box, vref = v => v.ref || item.ref;
+  let cw, ch, ZOOM, bbs = null;
+  if (box) {
+    // bbox de la REGIÓN de cada vista (contenedor mayor); la celda = la MAYOR → encaja todas.
+    bbs = views.map(v => boxBBox(regionOf(vbox(v)), P0));
+    const maxW = Math.max(...bbs.map(b => b.w)), maxH = Math.max(...bbs.map(b => b.h)), nm = 4;
+    cw = Math.ceil(maxW) + 2 * nm; ch = Math.ceil(maxH) + 2 * nm;
+    const target = n > 1 ? 200 : 340;                      // grande (menos en multi-vista)
+    ZOOM = Math.max(1, Math.round(target / Math.max(cw, ch)));
+  } else {
+    cw = 96; ch = 96; ZOOM = 3;
+  }
+  const colW = cw * ZOOM, H = ch * ZOOM + 30;              // +30 para la etiqueta
+  bigCanvas.width = n * colW; bigCanvas.height = H;
+  const c = bigCanvas.getContext("2d");
+  c.fillStyle = "#000"; c.fillRect(0, 0, bigCanvas.width, H);
+  const ink = curInk(), ink2 = curInk2();
+  const cubeC = (withCube && box) ? complementColor() : null;
+  const regC = (withRegion && box) ? regionColor() : null;
+  const ptC = (withPoint && box) ? pointColor() : null;
+  views.forEach((v, i) => {
+    const cell = document.createElement("canvas"); cell.width = cw; cell.height = ch;
+    const cx = cell.getContext("2d");
+    let P;
+    if (box) {
+      const b = vbox(v), bb = bbs[i];                      // origen que CENTRA esta vista en la celda
+      const ox = Math.round((cw - bb.w) / 2) - bb.minx, oy = Math.round((ch - bb.h) / 2) - bb.miny;
+      P = AP.projector(ox, oy, { TILE_W: TW, TILE_H: TH, BLOCK_H: BH });
+      if (regC) drawRefCube(cx, P, regionOf(b), regC);     // región estándar (detrás)
+      v.draw(cx, P, ink, ink2);
+      if (cubeC) drawRefCube(cx, P, b, cubeC);             // cubo exacto (delante)
+    } else drawViewGame(cx, cw / 2, ch * 0.56, v, ink, ink2, null);
+    c.imageSmoothingEnabled = false;
+    c.drawImage(cell, i * colW, 0, colW, ch * ZOOM);
+    const rf = vref(v);
+    if (ptC && P && rf) {                                  // punto de anclaje iso: marcador NÍTIDO sobre el canvas final
+      const pr = P(rf.x, rf.y, rf.z), fx = i * colW + pr.x * ZOOM, fy = pr.y * ZOOM;
+      c.beginPath(); c.arc(fx, fy, 5, 0, Math.PI * 2); c.fillStyle = ptC; c.fill();
+      c.lineWidth = 1.5; c.strokeStyle = "#000"; c.stroke();
+    }
+    c.fillStyle = ink; c.font = "14px 'Courier New', monospace"; c.textAlign = "center"; c.textBaseline = "alphabetic";
+    c.fillText(v.label, colW * (i + 0.5), H - 10);
+  });
+}
+
+function renderBig() {
+  if (!curItem) return;
+  // Asset con caja → marco SIEMPRE dimensionado a la REGIÓN (constante); cubo/región/punto según sus toggles.
+  if (curItem.box && curItem.views && curItem.views[0] && curItem.views[0].draw) { renderViews(curItem, showCube, showRegion, showPoint); return; }
+  if (curItem.file) { renderBigFile(curItem); return; }
+  if (curItem.sprite && AP.SPRITES[curItem.sprite]) { renderBigSprite(curItem.sprite); return; }
+  renderViews(curItem, false);
+}
+function openOverlay(item) {
+  curMode = "view"; curItem = item;
+  showCube = false; showRegion = false; showPoint = false;
+  cubeBtn.classList.remove("on"); regionBtn.classList.remove("on"); pointBtn.classList.remove("on");
+  cubeBtn.disabled = !item.box; regionBtn.disabled = !item.box; pointBtn.disabled = !item.ref;   // referencias sólo si hay datos
+  bigTitle.textContent = item.name; renderBig(); setupSvgPane(item); overlay.classList.add("open");
+  if (item.box) setTimeout(() => { if (curItem === item) renderBig(); }, 350);   // repinta cuando cargue el sprite (drawSprite async)
+}
+function closeOverlay() { overlay.classList.remove("open"); }
+document.getElementById("closeBtn").addEventListener("click", closeOverlay);
+overlay.addEventListener("click", (e) => { if (e.target === overlay) closeOverlay(); });
+addEventListener("keydown", (e) => { if (e.key === "Escape") closeOverlay(); });
+
+/* ---------- SELECTOR DE PALETA: en la cabecera (principal) + copia en el overlay ----------
+   Ambos llaman a setPalette → recolorea TODO (miniaturas + overlay) y sincroniza la selección. */
+const palDiv = document.getElementById("palette");
+function setPalette(i) {
+  palIdx = i;
+  [...palDiv.querySelectorAll(".pal")].forEach(el => el.classList.toggle("sel", +el.dataset.pi === i));
+  [...swatches.querySelectorAll("button")].forEach(el => el.classList.toggle("sel", +el.dataset.pi === i));
+  thumbs.forEach(t => renderThumb(t.canvas, t.item));
+  if (curMode === "create") renderSvgPreview(svgSrc.value); else renderBig();   // recolorea lo abierto
+}
+// Entradas: las 6 paletas + "SIN PALETA" (neutro, pi=-1: muestra la silueta sin teñir).
+const PALENTRIES = INKS.map((ink, i) => ({ pi: i, ink, ink2: INK2[i], name: NAMES[i] || ("" + i) }))
+  .concat([{ pi: -1, ink: "#888", ink2: "#ccc", name: "sin paleta" }]);
+// Cabecera: parejas grandes con nombre (selector principal)
+for (const e of PALENTRIES) {
+  const b = document.createElement("button"); b.className = "pal" + (e.pi === palIdx ? " sel" : "");
+  b.dataset.pi = e.pi; b.title = e.name;
+  b.innerHTML = `<div class="pair"><span style="background:${e.ink}"></span><span style="background:${e.ink2}"></span></div>${e.name}`;
+  b.addEventListener("click", () => setPalette(e.pi));
+  palDiv.appendChild(b);
+}
+// Overlay: copia compacta del selector
+for (const e of PALENTRIES) {
+  const b = document.createElement("button"); b.dataset.pi = e.pi; b.title = e.name;
+  if (e.pi === palIdx) b.classList.add("sel");
+  b.innerHTML = `<span style="background:${e.ink}"></span><span style="background:${e.ink2}"></span>`;
+  b.addEventListener("click", () => setPalette(e.pi));
+  swatches.appendChild(b);
+}
+
+/* ===================== VISOR / EDITOR DE SVG (absorbe la antigua tools/svg2png.html) =====================
+   La tool SOLO carga ficheros: no genera nada procedural. En un asset existente muestra su SVG (lectura)
+   y exporta el PNG NEUTRO (sin color). "Crear SVG" abre un editor con un cubo a tamaño de juego. */
+const svgPane = document.getElementById("svgPane");
+const svgMsg = document.getElementById("svgMsg");
+const svgSrc = document.getElementById("svgSrc");
+const dlPng = document.getElementById("dlPng");
+const dlSvg = document.getElementById("dlSvg");
+const infoGU = document.getElementById("infoGU"), infoPX = document.getElementById("infoPX");
+const cubeBtn = document.getElementById("cubeBtn");
+const regionBtn = document.getElementById("regionBtn");
+const pointBtn = document.getElementById("pointBtn");
+let paneSvgText = null, paneBaseName = "asset";
+
+// Toggles independientes: cubo exacto · región estándar · punto de anclaje iso
+cubeBtn.addEventListener("click", () => { showCube = !showCube; cubeBtn.classList.toggle("on", showCube); renderBig(); });
+regionBtn.addEventListener("click", () => { showRegion = !showRegion; regionBtn.classList.toggle("on", showRegion); renderBig(); });
+pointBtn.addEventListener("click", () => { showPoint = !showPoint; pointBtn.classList.toggle("on", showPoint); renderBig(); });
+
+// Cuadros informativos
+const numFmt = n => (n == null) ? "?" : (Math.round(n * 100) / 100);
+const fmtGU = gu => gu ? `${numFmt(gu.w)} × ${numFmt(gu.l)} × ${numFmt(gu.h)}` : "—";
+const fmtPX = ([w, h]) => `${w} × ${h}`;
+
+// SVG por defecto de "Crear": cubo 1×1×1 a tamaño de juego (viewBox −17..17 = 34×34), 3 caras iso.
+const DEFAULT_SVG = `<svg viewBox="-17 -17 34 34" xmlns="http://www.w3.org/2000/svg">
+  <path d="M0 -17 L17 -8.5 L0 0 L-17 -8.5 Z" fill="#ffffff" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M17 -8.5 L0 0 L0 17 L17 8.5 Z" fill="rgb(158,158,158)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M-17 -8.5 L0 0 L0 17 L-17 8.5 Z" fill="rgb(209,209,209)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+</svg>`;
+
+// Ruta del SVG de un asset, o null si es procedural (sin SVG): migrado→<sprite>.svg, suelto→file,
+// pared→<wallTile>.svg, puerta→primer file, solo-views (robot/zócalo/domo/cilindro/suelo/columna/dron)→null.
+function svgPathFor(item) {
+  if (!item) return null;
+  if (item.file) return "/assets/svg/" + item.file;
+  if (item.sprite && AP.SPRITES[item.sprite]) return "/assets/svg/" + item.sprite + ".svg";
+  if (item.wallTile) return "/assets/svg/" + item.wallTile + ".svg";
+  if (item.files && item.files.length) return "/assets/svg/" + item.files[0];
+  return null;
+}
+// Tamaño nativo (px de juego) desde el viewBox del SVG; fallback 34×34. (Sin inputs de W/H.)
+function svgSize(svgText) {
+  const m = /viewBox\s*=\s*"([^"]+)"/.exec(svgText || "");
+  if (m) { const v = m[1].trim().split(/[\s,]+/).map(Number); if (v.length === 4 && v[2] > 0 && v[3] > 0) return [Math.round(v[2]), Math.round(v[3])]; }
+  return [34, 34];
+}
+// SVG (texto) → canvas RASTER NEUTRO (grises, SIN teñir) a tamaño nativo.
+function rasterizeSVG(svgText, w, h) {
+  return new Promise((res, rej) => {
+    let doc; try { doc = new DOMParser().parseFromString(svgText, "image/svg+xml"); } catch (e) { return rej(e); }
+    if (doc.querySelector("parsererror") || doc.documentElement.nodeName.toLowerCase() !== "svg") return rej(new Error("SVG inválido"));
+    const root = doc.documentElement; root.setAttribute("width", w); root.setAttribute("height", h);
+    const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(root)], { type: "image/svg+xml" }));
+    const img = new Image();
+    img.onload = () => { const c = document.createElement("canvas"); c.width = w; c.height = h;
+      c.getContext("2d").drawImage(img, 0, 0, w, h); URL.revokeObjectURL(url); res(c); };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error("no se pudo rasterizar")); };
+    img.src = url;
+  });
+}
+function download(blob, filename) {
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// Panel SVG para un asset existente (modo lectura) o aviso si es procedural (sin SVG).
+async function setupSvgPane(item) {
+  dlSvg.hidden = true; svgSrc.readOnly = true;
+  infoGU.textContent = fmtGU(item.gu);            // dimensiones en celdas (de la geometría del juego)
+  const path = svgPathFor(item);
+  if (!path) {
+    paneSvgText = null; svgSrc.style.display = "none"; dlPng.style.display = "none";
+    infoPX.textContent = "— (sin imagen)";
+    svgMsg.textContent = "Sin SVG: este asset se dibuja proceduralmente en el juego (no hay fichero que mostrar ni exportar).";
+    return;
+  }
+  svgSrc.style.display = ""; dlPng.style.display = "";
+  svgMsg.textContent = "Código fuente del SVG (solo lectura). «Descargar PNG» exporta la silueta NEUTRA (sin color; el juego la tiñe por sala).";
+  paneBaseName = path.split("/").pop().replace(/\.svg$/, "");
+  try {
+    const r = await fetch(path + "?cb=" + Date.now());
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    paneSvgText = await r.text(); svgSrc.value = paneSvgText;
+    infoPX.textContent = fmtPX(svgSize(paneSvgText));   // tamaño nativo del SVG (px de juego)
+  } catch (e) {
+    paneSvgText = null; svgSrc.style.display = "none"; dlPng.style.display = "none";
+    infoPX.textContent = "—";
+    svgMsg.textContent = "⚠ no hay SVG para este asset (" + path + ").";
+  }
+}
+
+// Modo CREAR: popup con el cubo por defecto editable + preview en vivo + descargar svg/png.
+function openCreate() {
+  curMode = "create"; curItem = null;
+  showCube = false; showRegion = false; showPoint = false;
+  cubeBtn.classList.remove("on"); regionBtn.classList.remove("on"); pointBtn.classList.remove("on");
+  cubeBtn.disabled = true; regionBtn.disabled = true; pointBtn.disabled = true;   // crear: sin datos de juego → sin referencias
+  bigTitle.textContent = "Crear SVG (cubo 1×1×1, tamaño de juego)";
+  svgSrc.style.display = ""; dlPng.style.display = ""; dlSvg.hidden = false; svgSrc.readOnly = false;
+  svgMsg.textContent = "Edita el SVG (tamaño fijo del juego, del viewBox). El preview muestra la silueta NEUTRA (lo que se exporta) y cómo queda teñida con la paleta. «Descargar» baja el .svg y el .png NEUTRO.";
+  svgSrc.value = DEFAULT_SVG; paneSvgText = DEFAULT_SVG; paneBaseName = "asset";
+  infoGU.textContent = "— (nuevo)";                     // un SVG nuevo no tiene dims de juego conocidas
+  renderSvgPreview(DEFAULT_SVG);
+  overlay.classList.add("open");
+}
+
+// Preview del SVG editado en el bigCanvas: silueta NEUTRA (export) + teñida (paleta actual).
+async function renderSvgPreview(svgText) {
+  const [w, h] = svgSize(svgText);
+  infoPX.textContent = fmtPX([w, h]);                   // tamaño px en vivo (del viewBox editado)
+  let neutral; try { neutral = await rasterizeSVG(svgText, w, h); } catch (e) { svgMsg.textContent = "⚠ " + e.message; return; }
+  if (curMode !== "create") return;
+  const Z = 6, pad = 24, lblH = 22, gw = w * Z, gh = h * Z;
+  bigCanvas.width = pad * 3 + gw * 2; bigCanvas.height = gh + pad + lblH;
+  const c = bigCanvas.getContext("2d"); c.imageSmoothingEnabled = false;
+  c.fillStyle = "#000"; c.fillRect(0, 0, bigCanvas.width, bigCanvas.height);
+  c.drawImage(neutral, pad, pad / 2, gw, gh);                                       // neutro (export)
+  c.drawImage(tintSrc(neutral, curInk()), pad * 2 + gw, pad / 2, gw, gh);       // teñido (paleta)
+  c.fillStyle = "#8fb8c8"; c.font = "12px 'Courier New', monospace"; c.textAlign = "center"; c.textBaseline = "top";
+  c.fillText("neutro (export)", pad + gw / 2, pad / 2 + gh + 8);      // etiquetas DEBAJO de las imágenes
+  c.fillText("teñido · " + curName(), pad * 2 + gw + gw / 2, pad / 2 + gh + 8);
+  c.textBaseline = "alphabetic";
+}
+
+dlPng.addEventListener("click", async () => {
+  const txt = (curMode === "create") ? svgSrc.value : paneSvgText;
+  if (!txt) return;
+  const [w, h] = svgSize(txt);
+  let neutral; try { neutral = await rasterizeSVG(txt, w, h); } catch (e) { return; }
+  neutral.toBlob(b => download(b, paneBaseName + "_" + w + "x" + h + ".png"));
+});
+dlSvg.addEventListener("click", () => download(new Blob([svgSrc.value], { type: "image/svg+xml" }), paneBaseName + ".svg"));
+svgSrc.addEventListener("input", () => {
+  if (curMode !== "create") return;
+  clearTimeout(window._svgT); window._svgT = setTimeout(() => renderSvgPreview(svgSrc.value), 250);
+});
+document.getElementById("createBtn").addEventListener("click", openCreate);
+</script>
+</body>
+</html>

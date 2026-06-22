@@ -5,7 +5,9 @@
 > además, barrido de todo el proyecto buscando errores **funcionales, técnicos, de performance**
 > y posibles mejoras.
 >
-> Fecha: 2026-06-22 · Alcance: todo `src/` + `tools/` + `assets/` + `test/` (~3.600 líneas).
+> Fecha: 2026-06-22 · Alcance del JUEGO: `src/` + `assets/` + `test/`. **`tools/` NO es el juego**
+> (utillaje de desarrollo de la usuaria, no se publica; ver [`docs/ASSETS.md`](ASSETS.md)); se menciona
+> solo como herramienta de autoría de assets, no como funcionalidad del juego.
 > Método: lectura completa del código, ejecución de `npm test` (13/13 ✓), **regeneración de los
 > generadores de assets para detectar deriva**, y **reproducción empírica del comportamiento del
 > painter con scripts** (los resultados se citan literalmente). Esta auditoría NO modifica código.
@@ -123,20 +125,23 @@ objetos son **convexos y separables por un eje**. Dos casos reales lo rompen:
 - **Objetos en "L" / muros largos**: cualquier figura que envuelva a otra no se puede ordenar con un
   solo AABB. Hoy no hay salas en "L", pero `PENDIENTES.md` lo contempla; conviene saberlo antes.
 
-### 1.5 🟠 M4 — La caja de orden del robot es MÁS ESTRECHA que su dibujo → hombros/brazos mal ocluidos
+### 1.5 🟢 M4 — Caja de orden del robot más estrecha que su dibujo — **REVISADO: NO es bug (2026-06-22)**
 
-[`player.js:169-186`](../src/player.js) construye la caja de profundidad con la **huella de colisión**
-`±PRAD = ±0.32` (decisión deliberada y comentada). Pero el robot se **dibuja** más ancho:
+Diagnóstico inicial (análisis estático): la caja de profundidad usa la huella de colisión `±PRAD = ±0.32`
+([`player.js:169-186`](../src/player.js)) mientras el robot se dibuja más ancho (torso `±0.50`, brazos
+`~0.535`, antena ~7 px sobre el techo `z+1.5`), así que parecía que hombros/brazos se ocluirían mal.
 
-- Torso a `±ROBOT.WID = ±0.50` ([`assets.js:363`](../src/assets.js)).
-- Brazos a `sh = WID·0.92 = 0.46` + `armW = 0.075` → borde exterior **~0.535** ([`assets.js:353-358`](../src/assets.js)).
-- Antena 7 px por encima de la cabeza, **por encima** del techo de la caja (`z+1.5`) ([`assets.js:386-388`](../src/assets.js)).
-
-Es decir, el robot dibuja ~0.2 celdas (≈3-4 px por lado) y la antena **fuera de su caja de orden**.
-Cuando está pegado a un bloque (la colisión mantiene los centros a ~0.82), la caja de orden queda
-limpiamente separada del bloque, pero los **píxeles del hombro/brazo invaden la zona del bloque** y se
-ordenan como si no estuvieran allí → el bloque puede pintarse sobre el brazo (o al revés). Esto es
-visible y es parte del "parece parcheado".
+**Al REPRODUCIRLO en el navegador, no se sostiene.** La caja estrecha es **correcta y necesaria**:
+- La **colisión** garantiza que la huella del robot NUNCA solapa la de un bloque → `order()` los separa
+  sin ambigüedad y, como el robot se dibuja **como una sola pieza** a su profundidad correcta, el voladizo
+  de los hombros sale bien contra el bloque adyacente (verificado: robot delante y detrás de un bloque).
+- **Ensanchar la caja a la silueta (±0.50) ROMPE el orden**: la caja ancha interpenetra el bloque de
+  delante → par ambiguo → desempate por centro-Z → el robot (más alto) gana el frente y se pinta sobre un
+  bloque que está delante (reproducido). Por eso la caja estrecha es deliberada y debe quedarse así.
+- La **antena** (única parte realmente fuera de la caja, en z) es inofensiva hoy: para ocluirse mal haría
+  falta algo *encima* del robot (drones/techos) que aún no existe. Decisión: el robot es un TODO (caja +
+  brazos); no se ensancha ni se parte en sub-cajas. Si llegan elementos elevados, subir solo el techo de
+  la caja a `≈ z+1.95` (cambio de 1 línea, sin efecto en la separación horizontal).
 
 ### 1.6 🟡 M5 — Orden de inserción y desempates
 
@@ -203,16 +208,20 @@ los SVG estén en sync** con `assets.js`. Es deriva silenciosa esperando a morde
 > **Fix:** test de "no-deriva" que ejecuta los generadores en un dir temporal y falla si difieren de los
 > versionados (ver 5.3). Y regenerar `cube.svg` ahora.
 
-### 2.3 🟠 A2 — Los dos métodos de pared DIVERGEN (pointy-top vs flat-top)
+### 2.3 🟠 A2 — La pared tiene un fallback procedural que NO coincide con su imagen
 
-- El SVG de pared se genera con hexágonos **POINTY-TOP** proyectados ([`gen-walls.mjs:8,24-29`](../tools/gen-walls.mjs)).
-- El *fallback* vectorial `honeycomb()` dibuja hexágonos **FLAT-TOP** ([`engine.js:89-90`](../src/engine.js)),
-  y con un radio (`p.TW·0.40`) sin relación con el del SVG.
+Al dibujar la pared, `flatWall()` ([`assets.js`](../src/assets.js)) tiene dos caminos en RUNTIME:
+- **Vía buena**: blittea el tile de imagen `assets/svg/wall1.svg` (PNG→SVG) teselado a lo largo del muro
+  (`fillWall`). El juego solo pega la imagen.
+- **Fallback residual**: si la imagen no ha cargado (primeros frames, o si fallara), cae a `honeycomb()`
+  ([`engine.js:89-90`](../src/engine.js)), que dibuja un panal **distinto** al de la imagen (otra
+  orientación de hexágono y un radio `p.TW·0.40` sin relación con el de la imagen).
 
-Resultado: mientras el sprite de pared **no ha cargado** (primeros frames, o si fallara la carga), la
-pared se ve con un panal **distinto** (otra orientación y tamaño de celda) que cuando carga → **pop
-visual**. Como los dos métodos deben convivir, deberían **coincidir**: o el `honeycomb` se hace
-pointy-top con el mismo radio, o se acepta que el *fallback* es solo para Node/tests y se documenta.
+Resultado: la pared arranca con el panal del *fallback* y **salta** al de la imagen al cargar → **pop
+visual** (y queda en el fallback equivocado si la imagen fallara). El `honeycomb` procedural es la 3ª vía
+residual (ver [`docs/ASSETS.md`](ASSETS.md)). **Fix recomendado**: que la pared use SOLO la imagen
+(PNG→SVG) — precargar la textura al arrancar y quitar el `honeycomb` del runtime — en vez de mantener dos
+dibujos del mismo muro. (Cómo se genera la imagen es cosa de la tool, fuera del juego.)
 
 ### 2.4 🟡 A3 — Solo `cube` está curado; el resto son auto-trazados, y varios no se usan
 
@@ -340,7 +349,7 @@ no-fuga de estado en reset. Buen oráculo de no-regresión para la **lógica pur
 | **M1** | 🔴 | Motor | `depthSort` cicla con cajas que solapan en pantalla (reproducido, incl. caso realista) | Painter robusto (1.7 A/B/C) |
 | **M2** | 🔴 | Motor | El topo-sort no detecta ciclos → orden mudo y no determinista | Detección + rotura determinista de aristas |
 | **M3** | 🟠 | Motor | Caja AABB única para puerta-losa / objetos no convexos | Partir en sub-cajas convexas |
-| **M4** | 🟠 | Motor/Assets | Caja de orden del robot < silueta → hombros/antena mal ocluidos | Igualar caja a silueta o sub-cajas |
+| **M4** | 🟢 | Motor/Assets | ~~Caja de orden del robot < silueta~~ — **REVISADO: NO-BUG** (ver §1.5) | Ninguna: la caja estrecha es correcta; ensancharla rompe el orden |
 | **A1** | 🟠 | Assets | `cube.svg` derivado del código; sin guardarraíl | Regenerar + test de no-deriva |
 | **A2** | 🟠 | Assets | Pared SVG (pointy-top) ≠ fallback `honeycomb` (flat-top) | Unificar orientación/radio |
 | **T3** | 🟠 | Config | 18/21 `CFG.COL` muertos | Eliminar claves sin uso |
@@ -358,8 +367,8 @@ no-fuga de estado en reset. Buen oráculo de no-regresión para la **lógica pur
 
 1. **Red de seguridad primero** (5.3-1 y 5.3-2): test de no-deriva de assets + test de invariante del
    painter. Sin esto, tocar el motor es a ciegas.
-2. **Motor — parche (A):** detección de ciclos en el topo-sort + caja del robot = silueta + puerta en
-   piezas. Resuelve M1/M2/M3/M4 en su mayor parte con riesgo bajo. Verificar con los tests del paso 1.
+2. **Motor — parche (A):** detección de ciclos en el topo-sort + puerta en piezas. Resuelve M1/M2/M3 con
+   riesgo bajo. Verificar con los tests del paso 1. (M4 quedó descartado: la caja del robot NO se toca.)
 3. **Assets — saneado:** regenerar `cube.svg`, unificar el panal (A2), decidir destino de los assets sin
    uso (A3). Limpiar `CFG.COL` (T3).
 4. **(Opcional, si hace falta más)** Motor — descomposición plena en sub-cajas (B) o rediseño a orden
