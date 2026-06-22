@@ -50,13 +50,14 @@ investigación del original: [RESEARCH.md](RESEARCH.md).
 
 ## 💡 Ideas aportadas por la usuaria
 > Volcado libre de ideas (algunas sensatas, otras locas). **No son órdenes ni están
-> priorizadas**: son material para analizar y estudiar cuando toque. Solo las edita un humano.
+> priorizadas**: son material para analizar y estudiar cuando toque. Solo las crea un humano. Claude puede marcarlas como completadas, añadiendo un prefijo "COMPLETADA"
 - Mejorar estéticamente los bloques-cubo. Las esquinas hacerlas más pronunciadas, y transparentes.
 - Mejorar las puertas, darles formas más trabajadas.
 - Esta es gorda: Convertir el juego en un roguelike. Cada run, mapa random, ubicaciones random.
 - Mejorar el mapa: zonas un poco más claras, bordes ok. 
-- Colocar el nombre de la habitación encima del mapa (en la misma zona donde se dibuja ahora el mapa)
-- Arreglar ui inferior: Colocar toda la info en la zona más gruesa (igual que hacemos arriba con el mapa). "ALIEN POCHO" ponerlo siempre junto, no cortado por la ui.
+- **COMPLETADA** _(3 parejas base en `palette.js`; las paletas 3-5 son las 0-2 invertidas, primario↔secundario)_ — Las paletas cian, oliva, magenta, con sus secundarios,  son practicamente simétricas a las  paletas verde, naranja, violeta. Ver si tiene sentido unificar colores (que las tres últimas paletas sean simplemente las primeras paletas, invertidas
+- Existe la posibilidad de crear una tool que fabrique ficheros png a partir de svg? Podríamos usar svg para que claude prototipara dibujos, y poder revisarlos en un visor de assets svg, y exportarlos a ficheros png a petición mía, para usarlos como assets binarios en la aplicación. Investigar esto.
+  - En el svg2png también quiero ver el código fuente del svg, poder editarlo, ver el resultado, descargarlo, e incluso grabar el cambio del svg en el fichero `assets.js` (esto no sé si es posible). _(Nota Claude: hoy los assets son código de canvas procedural en `assets.js`, no SVG; "ver/editar el código fuente" del objeto sería editar su función `AP.*`; "grabar en assets.js" requeriría escritura en disco — no se puede solo desde el navegador servido por http estático; haría falta un pequeño backend/escritura local. Investigar.)_
 
 ## 🧭 Direcciones posibles (ideas, sin orden ni obligación)
 > Antes esto era un "roadmap por fases". Ahora son ideas a tomar (o no) cuando apetezca.

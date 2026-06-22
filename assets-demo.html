@@ -36,7 +36,7 @@
     cursor: pointer; color: var(--ink); display: flex; flex-direction: column; align-items: center;
     font-family: inherit; transition: border-color .12s, transform .12s; }
   .tile:hover { border-color: var(--ink); transform: translateY(-2px); }
-  .tile canvas { width: 100%; height: auto; image-rendering: auto; display: block; border-radius: 5px; }
+  .tile canvas { width: 100%; height: auto; image-rendering: pixelated; display: block; border-radius: 5px; }
   .tile .name { font-size: 11px; margin-top: 5px; letter-spacing: 1px; }
   .tile .badge { font-size: 9px; color: #7aa; }
 
@@ -53,6 +53,7 @@
     border-radius: 6px; width: 30px; height: 30px; font-size: 18px; cursor: pointer; }
   .modal .close:hover { border-color: var(--ink); }
   #bigCanvas { display: block; background: #000; border-radius: 7px; max-width: 100%; height: auto;
+    image-rendering: pixelated;
     image-rendering: auto; }
   .swatches { display: flex; gap: 8px; margin: 12px 0 2px; align-items: center; flex-wrap: wrap; }
   .swatches .lbl { font-size: 10px; color: #8fb8c8; margin-right: 2px; }
@@ -92,7 +93,8 @@
 import { AP } from "./src/assets.js";
 import { INKS, INK2 } from "./src/palette.js";
 
-const NAMES = ["cian", "oliva", "magenta", "verde", "naranja", "violeta"];
+// 0-2: parejas base · 3-5: las mismas invertidas (ver src/palette.js)
+const NAMES = ["cian", "oliva", "magenta", "ámbar", "azul", "verde"];
 
 /* Cada asset = { name, badge?, views:[{label, center?, draw(ctx,p,ink,ink2)}] }.
    La miniatura usa views[0]; el overlay muestra todas las vistas a lo grande.
@@ -137,14 +139,27 @@ const GROUPS = [
   ] },
 ];
 
-/* Dibuja una vista centrada en (anchorX, anchorY) del lienzo, a escala TILE. */
-function drawView(ctx, anchorX, anchorY, view, ink, ink2, TILE) {
+/* Render PIXELART coherente: dibuja la vista a RESOLUCIÓN DE JUEGO (drawViewGame) en un lienzo
+   nativo y la amplía con zoom ENTERO nearest-neighbor. Mismo criterio que el juego (low-res +
+   escalado pixelado) y que la tool svg2png → todo coincide, nada de re-render del vector. */
+function renderViewPixel(canvas, view, ink, ink2, nw, nh, zoom) {
+  const cell = document.createElement("canvas"); cell.width = nw; cell.height = nh;
+  drawViewGame(cell.getContext("2d"), nw / 2, nh * 0.58, view, ink, ink2);
+  canvas.width = nw * zoom; canvas.height = nh * zoom;
+  const x = canvas.getContext("2d"); x.imageSmoothingEnabled = false;
+  x.fillStyle = "#000"; x.fillRect(0, 0, canvas.width, canvas.height);
+  x.drawImage(cell, 0, 0, nw * zoom, nh * zoom);
+}
+
+/* Dibuja una vista a RESOLUCIÓN DE JUEGO (POPT real: tile 34×17, bloque 17), centrada en
+   (anchorX,anchorY) de un lienzo pequeño. La vista grande del overlay es un ZOOM pixelado de
+   esto (nunca un re-render del vector a otra resolución → así coincide con el juego). */
+function drawViewGame(ctx, anchorX, anchorY, view, ink, ink2) {
   const c = view.center || { x: 0.5, y: 0.5, z: 0.6 };
-  const TW = TILE, TH = TILE / 2, BH = TILE * 0.62;
+  const TW = 34, TH = 17, BH = 17;
   const ox = anchorX - (c.x - c.y) * TW / 2;
   const oy = anchorY - (c.x + c.y) * TH / 2 + c.z * BH;
-  const p = AP.projector(ox, oy, { TILE_W: TW, TILE_H: TH, BLOCK_H: BH });
-  view.draw(ctx, p, ink, ink2);
+  view.draw(ctx, AP.projector(ox, oy, { TILE_W: TW, TILE_H: TH, BLOCK_H: BH }), ink, ink2);
 }
 
 /* ---------- Estado global de PALETA (afecta a miniaturas y overlay) ---------- */
@@ -152,9 +167,7 @@ let palIdx = 0;
 
 /* ---------- Miniatura de un asset (con la paleta global) ---------- */
 function renderThumb(canvas, item) {
-  const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "#000"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-  drawView(ctx, canvas.width / 2, canvas.height * 0.58, item.views[0], INKS[palIdx], INK2[palIdx], 38);
+  renderViewPixel(canvas, item.views[0], INKS[palIdx], INK2[palIdx], 84, 72, 2);   // resolución juego ×2
 }
 
 /* ---------- Catálogo de miniaturas agrupadas ---------- */
@@ -185,15 +198,23 @@ let curItem = null;
 
 function renderBig() {
   if (!curItem) return;
-  const views = curItem.views, n = views.length, colW = 240, H = 360;
+  const views = curItem.views, n = views.length;
+  const GW = 96, GH = 96, ZOOM = 3;           // celda a RESOLUCIÓN DE JUEGO + zoom pixelado entero
+  const colW = GW * ZOOM, H = GH * ZOOM + 30;  // +30 para la etiqueta
   bigCanvas.width = n * colW; bigCanvas.height = H;
   const c = bigCanvas.getContext("2d");
   c.fillStyle = "#000"; c.fillRect(0, 0, bigCanvas.width, H);
   const ink = INKS[palIdx], ink2 = INK2[palIdx];
   views.forEach((v, i) => {
-    drawView(c, colW * (i + 0.5), H * 0.52, v, ink, ink2, 100);
+    // 1) render nativo (px de juego) en una celda offscreen
+    const cell = document.createElement("canvas"); cell.width = GW; cell.height = GH;
+    drawViewGame(cell.getContext("2d"), GW / 2, GH * 0.56, v, ink, ink2);
+    // 2) zoom pixelado a la celda grande (nearest-neighbor)
+    c.imageSmoothingEnabled = false;
+    c.drawImage(cell, i * colW, 0, colW, GH * ZOOM);
+    // 3) etiqueta (texto nítido, no se pixela)
     c.fillStyle = ink; c.font = "14px 'Courier New', monospace"; c.textAlign = "center";
-    c.fillText(v.label, colW * (i + 0.5), H - 20);
+    c.fillText(v.label, colW * (i + 0.5), H - 10);
   });
 }
 function openOverlay(item) { curItem = item; bigTitle.textContent = item.name; renderBig(); overlay.classList.add("open"); }
