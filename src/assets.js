@@ -19,6 +19,7 @@
 import { ENGINE } from "./engine.js";
 import { INKS, INK2, ROBOT_INK } from "./palette.js";
 import { DOOR, PROP, ROBOT, SOCKET, ASSET_USE_PNG, WALL_TILE } from "./config.js";
+import { ASSETS, WALL_H } from "./data/assets.js";   // FUENTE ÚNICA: encuadre de sprites + altura de pared
 
 export const AP = (() => {
 
@@ -34,14 +35,11 @@ export const AP = (() => {
      si no, su SVG generado) teñido por sala. Si no está migrado o aún no cargó, drawSprite devuelve
      false y el llamador pinta el VECTOR de siempre (degradado elegante + funciona en Node/tests).
      minX/minY = offset del bbox respecto al punto de referencia P(coords) del asset (lo calcula
-     tools/gen-svg.mjs); w/h = tamaño nativo del sprite. */
-  const SPRITES = {
-    cube:         { minX: -17, minY: -17, w: 34, h: 34 },
-    prop_cube:    { minX:  -9, minY: -13, w: 18, h: 18 },
-    prop_pyramid: { minX:  -9, minY:  -9, w: 18, h: 14 },
-    spikes:       { minX:  -7, minY: -10, w: 14, h: 11 },
-    plant:        { minX:  -4, minY: -11, w:  8, h: 13 },
-  };
+     tools/gen-svg.mjs); w/h = tamaño nativo del sprite.
+     Ya NO se declara aquí: se DERIVA del registro único `src/data/assets.js` (los assets con `sprite`). */
+  const SPRITES = Object.fromEntries(
+    Object.entries(ASSETS).filter(([, a]) => a.sprite).map(([id, a]) => [id, a.sprite])
+  );
   const _spr = {};   // name → { neutral: canvas|null, tints: { col: canvas } }
   function _rasterTo(def, img) {
     const c = document.createElement("canvas"); c.width = def.w; c.height = def.h;
@@ -193,18 +191,20 @@ export const AP = (() => {
     drawDoorSprite(ctx, p, axis, fixed, a0, a1, H, hole, col);
   }
 
-  // Columna delgada
+  // Columna delgada. La huella (centrada en la celda) la dicta el registro: margen = (1 − ancho)/2.
   function pillar(ctx, p, cx, cy, h, col) {
-    const m = 0.2; box(ctx, p, cx + m, cy + m, cx + 1 - m, cy + 1 - m, 0, h, col);
+    const m = (1 - ASSETS.pillar.foot.w) / 2;
+    box(ctx, p, cx + m, cy + m, cx + 1 - m, cy + 1 - m, 0, h, col);
   }
 
   // ---- Circuitos (4 formas) — figuras geométricas vistosas, monocromas ----
+  // Huella y alto los dicta el registro (PROP.HALF / PROP.H): el dibujo LLENA su huella física.
   function circuit(ctx, p, x, y, z, shape, col) {
-    const r = 0.26;
+    const r = PROP.HALF, hh = PROP.H;
     if (shape === "cube") {
-      box(ctx, p, x - r, y - r, x + r, y + r, z, z + 0.5, col);
+      box(ctx, p, x - r, y - r, x + r, y + r, z, z + hh, col);
     } else if (shape === "pyramid") {
-      const ap = p(x, y, z + 0.5);   // medio bloque, como el resto de objetos
+      const ap = p(x, y, z + hh);   // medio bloque, como el resto de objetos
       const b1 = p(x - r, y - r, z), b2 = p(x + r, y - r, z), b3 = p(x + r, y + r, z), b4 = p(x - r, y + r, z);
       // Orden de pintado atrás→delante: las dos caras TRASERAS (-x,-y) primero y
       // las dos FRONTALES (+x,+y, que comparten la arista delantera b3) encima.
@@ -215,7 +215,7 @@ export const AP = (() => {
     } else if (shape === "dome") {
       // Semiesfera de CRISTAL transparente: relleno muy tenue (se ve a través), aro de
       // base completo (trasera visible), contorno del casquete y brillo especular.
-      const rr = 0.34, c = p(x, y, z), rx = rr * p.TW / 2, ry = rr * p.TH / 2, dh = 0.5 * p.BH;   // alto = medio bloque
+      const rr = 0.34, c = p(x, y, z), rx = rr * p.TW / 2, ry = rr * p.TH / 2, dh = hh * p.BH;   // cúpula de cristal (rr propio); alto = PROP.H
       const cap = () => {
         ctx.beginPath(); ctx.moveTo(c.x - rx, c.y);
         ctx.bezierCurveTo(c.x - rx, c.y - dh, c.x + rx, c.y - dh, c.x + rx, c.y);
@@ -228,7 +228,7 @@ export const AP = (() => {
       ctx.beginPath(); ctx.ellipse(c.x - rx * 0.34, c.y - dh * 0.5, rx * 0.2, dh * 0.26, -0.5, 0, Math.PI * 2);
       ctx.fillStyle = "rgba(255,255,255,0.5)"; ctx.fill();                                        // brillo
     } else if (shape === "cylinder") {
-      const ch = 0.5, topC = p(x, y, z + ch), botC = p(x, y, z), rx = r * p.TW / 2, ry = r * p.TH / 2;
+      const ch = hh, topC = p(x, y, z + ch), botC = p(x, y, z), rx = r * p.TW / 2, ry = r * p.TH / 2;
       ctx.beginPath(); ctx.moveTo(topC.x - rx, topC.y); ctx.lineTo(botC.x - rx, botC.y);
       ctx.ellipse(botC.x, botC.y, rx, ry, 0, Math.PI, 0, true); ctx.lineTo(topC.x + rx, topC.y); ctx.closePath();
       ctx.fillStyle = darken(col, 0.7); ctx.fill();
@@ -269,11 +269,11 @@ export const AP = (() => {
     drawSprite("plant", ctx, p(x, y, z), col);
   }
 
-  // Dron flotante
+  // Dron flotante. Huella, altura de vuelo y alto los dicta el registro (foot {w,h,z}).
   function drone(ctx, p, x, y, z, col) {
-    const hv = z + 0.6;
-    box(ctx, p, x - 0.16, y - 0.16, x + 0.16, y + 0.16, hv, hv + 0.28, col);
-    const c = p(x, y, hv + 0.28);
+    const f = ASSETS.drone.foot, r = f.w / 2, hv = z + f.z, top = hv + f.h;
+    box(ctx, p, x - r, y - r, x + r, y + r, hv, top, col);
+    const c = p(x, y, top);
     ctx.strokeStyle = col; ctx.beginPath(); ctx.moveTo(c.x, c.y); ctx.lineTo(c.x, c.y - 5); ctx.stroke();
     ctx.fillStyle = col; ctx.fillRect(c.x - 1, c.y - 7, 2, 2);
   }
@@ -342,11 +342,37 @@ export const AP = (() => {
     ctx.beginPath(); ctx.ellipse(c.x, c.y, 12, 6, 0, 0, Math.PI * 2); ctx.fill();
   }
 
+  /* ===================== DRAWERS — DIBUJO NORMALIZADO POR CLAVE `draw` =====================
+     Firma ÚNICA `(ctx, P, t, col)` donde `t` = placement { asset, x, y, z, ...estado }
+     (x,y,z = punto de ANCLAJE en mundo, igual que assetRef). Cada drawer traduce el placement
+     a su primitiva (forma desde la clave `draw`, estado desde `t`). Así un motor de dibujo
+     GENÉRICO hace `drawAsset(ctx, P, t, col)` sin saber qué asset es (ver docs/AUDITORIA-MODULARIDAD.md). */
+  const _shapeOf = t => { const d = ASSETS[t.asset].draw, i = d.indexOf(":"); return i < 0 ? null : d.slice(i + 1); };
+  const DRAWERS = {
+    floor:    (c, P, t, col) => floor(c, P, t.x, t.y, col),
+    cube:     (c, P, t, col) => cube(c, P, t.x, t.y, t.z, col),
+    pillar:   (c, P, t, col) => pillar(c, P, t.x, t.y, ASSETS[t.asset].foot.h, col),
+    spikes:   (c, P, t, col) => spikes(c, P, t.x, t.y, t.z, col),
+    plant:    (c, P, t, col) => plant(c, P, t.x, t.y, t.z, col),
+    drone:    (c, P, t, col) => drone(c, P, t.x, t.y, t.z, col),
+    robot:    (c, P, t, col) => robot(c, P, t.x, t.y, t.z, t.facing || 0, col),
+    circuit:  (c, P, t, col) => prop(c, P, t.x, t.y, t.z, _shapeOf(t), col),          // PNG→SVG→procedural
+    socket:   (c, P, t, col) => socket(c, P, t.x, t.y, t.z, _shapeOf(t), !!t.active, col),
+    // Estructura (paramétrica): la sala la dibuja en su capa propia; estos drawers son para
+    // PREVIEWS sueltos (la tool) — dibujan una instancia de muestra a partir de la huella.
+    flatWall: (c, P, t, col) => { const a = ASSETS[t.asset]; flatWall(c, P, t.axis || "x", t.fixed || 0, t.a0 || 0, (t.a0 || 0) + a.foot.w, a.foot.h, col, t.asset); },
+    door:     (c, P, t, col) => { const a0 = t.a0 != null ? t.a0 : 1.5 - DOOR.SPAN_HALF, a1 = t.a1 != null ? t.a1 : 1.5 + DOOR.SPAN_HALF;
+                                  door(c, P, t.axis || "x", t.fixed || 0, a0, a1, WALL_H, col, t.hole != null ? t.hole : true); },
+  };
+  // Punto de entrada genérico: resuelve la clave base (antes de ":") y delega en su drawer.
+  function drawAsset(ctx, P, t, col) { return DRAWERS[ASSETS[t.asset].draw.split(":")[0]](ctx, P, t, col); }
+
   return {
     INKS, INK2, ROBOT_INK, DIRS, ROBOT, BLACK, DOOR, darken, lighten,
     projector, poly, box, facePt, edgeLine,
     floor, cube, flatWall, door, doorHole,
     pillar, circuit, prop, PROP, socket, spikes, plant, drone, robot, shadow,
+    DRAWERS, drawAsset,   // motor de dibujo GENÉRICO por asset (modularidad)
     SPRITES   // registro de sprites migrados {name:{minX,minY,w,h}} (lo usa el catálogo)
   };
 })();

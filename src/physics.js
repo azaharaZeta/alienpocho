@@ -10,6 +10,9 @@
 "use strict";
 
 import { CFG, PROP, ROBOT, SOCKET, DOOR } from "./config.js";
+import { ASSETS, socketTop } from "./data/assets.js";   // registro (physics.solid) + cima del zócalo (re-exportada)
+import { roomThings } from "./world.js";                // lista uniforme de placements (sólidos genéricos)
+export { socketTop };
 
 /* ¿Está la coord. dentro del HUECO de la puerta? Vano estrecho: el robot (semiancho
    ~0.5) pasa con un poco de margen. Coincide con el hueco visual entre postes. */
@@ -33,29 +36,17 @@ export function objBox(o) {
   return { x0: o.x - m, y0: o.y - m, x1: o.x + m, y1: o.y + m, z0: o.z, top: o.z + PROP.H, obj: o };
 }
 
-/* CAJAS SÓLIDAS de la sala — fuente ÚNICA para colisión y apoyo. Cada sólido es
-   una huella en planta [x0,y0]-[x1,y1] con base `z0` y cima `top`:
-     - bloques: cubo completo (una caja por bloque, aunque tenga varias capas);
-     - objetos: cajas transportables (se empujan, se sube uno encima y se apilan).
-   Los ZÓCALOS NO son sólidos: son la casilla-DESTINO sobre la que el robot se planta
-   para soltar el circuito y activarlos (ver interact). Los PINCHOS tampoco (se saltan;
-   el daño llega en Fase 6). */
-/* Cima SÓLIDA de un zócalo según su estado: la peana (SOCKET.BASE_H) y, si está ACTIVADO, el
-   circuito encajado encima (PROP.H). El zócalo es SÓLIDO siempre: inactivo = peana baja a la que
-   el robot SE SUBE andando (mientras SOCKET.BASE_H ≤ CFG.STEP); activo = peana + circuito. */
-export function socketTop(s) { return (s.z || 0) + SOCKET.BASE_H + (s.active ? PROP.H : 0); }
-
+/* CAJAS SÓLIDAS de la sala — fuente ÚNICA para colisión y apoyo. GENÉRICA: NO enumera tipos.
+   Recorre la lista uniforme de placements (world.roomThings) e incluye los cuyo asset declara
+   `physics.solid` (cubos, circuitos, zócalos…); excluye lo no sólido (pinchos, decoración). La caja
+   (aabb) y la cima (con el zócalo ACTIVO ya sumando el circuito) las trae el placement → física y
+   render comparten exactamente la misma geometría. `obj` = objeto fuente (para no chocar consigo). */
 export function roomSolids(room) {
   const s = [];
-  for (const bl of room.blocks)
-    s.push({ x0: bl.x, y0: bl.y, z0: bl.z, x1: bl.x + 1, y1: bl.y + 1, top: bl.z + bl.h });
-  for (const o of room.objects) s.push(objBox(o));
-  // Los zócalos son SÓLIDOS (sin excepciones): el inactivo es una peana baja a la que el robot SE
-  // SUBE andando (SOCKET.BASE_H ≤ CFG.STEP); el activo suma el circuito encajado encima. Misma
-  // huella que su dibujo (AP.socket) → física y render no se contradicen.
-  for (const k of room.sockets) {
-    const oz = k.z || 0;
-    s.push({ x0: k.cx + 0.16, y0: k.cy + 0.16, z0: oz, x1: k.cx + 0.84, y1: k.cy + 0.84, top: socketTop(k) });
+  for (const t of roomThings(room)) {
+    if (!ASSETS[t.asset].physics.solid) continue;
+    const a = t.aabb;
+    s.push({ x0: a.x0, y0: a.y0, z0: a.z0, x1: a.x1, y1: a.y1, top: a.z1, obj: t.src });
   }
   return s;
 }

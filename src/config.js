@@ -70,28 +70,12 @@ export const POPT = { TILE_W: CFG.TILE_W, TILE_H: CFG.TILE_H, BLOCK_H: CFG.BLOCK
 export const ASSET_USE_PNG = true;
 
 /* =========================================================================
-   GEOMETRÍA COMPARTIDA — fuente ÚNICA de las medidas que usan A LA VEZ el dibujo
-   (assets.js) y la física (physics.js). Antes estaban duplicadas a mano en ambos
-   lados (y había que mantenerlas iguales). Ahora se definen aquí y se importan.
+   GEOMETRÍA COMPARTIDA — la usan A LA VEZ el dibujo (assets.js) y la física
+   (physics.js). Su HOGAR ÚNICO es ahora el registro de assets `src/data/assets.js`
+   (ver docs/AUDITORIA-ASSETS.md). Aquí solo se RE-EXPORTAN por comodidad de los
+   consumidores que ya importan estas constantes desde "./config.js".
    ========================================================================= */
-
-// Objeto físico transportable (circuito): semilado en planta y alto (medio bloque).
-export const PROP = { HALF: 0.28, H: 0.5 };
-
-// Robot Pocho: semianchos del cuerpo (ancho/profundidad) y alto total.
-export const ROBOT = { WID: 0.50, DEP: 0.33, H: 1.50 };
-
-// Puerta: grosor del marco (T), ancho de poste (POST_W), alto del dintel (LINTEL_H)
-// y semiancho del VANO visual (SPAN_HALF, de extremo a extremo del marco). El HUECO
-// FÍSICO por el que pasa el robot se DERIVA: SPAN_HALF − POST_W (= el hueco entre postes).
-export const DOOR = { T: 0.34, POST_W: 0.40, LINTEL_H: 0.46, SPAN_HALF: 1.12 };
-
-// Zócalo: alto de la peana (sobre ella encaja el circuito al activarse).
-export const SOCKET = { BASE_H: 0.2 };
-
-// Altura (en unidades de mundo) de las paredes de TODAS las salas. GLOBAL y FIJA: siempre la
-// misma para cada habitación (no varía por sala). La usan render (paredes) y las puertas.
-export const WALL_H = 3;
+export { PROP, ROBOT, DOOR, SOCKET, WALL_H } from "./data/assets.js";
 
 // Variante de TILE de pared (panal SVG, teselado horizontal + cizallado): "wall1" (1 tile,
 // hexágono pequeño) | "wall2" (2 tiles, hexágono doble). En consola: window.__wall para comparar.

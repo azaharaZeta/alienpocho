@@ -12,6 +12,7 @@
 
 import { INKS, INK2 } from "./palette.js";
 import { ROOMS, START } from "./data/rooms.js";
+import { assetBox, assetRef, socketTop } from "./data/assets.js";   // huellas/anclaje para armar los placements
 
 /* Construye una sala a partir de su definición (datos).
    Salas rectangulares con LÍMITES: ancho/largo ∈ [3,13] y ancho+largo ≤ 16 (para que
@@ -36,6 +37,41 @@ export function makeRoom(o) {
     ink: o.ink, ink2: o.ink2, exits: o.exits || {}, name: o.name || "",
     wallTile: o.wallTile   // variante de panal por sala (opcional; si undefined → global WALL_TILE)
   };
+}
+
+/* AABB de mundo {x0,y0,z0,x1,y1,z1} de un asset colocado con su ANCLAJE en (ax,ay,az).
+   Deriva de assetBox/assetRef (frame local del asset) + el offset del anclaje. `top` opcional
+   sobreescribe la cima (zócalo activo). La usan a la vez render (painter) y física (sólidos). */
+function placeAabb(id, ax, ay, az, top) {
+  const b = assetBox(id), r = assetRef(id);
+  const x0 = b.x + (ax - r.x), y0 = b.y + (ay - r.y), z0 = b.z + (az - r.z);
+  return { x0, y0, z0, x1: x0 + b.w, y1: y0 + b.l, z1: top != null ? top : z0 + b.h };
+}
+
+/* LISTA UNIFORME de placements de la sala (lo COLOCABLE; la cáscara suelo/pared/puerta va aparte).
+   ES LA FUENTE ÚNICA del mapeo "cubetas del mapa → assets": render y física la consumen
+   GENÉRICAMENTE (sin enumerar tipos). Se calcula EN VIVO desde las cubetas (los objetos se mueven,
+   los zócalos se activan) → nunca se desincroniza. Cada placement:
+     { asset, x, y, z, ...estado, src?, aabb }  (x,y,z = anclaje en mundo; aabb = caja painter/sólido). */
+export function roomThings(room) {
+  const t = [];
+  for (const b of room.blocks)                                   // bloque = un cubo por capa
+    for (let k = 0; k < (b.h || 1); k++) {
+      const z = (b.z || 0) + k;
+      t.push({ asset: "cube", x: b.x, y: b.y, z, aabb: placeAabb("cube", b.x, b.y, z) });
+    }
+  for (const o of room.objects)                                  // circuitos transportables (vivos: se mueven)
+    t.push({ asset: "prop_" + o.shape, x: o.x, y: o.y, z: o.z, shape: o.shape, src: o,
+             aabb: placeAabb("prop_" + o.shape, o.x, o.y, o.z) });
+  for (const s of room.sockets) {                                // zócalos (vivos: se activan → más altos)
+    const cx = s.cx + 0.5, cy = s.cy + 0.5, z = s.z || 0;
+    t.push({ asset: "socket_" + s.shape, x: cx, y: cy, z, shape: s.shape, active: s.active, src: s,
+             aabb: placeAabb("socket_" + s.shape, cx, cy, z, socketTop(s)) });
+  }
+  for (const h of room.hazards)                                  // pinchos (decorativos, estáticos)
+    t.push({ asset: "spikes", x: h.cx + 0.5, y: h.cy + 0.5, z: 0, src: h,
+             aabb: placeAabb("spikes", h.cx + 0.5, h.cy + 0.5, 0) });
+  return t;
 }
 
 /* Construye el mundo entero desde los datos: resuelve color por índice de paleta y

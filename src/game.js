@@ -13,7 +13,8 @@
 import { CFG, PROP } from "./config.js";
 import { canStandOn, socketTop, overlapsBox, objBox } from "./physics.js";
 import { player } from "./player.js";
-import { buildWorld } from "./world.js";
+import { buildWorld, roomThings } from "./world.js";
+import { ASSETS } from "./data/assets.js";   // comportamiento del asset (carriable/target), no cubetas concretas
 
 /* Estado de partida (placeholders hasta las fases 5-7) */
 export const game = { state: "title", lives: 3, circuits: 0, circuitsTotal: 4, carried: null, lightYears: 9999, won: false };
@@ -26,16 +27,18 @@ export const game = { state: "title", lives: 3, circuits: 0, circuitsTotal: 4, c
      caes a su sitio (caída visible por gravedad). */
 export function interact(room) {
   if (game.won) return;
+  const things = roomThings(room);   // lista uniforme; se filtra por COMPORTAMIENTO, no por cubeta
 
   if (game.carried) {
-    // 1) ¿estoy plantado en la casilla-destino de un zócalo compatible? → activar
-    for (const s of room.sockets) {
-      if (!s.active && s.shape === game.carried &&
-          Math.abs(player.x - (s.cx + 0.5)) < 0.5 && Math.abs(player.y - (s.cy + 0.5)) < 0.5 &&
-          Math.abs(player.z - (s.z || 0)) < 0.4) {
+    // 1) ¿estoy plantado en un DESTINO ("target") compatible y libre? → colocar y activar
+    for (const t of things) {
+      if (ASSETS[t.asset].behavior !== "target") continue;
+      const s = t.src;
+      if (!s.active && t.shape === game.carried &&
+          Math.abs(player.x - t.x) < 0.5 && Math.abs(player.y - t.y) < 0.5 &&
+          Math.abs(player.z - t.z) < 0.4) {
         s.active = true; game.carried = null; game.circuits++;
         if (game.circuits >= game.circuitsTotal) game.won = true;
-        // el zócalo ya es sólido bajo los pies → subir encima del circuito encajado
         player.z = socketTop(s); player.vz = 0; player.onGround = true;   // s.active ya es true → cima activa
         return;
       }
@@ -50,19 +53,20 @@ export function interact(room) {
     return;                                  // sin hueco → no suelta
   }
 
-  // Manos libres: coger el objeto si estás SUBIDO encima (tu huella lo pisa y los
-  // pies a su cima) o PEGADO a él (a su misma altura base y las huellas casi
-  // tocándose). Subido → al cogerlo caes al hueco; pegado → te quedas donde estás.
+  // Manos libres: coger un CARRIABLE si estás SUBIDO encima (tu huella lo pisa y los pies a su
+  // cima) o PEGADO a él (a su misma altura base y las huellas casi tocándose). Subido → al cogerlo
+  // caes al hueco; pegado → te quedas donde estás.
   const REACH = 0.2;   // margen de alcance lateral para "pegado"
-  for (let i = 0; i < room.objects.length; i++) {
-    const o = room.objects[i], b = objBox(o);
+  for (const t of things) {
+    if (ASSETS[t.asset].behavior !== "carriable") continue;
+    const o = t.src, b = objBox(o);
     const encima = overlapsBox(b, player.x, player.y) && Math.abs((o.z + PROP.H) - player.z) < 0.25;
     const pegado = Math.abs(player.z - o.z) < 0.4 &&
       (player.x - CFG.PRAD - REACH) < b.x1 && (player.x + CFG.PRAD + REACH) > b.x0 &&
       (player.y - CFG.PRAD - REACH) < b.y1 && (player.y + CFG.PRAD + REACH) > b.y0;
     if (encima || pegado) {
       game.carried = o.shape;
-      room.objects.splice(i, 1);
+      const i = room.objects.indexOf(o); if (i >= 0) room.objects.splice(i, 1);
       if (encima) { player.onGround = false; player.vz = 0; }  // que se vea caer hasta o.z
       return;
     }

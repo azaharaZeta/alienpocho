@@ -10,9 +10,10 @@
 "use strict";
 
 import { CFG, WALL_H } from "./config.js";
-import { socketTop } from "./physics.js";   // misma altura sólida del zócalo que la física (fuente única)
 import { ENGINE } from "./engine.js";
 import { AP } from "./assets.js";
+import { roomThings } from "./world.js";          // lista uniforme de placements (fuente del mapeo)
+import { assetTint } from "./data/assets.js";     // primario/secundario por asset (sin enumerar tipos)
 import { ctx, P, setProjector, applyRoomTheme } from "./view.js";
 import { entities } from "./player.js";
 import { game, world, room } from "./game.js";
@@ -39,27 +40,17 @@ export function render(room) {
   AP.flatWall(ctx, P, "y", 0, 0, room.h, WH, ink, room.wallTile);        // borde x=0 (atrás-izq)
   if (room.exits.xm) { const [s0, s1] = doorSpan(room.h); AP.door(ctx, P, "y", 0, s0, s1, WH, ink, true); }
 
-  // 2) Objetos como CAJAS para el pintor topológico
+  // 2) Lo COLOCABLE como CAJAS para el pintor topológico — GENÉRICO: render NO conoce los assets.
+  //    Itera la lista uniforme de la sala (world.roomThings) y, por cada placement, usa su caja
+  //    (aabb, derivada del registro) + su drawer (AP.drawAsset). Añadir un asset nuevo NO toca esto.
   const draws = [];
   const box3 = (x0, y0, z0, x1, y1, z1, draw) => draws.push({ x0, y0, z0, x1, y1, z1, draw });
 
-  // bloques (un cubo por capa)
-  for (const bl of room.blocks)
-    for (let k = 0; k < bl.h; k++) {
-      const z = bl.z + k;
-      box3(bl.x, bl.y, z, bl.x + 1, bl.y + 1, z + 1, () => AP.cube(ctx, P, bl.x, bl.y, z, ink));
-    }
-  // pinchos / zócalos / circuitos sueltos (a su altura oz)
-  for (const hz of room.hazards)
-    box3(hz.cx + 0.2, hz.cy + 0.2, 0, hz.cx + 0.8, hz.cy + 0.8, 0.5,
-         () => AP.spikes(ctx, P, hz.cx + 0.5, hz.cy + 0.5, 0, ink));
-  for (const s of room.sockets) { const oz = s.z || 0;
-    box3(s.cx + 0.16, s.cy + 0.16, oz, s.cx + 0.84, s.cy + 0.84, socketTop(s),
-         () => AP.socket(ctx, P, s.cx + 0.5, s.cy + 0.5, oz, s.shape, s.active, ink2)); }
-  // objetos físicos (circuitos transportables): se dibujan en el SECUNDARIO de la sala.
-  for (const o of room.objects) { const m = AP.PROP.HALF;
-    box3(o.x - m, o.y - m, o.z, o.x + m, o.y + m, o.z + AP.PROP.H,
-         () => AP.prop(ctx, P, o.x, o.y, o.z, o.shape, ink2)); }
+  for (const t of roomThings(room)) {
+    const col = assetTint(t.asset) === "secondary" ? ink2 : ink;   // primario/secundario lo dicta el asset
+    const a = t.aabb;
+    box3(a.x0, a.y0, a.z0, a.x1, a.y1, a.z1, () => AP.drawAsset(ctx, P, t, col));
+  }
 
   // entidades (jugador y, en Fase 6, pinchos/enemigos): cada una añade su caja al orden.
   for (const e of entities) e.addDraws(draws, room);

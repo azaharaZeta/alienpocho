@@ -11,12 +11,13 @@
 import assert from "node:assert/strict";
 
 import { ENGINE } from "../src/engine.js";
-import { buildWorld } from "../src/world.js";
+import { buildWorld, roomThings } from "../src/world.js";
 import { START } from "../src/data/rooms.js";
 import { game, room, interact, checkExits, resetGame } from "../src/game.js";
 import { player } from "../src/player.js";
 import { updateObjects, blocksHoriz, supportHeight, roomSolids, socketTop } from "../src/physics.js";
 import { CFG, SOCKET } from "../src/config.js";
+import { ASSETS } from "../src/data/assets.js";
 
 /* ---- mini-runner sin dependencias ---- */
 let passed = 0, failed = 0;
@@ -35,6 +36,32 @@ test("buildWorld arma 8 salas con la inicial presente", () => {
   assert.equal(Object.keys(w.rooms).length, 8);
   assert.ok(w.rooms[START], "existe la sala inicial");
   assert.equal(w.start, START);
+});
+
+test("roomThings: lista uniforme coherente y SÓLIDOS equivalentes a roomSolids (por columna)", () => {
+  const w = buildWorld();
+  for (const [key, room] of Object.entries(w.rooms)) {
+    const things = roomThings(room);
+    // 1) cada placement referencia un asset válido y trae aabb bien formada
+    for (const t of things) {
+      assert.ok(ASSETS[t.asset], `${key}: asset desconocido ${t.asset}`);
+      assert.ok(t.aabb && t.aabb.z1 >= t.aabb.z0, `${key}: aabb inválida en ${t.asset}`);
+    }
+    // 2) la UNIÓN de las cajas sólidas cubre lo mismo que roomSolids: misma cima por celda-base
+    const topByCell = (boxes) => {
+      const m = new Map();
+      for (const b of boxes) {
+        const x0 = b.x0 ?? b.aabb.x0, y0 = b.y0 ?? b.aabb.y0, top = b.top ?? b.aabb.z1;
+        const k = Math.round(x0 * 100) + "," + Math.round(y0 * 100);
+        m.set(k, Math.max(m.get(k) ?? -1e9, top));
+      }
+      return m;
+    };
+    const a = topByCell(roomSolids(room));
+    const b = topByCell(things.filter(t => ASSETS[t.asset].physics.solid));
+    assert.deepEqual([...b.entries()].sort(), [...a.entries()].sort(),
+      `${key}: la cima sólida por celda difiere entre roomThings y roomSolids`);
+  }
 });
 
 test("cada salida tiene su recíproca en la sala destino", () => {

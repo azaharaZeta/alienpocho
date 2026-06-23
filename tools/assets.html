@@ -145,64 +145,42 @@
 <script type="module">
 import { AP } from "../src/assets.js";
 import { INKS, INK2 } from "../src/palette.js";
-import { ASSET_USE_PNG, WALL_H, PROP, ROBOT, DOOR, SOCKET } from "../src/config.js";   // prioridad PNG/SVG + geometría (celdas)
+import { ASSET_USE_PNG } from "../src/config.js";                                       // prioridad PNG/SVG
+// FUENTE ÚNICA de la geometría de assets: nada de medidas hardcodeadas aquí, todo se LEE del registro.
+import { ASSETS, assetBox, assetRef, assetFoot, assetRegion, assetsByGroup, assetViews, assetTint, WALL_H } from "../src/data/assets.js";
 
 // 0-2: parejas base · 3-5: las mismas invertidas (ver src/palette.js)
 const NAMES = ["cian", "oliva", "magenta", "ámbar", "azul", "verde"];
 
-/* Cada asset = { name, badge?, views:[{label, center?, draw(ctx,p,ink,ink2)}] }.
-   La miniatura usa views[0]; el overlay muestra todas las vistas a lo grande.
-   center = punto del mundo (celda) a centrar en el lienzo (def. {0.5,0.5,0.6}). */
-const circuitItem = (name, shape) => ({ name, sprite: "prop_" + shape, views: [{ label: name, center: { x: .5, y: .5, z: .3 },
-  draw: (c, p, ink, ink2) => { AP.floor(c, p, 0, 0, ink); AP.circuit(c, p, 0.5, 0.5, 0, shape, ink2); } }] });
-const socketItem = (name, shape) => ({ name, badge: "inactivo·activo", views: [
-  { label: "inactivo", center: { x: .5, y: .5, z: .3 }, draw: (c, p, ink, ink2) => { AP.floor(c, p, 0, 0, ink); AP.socket(c, p, 0.5, 0.5, 0, shape, false, ink2); } },
-  { label: "activo",   center: { x: .5, y: .5, z: .3 }, draw: (c, p, ink, ink2) => { AP.floor(c, p, 0, 0, ink); AP.socket(c, p, 0.5, 0.5, 0, shape, true, ink2); } } ] });
-
-const GROUPS = [
-  { title: "Terreno y estructura", items: [
-    { name: "Suelo", views: [{ label: "suelo 1×1", center: { x: 0.5, y: 0.5, z: 0 },
-      draw: (c, p, ink) => AP.floor(c, p, 0, 0, ink) }] },
-    { name: "Bloque", sprite: "cube", views: [{ label: "bloque", center: { x: .5, y: .5, z: .5 },
-      draw: (c, p, ink) => { AP.floor(c, p, 0, 0, ink); AP.cube(c, p, 0, 0, 0, ink); } }] },
-    { name: "Pared (wall1)", wallTile: "wall1", views: [{ label: "wall1 · 1 tile", center: { x: 0.5, y: 0, z: WALL_H / 2 },
-      draw: (c, p, ink) => AP.flatWall(c, p, "x", 0, 0, 1, WALL_H, ink, "wall1") }] },
-    { name: "Pared (wall2)", wallTile: "wall2", views: [{ label: "wall2 · 2 tiles", center: { x: 1, y: 0, z: WALL_H / 2 },
-      draw: (c, p, ink) => AP.flatWall(c, p, "x", 0, 0, 2, WALL_H, ink, "wall2") }] },
-    { name: "Puerta (arco)", badge: "eje x · eje y", files: ["door_front.svg", "door_back.svg"],
-      box: { x: 1.5 - DOOR.SPAN_HALF, y: -DOOR.T, z: 0, w: 2 * DOOR.SPAN_HALF, l: DOOR.T, h: WALL_H },   // representativa (eje x); habilita botones
-      ref: { x: 1.5 - DOOR.SPAN_HALF, y: 0, z: 0 },
-      views: [
-      { label: "eje x", center: { x: 1.5, y: 0, z: WALL_H / 2 },
-        box: { x: 1.5 - DOOR.SPAN_HALF, y: -DOOR.T, z: 0, w: 2 * DOOR.SPAN_HALF, l: DOOR.T, h: WALL_H },
-        ref: { x: 1.5 - DOOR.SPAN_HALF, y: 0, z: 0 },   // = p(a0, fixed, 0): donde drawDoorSprite ancla el marco
-        draw: (c, p, ink) => { const s = AP.DOOR.SPAN_HALF; AP.door(c, p, "x", 0, 1.5 - s, 1.5 + s, WALL_H, ink, true); } },
-      { label: "eje y", center: { x: 0, y: 1.5, z: WALL_H / 2 },
-        box: { x: -DOOR.T, y: 1.5 - DOOR.SPAN_HALF, z: 0, w: DOOR.T, l: 2 * DOOR.SPAN_HALF, h: WALL_H },
-        ref: { x: 0, y: 1.5 - DOOR.SPAN_HALF, z: 0 },
-        draw: (c, p, ink) => { const s = AP.DOOR.SPAN_HALF; AP.door(c, p, "y", 0, 1.5 - s, 1.5 + s, WALL_H, ink, true); } } ] },
-    { name: "Columna", views: [{ label: "columna", center: { x: .5, y: .5, z: 1.1 },
-      draw: (c, p, ink) => { AP.floor(c, p, 0, 0, ink); AP.pillar(c, p, 0, 0, 2.2, ink); } }] },
-  ] },
-  { title: "Circuitos (transportables)", items: [
-    circuitItem("Cubo", "cube"), circuitItem("Pirámide", "pyramid"),
-    circuitItem("Domo", "dome"), circuitItem("Cilindro", "cylinder"),
-  ] },
-  { title: "Zócalos (destino, por forma)", items: [
-    socketItem("Zócalo cubo", "cube"), socketItem("Zócalo pirámide", "pyramid"),
-    socketItem("Zócalo domo", "dome"), socketItem("Zócalo cilindro", "cylinder"),
-  ] },
-  { title: "Peligros y decoración", items: [
-    { name: "Pinchos", sprite: "spikes", views: [{ label: "pinchos", center: { x: .5, y: .5, z: .3 }, draw: (c, p, ink) => { AP.floor(c, p, 0, 0, ink); AP.spikes(c, p, 0.5, 0.5, 0, ink); } }] },
-    { name: "Planta", sprite: "plant", views: [{ label: "planta", center: { x: .5, y: .5, z: .3 }, draw: (c, p, ink) => { AP.floor(c, p, 0, 0, ink); AP.plant(c, p, 0.5, 0.5, 0, ink); } }] },
-    { name: "Dron", views: [{ label: "dron", center: { x: .5, y: .5, z: .7 }, draw: (c, p, ink) => { AP.floor(c, p, 0, 0, ink); AP.drone(c, p, 0.5, 0.5, 0, ink); } }] },
-  ] },
-  { title: "Personaje", items: [
-    { name: "Robot Pocho", badge: "4 vistas", views: [0, 1, 2, 3].map(f => ({
-      label: ["+x", "+y", "-x", "-y"][f], center: { x: .5, y: .5, z: .8 },
-      draw: (c, p, ink) => { AP.shadow(c, p, 0.5, 0.5, 0); AP.robot(c, p, 0.5, 0.5, 0, f, ink); } })) },
-  ] },
-];
+/* CATÁLOGO 100% DERIVADO DEL REGISTRO (src/data/assets.js): grupos, etiquetas, vistas y dibujo salen
+   de ASSETS. Añadir un asset nuevo aparece SOLO aquí, en su grupo, sin tocar esta tool (modularidad).
+   Cada item: { name, asset, sprite?, files?, wallTile?, badge?, views:[{label, variant?, center, draw}] }.
+   El dibujo de cada vista es el motor GENÉRICO AP.drawAsset(placement) — la tool no sabe de assets. */
+const previewCenter = (id, variant) => {                       // centra la cámara en el centro de la región
+  const r = assetRegion(id, variant) || { x: 0, y: 0, z: 0, w: 1, l: 1, h: 1 };
+  return { x: r.x + r.w / 2, y: r.y + r.l / 2, z: r.z + r.h / 2 };
+};
+function makeItem(id) {
+  const a = ASSETS[id], tint = assetTint(id);
+  const views = assetViews(id).map(v => ({
+    label: v.label, variant: v.key, center: previewCenter(id, v.key),
+    draw: (c, p, ink, ink2) => {
+      const col = tint === "secondary" ? ink2 : ink, ref = assetRef(id, v.key);
+      if (a.behavior === "player") AP.shadow(c, p, ref.x, ref.y, ref.z);   // sombra (no suelo) bajo el robot
+      else if (a.behavior !== "structure") AP.floor(c, p, 0, 0, ink);      // suelo de fondo (no en la cáscara)
+      AP.drawAsset(c, p, { asset: id, x: ref.x, y: ref.y, z: ref.z, ...v.state }, col);
+    },
+  }));
+  return {
+    name: a.label || id, asset: id,
+    sprite: a.sprite ? id : undefined,                          // panel SVG/PNG + miniatura de sprite
+    files: a.files ? [a.files.svg, ...(a.extraFiles || [])].filter(Boolean) : undefined,
+    wallTile: a.tile ? id : undefined,                          // tile de pared (miniatura/SVG)
+    badge: a.variants ? Object.values(a.variants).map(v => v.label).filter(Boolean).join(" · ") : undefined,
+    views,
+  };
+}
+const GROUPS = assetsByGroup().map(g => ({ title: g.title, items: g.ids.map(makeItem) }));
 
 /* Render PIXELART coherente: dibuja la vista a RESOLUCIÓN DE JUEGO (drawViewGame) en un lienzo
    nativo y la amplía con zoom ENTERO nearest-neighbor. Mismo criterio que el juego (low-res +
@@ -276,7 +254,7 @@ function renderThumb(canvas, item) {
   // bug de pintar el vector de fallback (la miniatura es síncrona y el sprite carga async).
   if (item.file) { renderFileThumb(canvas, item.file, item.w, item.h); return; }   // SVG suelto (manifiesto)
   if (item.sprite && AP.SPRITES[item.sprite]) { renderSpriteThumb(canvas, item.sprite); return; }
-  renderViewPixel(canvas, item.views[0], curInk(), curInk2(), 84, 72, 2);   // resolución juego ×2
+  renderViewPixel(canvas, item.views[0], curInk(), curInk2(), THUMB_NW, THUMB_NH, THUMB_ZOOM);   // escala COMÚN
 }
 /* Carga (cacheada) un fichero SVG suelto a su tamaño nativo (silueta neutra). */
 function ensureFile(file, w, h, cb) {
@@ -291,11 +269,10 @@ function ensureFile(file, w, h, cb) {
 function renderFileThumb(canvas, file, w, h) {
   ensureFile(file, w, h, (neutral) => {
     if (!neutral) return;
-    const z = 2, W = 84 * z, Hc = 72 * z; canvas.width = W; canvas.height = Hc;
+    const z = THUMB_ZOOM, W = THUMB_NW * z, Hc = THUMB_NH * z; canvas.width = W; canvas.height = Hc;   // escala COMÚN
     const x = canvas.getContext("2d"); x.imageSmoothingEnabled = false;
     x.fillStyle = "#000"; x.fillRect(0, 0, W, Hc);
-    const s = Math.max(1, Math.floor(Math.min(W / w, Hc / h) * 0.8));
-    x.drawImage(tintSrc(neutral, curInk()), Math.round((W - w * s) / 2), Math.round((Hc - h * s) / 2), w * s, h * s);
+    x.drawImage(tintSrc(neutral, curInk()), Math.round((W - w * z) / 2), Math.round((Hc - h * z) / 2), w * z, h * z);
   });
 }
 /* Miniatura de un sprite migrado: se pinta desde su FICHERO, con la MISMA prioridad que el juego
@@ -306,13 +283,12 @@ function renderSpriteThumb(canvas, name) {
     if (!sources.length) return;
     const png = sources.find(s => s.tag === "PNG"), svg = sources.find(s => s.tag === "SVG");
     const chosen = (ASSET_USE_PNG && png) ? png : (svg || png);
-    const z = 2, W = 84 * z, H = 72 * z; canvas.width = W; canvas.height = H;
+    const z = THUMB_ZOOM, W = THUMB_NW * z, H = THUMB_NH * z; canvas.width = W; canvas.height = H;   // escala COMÚN
     const x = canvas.getContext("2d"); x.imageSmoothingEnabled = false;
     x.fillStyle = "#000"; x.fillRect(0, 0, W, H);
     const ink = name.startsWith("prop_") ? curInk2() : curInk();   // circuitos en secundario (como el juego)
     const tinted = tintSrc(chosen.neutral, ink);
-    const s = Math.max(1, Math.floor(Math.min(W / def.w, H / def.h) * 0.7));
-    x.drawImage(tinted, Math.round((W - def.w * s) / 2), Math.round((H - def.h * s) / 2), def.w * s, def.h * s);
+    x.drawImage(tinted, Math.round((W - def.w * z) / 2), Math.round((H - def.h * z) / 2), def.w * z, def.h * z);
   });
 }
 
@@ -327,53 +303,38 @@ function renderSpriteThumb(canvas, name) {
     items: extra.map(n => ({ name: n, sprite: n, spriteOnly: true, views: [{ label: n }] })) });
 }
 
-/* Dimensiones en CELDAS de juego (ancho×largo×alto) por asset, derivadas de la geometría (config).
-   Las que faltan (SVG sueltos del manifiesto, "otros sprites") quedan sin gu → el popup muestra "—". */
-const GU = {
-  "Suelo": { w: 1, l: 1, h: 0 }, "Bloque": { w: 1, l: 1, h: 1 },
-  "Pared (wall1)": { w: 1, l: 0, h: WALL_H }, "Pared (wall2)": { w: 2, l: 0, h: WALL_H },
-  "Puerta (arco)": { w: +(DOOR.SPAN_HALF * 2).toFixed(2), l: DOOR.T, h: WALL_H },
-  "Columna": { w: 0.6, l: 0.6, h: 2.2 },
-  "Pinchos": { w: 0.54, l: 0.54, h: 0.5 }, "Planta": { w: 0.32, l: 0.32, h: 0.5 }, "Dron": { w: 0.32, l: 0.32, h: 0.28 },
-  "Robot Pocho": { w: +(ROBOT.WID * 2).toFixed(2), l: +(ROBOT.DEP * 2).toFixed(2), h: ROBOT.H },
-};
-const guProp = { w: +(PROP.HALF * 2).toFixed(2), l: +(PROP.HALF * 2).toFixed(2), h: PROP.H };   // circuitos
-const guSocket = { w: 0.68, l: 0.68, h: SOCKET.BASE_H };                                          // zócalos (peana)
-/* Caja-contenedor (AABB de mundo) por asset, en las coords donde la dibuja su `view.draw` (cube en (0,0);
-   props/zócalos/peligros/robot centrados en (0.5,0.5); columna en (0.2,0.2)). La usa el cubo de referencia. */
-const BOX = {
-  "Suelo": { x: 0, y: 0, z: 0, w: 1, l: 1, h: 0 },                 // plano (alto 0)
-  "Pared (wall1)": { x: 0, y: 0, z: 0, w: 1, l: 0, h: WALL_H },    // plano (largo/profundidad 0)
-  "Pared (wall2)": { x: 0, y: 0, z: 0, w: 2, l: 0, h: WALL_H },
-  "Bloque": { x: 0, y: 0, z: 0, w: 1, l: 1, h: 1 },
-  "Columna": { x: 0.2, y: 0.2, z: 0, w: 0.6, l: 0.6, h: 2.2 },
-  "Pinchos": { x: 0.5 - 0.27, y: 0.5 - 0.27, z: 0, w: 0.54, l: 0.54, h: 0.5 },
-  "Planta": { x: 0.5 - 0.16, y: 0.5 - 0.16, z: 0, w: 0.32, l: 0.32, h: 0.5 },
-  "Dron": { x: 0.5 - 0.16, y: 0.5 - 0.16, z: 0.6, w: 0.32, l: 0.32, h: 0.28 },
-  "Robot Pocho": { x: 0.5 - ROBOT.WID, y: 0.5 - ROBOT.DEP, z: 0, w: 2 * ROBOT.WID, l: 2 * ROBOT.DEP, h: ROBOT.H },
-};
-const boxProp = { x: 0.5 - PROP.HALF, y: 0.5 - PROP.HALF, z: 0, w: 2 * PROP.HALF, l: 2 * PROP.HALF, h: PROP.H };
-const boxSocket = { x: 0.16, y: 0.16, z: 0, w: 0.68, l: 0.68, h: SOCKET.BASE_H };
-/* Punto de anclaje ISO (coords de mundo donde el juego ancla el sprite = píxel (−minX,−minY) del PNG/SVG).
-   Dos convenciones: ESQUINA (0,0,0) para bloque/suelo/pared/columna; CENTRO-base (0.5,0.5,0) para props/
-   zócalos/peligros/robot (objetos). */
-const REF = {
-  "Suelo": { x: 0, y: 0, z: 0 }, "Bloque": { x: 0, y: 0, z: 0 }, "Columna": { x: 0, y: 0, z: 0 },
-  "Pared (wall1)": { x: 0, y: 0, z: 0 }, "Pared (wall2)": { x: 0, y: 0, z: 0 },
-  "Pinchos": { x: 0.5, y: 0.5, z: 0 }, "Planta": { x: 0.5, y: 0.5, z: 0 }, "Dron": { x: 0.5, y: 0.5, z: 0 },
-  "Robot Pocho": { x: 0.5, y: 0.5, z: 0 },
-};
-const refCenter = { x: 0.5, y: 0.5, z: 0 };   // props y zócalos: centro de la celda en el suelo
+/* GU (ancho×largo×alto en celdas), BOX (AABB de mundo) y REF (punto de anclaje iso) NO se declaran
+   aquí: se LEEN del registro único `src/data/assets.js` por el `asset` id de cada item (y por `variant`
+   en las vistas con orientación: puerta eje x/y, robot ±x/±y). Cero geometría hardcodeada en la tool. */
 for (const g of GROUPS) for (const it of g.items) {
-  if (GU[it.name]) it.gu = GU[it.name];
-  else if (it.sprite && it.sprite.startsWith("prop_")) it.gu = guProp;
-  else if (g.title.startsWith("Zócalos")) it.gu = guSocket;
-  if (BOX[it.name]) it.box = BOX[it.name];
-  else if (it.sprite && it.sprite.startsWith("prop_")) it.box = boxProp;
-  else if (g.title.startsWith("Zócalos")) it.box = boxSocket;
-  if (REF[it.name]) it.ref = REF[it.name];
-  else if ((it.sprite && it.sprite.startsWith("prop_")) || g.title.startsWith("Zócalos")) it.ref = refCenter;
+  if (!it.asset || !ASSETS[it.asset]) continue;
+  const f = assetFoot(it.asset);
+  if (f) it.gu = { w: f.w, l: f.l, h: f.h };
+  it.box = assetBox(it.asset);     // representativa (habilita botones cubo/región)
+  it.ref = assetRef(it.asset);     // representativa (habilita botón punto de anclaje)
+  for (const v of it.views) if (v.variant) { v.box = assetBox(it.asset, v.variant); v.ref = assetRef(it.asset, v.variant); }
 }
+
+/* ===================== ESCALA COMÚN (px por unidad de juego CONSTANTE) =====================
+   TODOS los assets se dibujan a la MISMA escala (la proyección nativa ya codifica los tamaños
+   reales; sólo multiplicamos por un ZOOM ENTERO ÚNICO). Así una celda de juego mide los MISMOS
+   píxeles en cualquier asset: el Bloque sale grande y el domo pequeño porque LO SON, no por un
+   zoom distinto. El zoom se elige para que el asset MÁS GRANDE (su región) quepa en ~BIG_TARGET px;
+   cada celda se dimensiona a la región de SU asset (no se rellena a la del mayor), pero la escala
+   es común. El <canvas> se ajusta por CSS (max-width) si una vista múltiple se sale. */
+const P_NATIVE = AP.projector(0, 0, { TILE_W: 34, TILE_H: 17, BLOCK_H: 17 });
+let _maxDim = 1;
+for (const g of GROUPS) for (const it of g.items) {
+  if (!it.box) continue;
+  const boxes = (it.views || []).map(v => v.box).filter(Boolean);
+  for (const b of (boxes.length ? boxes : [it.box])) {
+    const bb = boxBBox(regionOf(b), P_NATIVE); _maxDim = Math.max(_maxDim, bb.w, bb.h);
+  }
+}
+const BIG_TARGET = 380;                                       // lado mayor del asset más grande, en px de pantalla
+const BIG_ZOOM = Math.max(1, Math.floor(BIG_TARGET / (_maxDim + 8)));   // ZOOM ÚNICO del popup (+8 = margen de celda)
+const THUMB_ZOOM = 2;                                         // ZOOM ÚNICO de las miniaturas (escala nativa ×2)
+const THUMB_NW = 84, THUMB_NH = 72;                           // celda nativa común de las miniaturas
 
 const catalog = document.getElementById("catalog");
 const thumbs = [];   // {canvas, item} → para recolorear al cambiar de paleta
@@ -467,7 +428,7 @@ function renderBigSprite(name) {
   const def = AP.SPRITES[name], ink = name.startsWith("prop_") ? curInk2() : curInk();
   ensureSpriteSources(name, (sources) => {
     if (!curItem || curItem.sprite !== name) return;       // cambió de item mientras cargaba
-    const ZOOM = 5, GW = def.w * ZOOM, GH = def.h * ZOOM, pad = 26, labelH = 34;
+    const ZOOM = BIG_ZOOM, GW = def.w * ZOOM, GH = def.h * ZOOM, pad = 26, labelH = 34;   // escala COMÚN
     const cells = sources.length || 1, maxGW = (def.w) * ZOOM;
     bigCanvas.width = cells * (maxGW + pad) + pad; bigCanvas.height = GH + labelH + pad;
     const c = bigCanvas.getContext("2d");
@@ -488,7 +449,7 @@ function renderBigSprite(name) {
 function renderBigFile(item) {
   ensureFile(item.file, item.w, item.h, (neutral) => {
     if (!curItem || curItem.file !== item.file || !neutral) return;
-    const z = 6, W = item.w * z, Hh = item.h * z, pad = 26;
+    const z = BIG_ZOOM, W = item.w * z, Hh = item.h * z, pad = 26;   // escala COMÚN
     bigCanvas.width = W + pad * 2; bigCanvas.height = Hh + pad * 2;
     const c = bigCanvas.getContext("2d"); c.imageSmoothingEnabled = false;
     c.fillStyle = "#000"; c.fillRect(0, 0, bigCanvas.width, bigCanvas.height);
@@ -505,16 +466,15 @@ function renderViews(item, withCube, withRegion, withPoint) {
   const TW = 34, TH = 17, BH = 17, P0 = AP.projector(0, 0, { TILE_W: TW, TILE_H: TH, BLOCK_H: BH });
   // box/ref PUEDEN ser POR VISTA (la puerta: eje x / eje y con orientaciones distintas).
   const vbox = v => v.box || box, vref = v => v.ref || item.ref;
-  let cw, ch, ZOOM, bbs = null;
+  let cw, ch, bbs = null;
+  const ZOOM = BIG_ZOOM;                                    // ZOOM ÚNICO (escala común a TODOS los assets)
   if (box) {
-    // bbox de la REGIÓN de cada vista (contenedor mayor); la celda = la MAYOR → encaja todas.
+    // bbox de la REGIÓN de cada vista (contenedor mayor); la celda = la MAYOR → encaja todas las vistas.
     bbs = views.map(v => boxBBox(regionOf(vbox(v)), P0));
     const maxW = Math.max(...bbs.map(b => b.w)), maxH = Math.max(...bbs.map(b => b.h)), nm = 4;
     cw = Math.ceil(maxW) + 2 * nm; ch = Math.ceil(maxH) + 2 * nm;
-    const target = n > 1 ? 200 : 340;                      // grande (menos en multi-vista)
-    ZOOM = Math.max(1, Math.round(target / Math.max(cw, ch)));
   } else {
-    cw = 96; ch = 96; ZOOM = 3;
+    cw = 96; ch = 96;
   }
   const colW = cw * ZOOM, H = ch * ZOOM + 30;              // +30 para la etiqueta
   bigCanvas.width = n * colW; bigCanvas.height = H;
@@ -608,7 +568,8 @@ const svgMsg = document.getElementById("svgMsg");
 const svgSrc = document.getElementById("svgSrc");
 const dlPng = document.getElementById("dlPng");
 const dlSvg = document.getElementById("dlSvg");
-const infoGU = document.getElementById("infoGU"), infoPX = document.getElementById("infoPX");
+const infoGU = document.getElementById("infoGU");
+const infoPX = document.getElementById("infoPX");
 const cubeBtn = document.getElementById("cubeBtn");
 const regionBtn = document.getElementById("regionBtn");
 const pointBtn = document.getElementById("pointBtn");
