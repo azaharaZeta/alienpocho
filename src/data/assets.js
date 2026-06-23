@@ -95,15 +95,17 @@ export const ASSETS = {
 
   // --- Transportables (circuitos): sólidos, empujables, recogibles y caen ---
   prop_cube:     { label: "Cubo", kind: "object", group: "Transportables", traits: { solid: true, movable: true, carriable: true, falls: true },
-                   draw: "circuit:cube",     anchor: "center", foot: { w: P2, l: P2, h: PROP.H },
+                   draw: "sprite", anchor: "center", foot: { w: P2, l: P2, h: PROP.H },
                    files: { svg: "prop_cube.svg", png: null }, sprite: { w: 18, h: 18, minX: -9, minY: -13 } },
   prop_pyramid:  { label: "Pirámide", kind: "object", group: "Transportables", traits: { solid: true, movable: true, carriable: true, falls: true },
-                   draw: "circuit:pyramid",  anchor: "center", foot: { w: P2, l: P2, h: PROP.H },
+                   draw: "sprite", anchor: "center", foot: { w: P2, l: P2, h: PROP.H },
                    files: { svg: "prop_pyramid.svg", png: null }, sprite: { w: 18, h: 14, minX: -9, minY: -9 } },
   prop_dome:     { label: "Domo", kind: "object", group: "Transportables", traits: { solid: true, movable: true, carriable: true, falls: true },
-                   draw: "circuit:dome",     anchor: "center", foot: { w: P2, l: P2, h: PROP.H } },
+                   draw: "sprite", anchor: "center", foot: { w: P2, l: P2, h: PROP.H },
+                   files: { svg: "prop_dome.svg", png: null }, sprite: { w: 14, h: 11, minX: -7, minY: -7 } },
   prop_cylinder: { label: "Cilindro", kind: "object", group: "Transportables", traits: { solid: true, movable: true, carriable: true, falls: true },
-                   draw: "circuit:cylinder", anchor: "center", foot: { w: P2, l: P2, h: PROP.H } },
+                   draw: "sprite", anchor: "center", foot: { w: P2, l: P2, h: PROP.H },
+                   files: { svg: "prop_cylinder.svg", png: null }, sprite: { w: 12, h: 15, minX: -6, minY: -12 } },
 
   // --- Receptáculos (zócalos): sólidos, reciben un transportable compatible y cambian de estado ---
   socket_cube:     { label: "Zócalo cubo", kind: "object", group: "Receptáculos", traits: { solid: true, receptacle: true, stateful: true },
@@ -125,7 +127,8 @@ export const ASSETS = {
             draw: "sprite", anchor: "center", foot: { w: 0.32, l: 0.32, h: 0.5 },
             files: { svg: "plant.svg", png: null }, sprite: { w: 8, h: 13, minX: -4, minY: -11 } },
   drone:  { label: "Dron", kind: "object", group: "Decoración", traits: {},
-            draw: "drone",  anchor: "center", foot: { w: 0.32, l: 0.32, h: 0.28, z: 0.6 } },
+            draw: "sprite", anchor: "center", foot: { w: 0.32, l: 0.32, h: 0.28, z: 0.6 },
+            files: { svg: "drone.svg", png: null }, sprite: { w: 12, h: 16, minX: -6, minY: -22 } },
   // Ordenador: sólido + empujable + cae.
   computer: { label: "Ordenador", kind: "object", group: "Decoración", traits: { solid: true, movable: true, falls: true },
             draw: "sprite", anchor: "center", foot: { w: 0.5, l: 0.5, h: 0.7 },

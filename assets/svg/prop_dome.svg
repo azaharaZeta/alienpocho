@@ -1,0 +1,10 @@
+<svg viewBox="-7 -7 14 11" xmlns="http://www.w3.org/2000/svg">
+  <!-- cristal: casquete con relleno muy tenue -->
+  <path d="M-5.78 0 C-5.78 -8.5 5.78 -8.5 5.78 0 A5.78 2.89 0 0 0 -5.78 0 Z" fill="#ffffff" fill-opacity="0.2"/>
+  <!-- aro de la base -->
+  <ellipse cx="0" cy="0" rx="5.78" ry="2.89" fill="none" stroke="rgb(140,140,140)" stroke-width="1"/>
+  <!-- contorno del casquete -->
+  <path d="M-5.78 0 C-5.78 -8.5 5.78 -8.5 5.78 0 A5.78 2.89 0 0 0 -5.78 0 Z" fill="none" stroke="#ffffff" stroke-width="1"/>
+  <!-- brillo -->
+  <ellipse cx="-1.97" cy="-4.25" rx="1.16" ry="2.21" transform="rotate(-28.6 -1.97 -4.25)" fill="#ffffff" fill-opacity="0.5"/>
+</svg>

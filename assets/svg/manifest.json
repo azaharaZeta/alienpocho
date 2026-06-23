@@ -18,6 +18,24 @@
     "h": 14
   },
   {
+    "name": "Prop domo",
+    "file": "prop_dome.svg",
+    "w": 14,
+    "h": 11
+  },
+  {
+    "name": "Prop cilindro",
+    "file": "prop_cylinder.svg",
+    "w": 12,
+    "h": 15
+  },
+  {
+    "name": "Dron",
+    "file": "drone.svg",
+    "w": 12,
+    "h": 16
+  },
+  {
     "name": "Pinchos",
     "file": "spikes.svg",
     "w": 14,

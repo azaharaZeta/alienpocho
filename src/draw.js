@@ -191,6 +191,9 @@ export const AP = (() => {
   }
 
   // ---- Circuitos (4 formas geométricas monocromas) ----
+  // Dibujo PARAMÉTRICO residual: los circuitos como OBJETO suelto ya son sprites SVG (prop_*).
+  // Esto queda solo para los usos que necesitan dibujar la figura a un proyector/posición
+  // arbitrarios: icono del HUD (render), objeto en brazos (player) y cima de zócalo activo.
   // Huella y alto los dicta el registro (PROP.HALF / PROP.H): el dibujo LLENA su huella física.
   function circuit(ctx, p, x, y, z, shape, col) {
     const r = PROP.HALF, hh = PROP.H;
@@ -228,14 +231,6 @@ export const AP = (() => {
     }
   }
 
-  // OBJETO FÍSICO transportable: se dibuja como la figura del circuito (sin base). Su caja
-  // física (HALF/H) se ajusta al tamaño visible de la figura.
-  function prop(ctx, p, x, y, z, shape, col) {
-    const name = "prop_" + shape;
-    if (SPRITES[name]) { drawSprite(name, ctx, p(x, y, z), col); return; }  // cube/pyramid: sprite PNG→SVG
-    circuit(ctx, p, x, y, z, shape, col);   // domo/cilindro: procedurales
-  }
-
   // Zócalo / pedestal
   function socket(ctx, p, x, y, z, shape, active, col) {
     const c = active ? col : darken(col, 0.4);
@@ -257,15 +252,6 @@ export const AP = (() => {
   // Planta decorativa: desde fichero (PNG→SVG).
   function plant(ctx, p, x, y, z, col) {
     drawSprite("plant", ctx, p(x, y, z), col);
-  }
-
-  // Dron flotante. Huella, altura de vuelo y alto los dicta el registro (foot {w,h,z}).
-  function drone(ctx, p, x, y, z, col) {
-    const f = ASSETS.drone.foot, r = f.w / 2, hv = z + f.z, top = hv + f.h;
-    box(ctx, p, x - r, y - r, x + r, y + r, hv, top, col);
-    const c = p(x, y, top);
-    ctx.strokeStyle = col; ctx.beginPath(); ctx.moveTo(c.x, c.y); ctx.lineTo(c.x, c.y - 5); ctx.stroke();
-    ctx.fillStyle = col; ctx.fillRect(c.x - 1, c.y - 7, 2, 2);
   }
 
   /* ---- Robot Pocho (color propio fijo; 4 vistas, traseras = espejo) ---- */
@@ -346,9 +332,7 @@ export const AP = (() => {
     floor:    (c, P, t, col) => floor(c, P, t.x, t.y, col),
     cube:     (c, P, t, col) => cube(c, P, t.x, t.y, t.z, col),
     pillar:   (c, P, t, col) => pillar(c, P, t.x, t.y, ASSETS[t.asset].foot.h, col),
-    drone:    (c, P, t, col) => drone(c, P, t.x, t.y, t.z, col),
     robot:    (c, P, t, col) => robot(c, P, t.x, t.y, t.z, t.facing || 0, col),
-    circuit:  (c, P, t, col) => prop(c, P, t.x, t.y, t.z, _shapeOf(t), col),          // PNG→SVG→procedural
     socket:   (c, P, t, col) => socket(c, P, t.x, t.y, t.z, _shapeOf(t), !!t.active, col),
     // Estructura (paramétrica): la sala la dibuja en su capa propia; estos drawers son para
     // PREVIEWS sueltos de la tool, dibujando una instancia de muestra a partir de la huella.
@@ -361,11 +345,11 @@ export const AP = (() => {
 
   /* SUPERFICIE PÚBLICA. Lo COLOCABLE se dibuja por `drawAsset`/`DRAWERS`, no por una función por
      asset. Aquí van: constantes/helpers, la API genérica, y las primitivas referenciadas POR NOMBRE
-     desde fuera (cáscara estructural en render, robot/sombra en player/screens, generadores tools/gen-*). */
+     desde fuera (cáscara estructural en render, robot/sombra en player/screens, circuito icono-HUD/en-brazos). */
   return {
     INKS, INK2, ROBOT_INK, DIRS, ROBOT, BLACK, DOOR, PROP, darken, lighten,   // constantes + helpers
     projector, poly, box, facePt, edgeLine,                                   // primitivas de motor
     DRAWERS, drawAsset, SPRITES,                                              // API de dibujo genérica
-    floor, flatWall, door, cube, prop, circuit, spikes, plant, robot, shadow, // primitivas usadas por nombre
+    floor, flatWall, door, cube, circuit, spikes, plant, robot, shadow, // primitivas usadas por nombre
   };
 })();

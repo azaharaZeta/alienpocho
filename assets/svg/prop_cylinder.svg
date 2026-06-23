@@ -1,0 +1,6 @@
+<svg viewBox="-6 -12 12 15" xmlns="http://www.w3.org/2000/svg">
+  <!-- pared cilíndrica (cara oscura) con la base curvada hacia el frente -->
+  <path d="M-4.76 -8.5 L-4.76 0 A4.76 2.38 0 0 0 4.76 0 L4.76 -8.5 Z" fill="rgb(179,179,179)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <!-- tapa superior (iluminada) -->
+  <ellipse cx="0" cy="-8.5" rx="4.76" ry="2.38" fill="#ffffff" stroke="#000000" stroke-width="1"/>
+</svg>
