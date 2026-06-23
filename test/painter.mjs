@@ -130,7 +130,7 @@ test("fila en x: se pintan de atrás (−x) a delante (+x)", () => {
 
 /* ---------------------------------------------------------------- DETERMINISMO --- */
 test("determinismo: permutar la entrada NO cambia el orden visual (casos de ciclo del audit)", () => {
-  // Ciclos REALES reproducidos en docs/AUDITORIA.md (cajas que SÍ solapan en pantalla).
+  // Ciclos REALES entre cajas que SÍ solapan en pantalla (el painter debe ordenarlas determinista).
   const escenas = [
     [box(2, 2, 1, 5, 5, 3), box(0, 3, 4, 3, 4, 5), box(0, 4, 2, 2, 7, 3)],
     [box(0, 0, 1, 2, 3, 2), box(2, 0, 1, 5, 1, 4), box(1, 2, 0, 4, 4, 1)],

@@ -1,0 +1,9 @@
+<svg viewBox="-9 -17 18 22" xmlns="http://www.w3.org/2000/svg">
+  <!-- Ordenador/terminal: caja iso monocroma (silueta neutra; el juego la tiñe por sala).
+       Borrador para refinar a mano. Anclaje centro-base = píxel (9,17) del viewBox. -->
+  <path d="M0 -16.15 L8.5 -11.9 L0 -7.65 L-8.5 -11.9 Z" fill="#e0e0e0" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M-8.5 0 L0 4.25 L0 -7.65 L-8.5 -11.9 Z" fill="#b4b4b4" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M8.5 0 L0 4.25 L0 -7.65 L8.5 -11.9 Z" fill="#8a8a8a" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <!-- pantalla (cara frontal izquierda) -->
+  <path d="M-6.8 -1.53 L-1.7 1.02 L-1.7 -6.12 L-6.8 -8.67 Z" fill="#2a2a2a" stroke="#000000" stroke-width="0.6" stroke-linejoin="round"/>
+</svg>

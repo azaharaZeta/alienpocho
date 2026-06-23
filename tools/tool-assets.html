@@ -143,48 +143,42 @@
   </div>
 
 <script type="module">
-import { AP } from "../src/assets.js";
+import { AP } from "../src/draw.js";
 import { INKS, INK2 } from "../src/palette.js";
-import { ASSET_USE_PNG } from "../src/config.js";                                       // prioridad PNG/SVG
-// FUENTE ÚNICA de la geometría de assets: nada de medidas hardcodeadas aquí, todo se LEE del registro.
-import { ASSETS, assetBox, assetRef, assetFoot, assetRegion, assetsByGroup, assetViews, assetTint, WALL_H } from "../src/data/assets.js";
+// FUENTE ÚNICA: la tool LEE todo del registro; no conoce nombres ni tipos de asset.
+import { ASSETS, assetBox, assetRef, assetFoot, assetRegion, assetsByGroup, assetViews, assetTint, assetTraits, WALL_H } from "../src/data/assets.js";
 
 // 0-2: parejas base · 3-5: las mismas invertidas (ver src/palette.js)
 const NAMES = ["cian", "oliva", "magenta", "ámbar", "azul", "verde"];
 
-/* CATÁLOGO 100% DERIVADO DEL REGISTRO (src/data/assets.js): grupos, etiquetas, vistas y dibujo salen
-   de ASSETS. Añadir un asset nuevo aparece SOLO aquí, en su grupo, sin tocar esta tool (modularidad).
-   Cada item: { name, asset, sprite?, files?, wallTile?, badge?, views:[{label, variant?, center, draw}] }.
-   El dibujo de cada vista es el motor GENÉRICO AP.drawAsset(placement) — la tool no sabe de assets. */
-const previewCenter = (id, variant) => {                       // centra la cámara en el centro de la región
+/* CATÁLOGO GENÉRICO: toma todos los assets del registro agrupados por su `group`.
+   Cada asset se dibuja con el motor genérico `AP.drawAsset`; el badge muestra sus
+   `traits`. Añadir un asset aparece aquí solo, en su grupo, sin tocar la tool. */
+const previewCenter = (id, variant) => {                       // centro de la región (para centrar la cámara)
   const r = assetRegion(id, variant) || { x: 0, y: 0, z: 0, w: 1, l: 1, h: 1 };
   return { x: r.x + r.w / 2, y: r.y + r.l / 2, z: r.z + r.h / 2 };
 };
 function makeItem(id) {
-  const a = ASSETS[id], tint = assetTint(id);
+  const tint = assetTint(id);
   const views = assetViews(id).map(v => ({
     label: v.label, variant: v.key, center: previewCenter(id, v.key),
     draw: (c, p, ink, ink2) => {
       const col = tint === "secondary" ? ink2 : ink, ref = assetRef(id, v.key);
-      if (a.behavior === "player") AP.shadow(c, p, ref.x, ref.y, ref.z);   // sombra (no suelo) bajo el robot
-      else if (a.behavior !== "structure") AP.floor(c, p, 0, 0, ink);      // suelo de fondo (no en la cáscara)
       AP.drawAsset(c, p, { asset: id, x: ref.x, y: ref.y, z: ref.z, ...v.state }, col);
     },
   }));
+  const a = ASSETS[id], traits = Object.keys(assetTraits(id));
   return {
     name: a.label || id, asset: id,
-    sprite: a.sprite ? id : undefined,                          // panel SVG/PNG + miniatura de sprite
-    files: a.files ? [a.files.svg, ...(a.extraFiles || [])].filter(Boolean) : undefined,
-    wallTile: a.tile ? id : undefined,                          // tile de pared (miniatura/SVG)
-    badge: a.variants ? Object.values(a.variants).map(v => v.label).filter(Boolean).join(" · ") : undefined,
+    files: a.files ? [a.files.svg, ...(a.extraFiles || [])].filter(Boolean) : undefined,   // para el panel SVG
+    badge: traits.length ? traits.join(" · ") : undefined,
     views,
   };
 }
 const GROUPS = assetsByGroup().map(g => ({ title: g.title, items: g.ids.map(makeItem) }));
 
-/* Render PIXELART coherente: dibuja la vista a RESOLUCIÓN DE JUEGO (drawViewGame) en un lienzo
-   nativo y la amplía con zoom ENTERO nearest-neighbor. Mismo criterio que el juego (low-res +
-   escalado pixelado) y que la tool svg2png → todo coincide, nada de re-render del vector. */
+/* Render pixelart: dibuja la vista a RESOLUCIÓN DE JUEGO (drawViewGame) en un lienzo
+   nativo y la amplía con zoom entero nearest-neighbor (mismo criterio que el juego). */
 function renderViewPixel(canvas, view, ink, ink2, nw, nh, zoom) {
   const cell = document.createElement("canvas"); cell.width = nw; cell.height = nh;
   drawViewGame(cell.getContext("2d"), nw / 2, nh * 0.58, view, ink, ink2);
@@ -195,8 +189,7 @@ function renderViewPixel(canvas, view, ink, ink2, nw, nh, zoom) {
 }
 
 /* Dibuja una vista a RESOLUCIÓN DE JUEGO (POPT real: tile 34×17, bloque 17), centrada en
-   (anchorX,anchorY) de un lienzo pequeño. La vista grande del overlay es un ZOOM pixelado de
-   esto (nunca un re-render del vector a otra resolución → así coincide con el juego). */
+   (anchorX,anchorY). La vista grande del overlay es un zoom pixelado de esto. */
 function drawViewGame(ctx, anchorX, anchorY, view, ink, ink2, cube) {
   const c = view.center || { x: 0.5, y: 0.5, z: 0.6 };
   const TW = 34, TH = 17, BH = 17;
@@ -204,13 +197,12 @@ function drawViewGame(ctx, anchorX, anchorY, view, ink, ink2, cube) {
   const oy = anchorY - (c.x + c.y) * TH / 2 + c.z * BH;
   const P = AP.projector(ox, oy, { TILE_W: TW, TILE_H: TH, BLOCK_H: BH });
   view.draw(ctx, P, ink, ink2);
-  if (cube) drawRefCube(ctx, P, cube.box, cube.color);   // referencia de perspectiva (mismo proyector → alineado)
+  if (cube) drawRefCube(ctx, P, cube.box, cube.color);   // cubo de referencia (mismo proyector → alineado)
 }
 
-/* Color del cubo de referencia: COMPLEMENTARIO del color elegido (= secundario de la paleta);
-   azul brillante en modo "sin paleta". */
+/* Color del cubo de referencia: secundario de la paleta; azul en "sin paleta". */
 const complementColor = () => palIdx < 0 ? "#3aa0ff" : curInk2();
-/* Cubo-contenedor en perspectiva iso (alambre): AABB de mundo {x,y,z,w,l,h} proyectada por P. */
+/* Cubo-contenedor en alambre iso: AABB de mundo {x,y,z,w,l,h} proyectada por P. */
 function drawRefCube(ctx, P, b, color) {
   const X0 = b.x, Y0 = b.y, Z0 = b.z, X1 = b.x + b.w, Y1 = b.y + b.l, Z1 = b.z + b.h;
   const v = [[X0,Y0,Z0],[X1,Y0,Z0],[X1,Y1,Z0],[X0,Y1,Z0],[X0,Y0,Z1],[X1,Y0,Z1],[X1,Y1,Z1],[X0,Y1,Z1]].map(c => P(c[0], c[1], c[2]));
@@ -220,10 +212,9 @@ function drawRefCube(ctx, P, b, color) {
   ctx.globalAlpha = 1;
 }
 
-/* Región estándar contenedora: ceil de cada dimensión (mín. 1; 0→1), alineada a celdas. Color
-   SECUNDARIO oscuro (gris en "sin paleta"). Siempre ⊇ el cubo, así que es el contenedor mayor. */
+/* Región estándar contenedora: ceil de cada dimensión (mín. 1), alineada a celdas. */
 const regionColor = () => AP.darken(curInk2(), 0.45);
-const pointColor = () => palIdx < 0 ? "#cfe9ff" : AP.lighten(curInk2(), 0.45);   // punto de anclaje: secundario BRILLANTE
+const pointColor = () => palIdx < 0 ? "#cfe9ff" : AP.lighten(curInk2(), 0.45);   // punto de anclaje: secundario brillante
 function regionOf(b) {
   const x0 = Math.floor(b.x), x1 = Math.max(x0 + 1, Math.ceil(b.x + b.w));
   const y0 = Math.floor(b.y), y1 = Math.max(y0 + 1, Math.ceil(b.y + b.l));
@@ -240,72 +231,19 @@ function boxBBox(b, P) {
 }
 
 /* ---------- Estado global de PALETA (afecta a miniaturas y overlay) ---------- */
-// palIdx = índice de paleta · -1 = "SIN PALETA" (neutro): teñir con blanco = silueta SIN color.
+// palIdx = índice de paleta · -1 = "sin paleta": tiñe con blanco = silueta sin color.
 let palIdx = 0;
 const curInk  = () => palIdx < 0 ? "#ffffff" : INKS[palIdx];
 const curInk2 = () => palIdx < 0 ? "#ffffff" : INK2[palIdx];
 const curName = () => palIdx < 0 ? "sin paleta" : (NAMES[palIdx] || palIdx);
-const _cmpCache = {};   // cache de siluetas SVG/PNG por sprite (definido ANTES del bucle que lo usa)
-const _fileCache = {};  // cache de siluetas de ficheros SVG sueltos (auto-descubiertos del manifiesto)
 
-/* ---------- Miniatura de un asset (con la paleta global) ---------- */
+/* ---------- Miniatura de un asset (motor genérico, primera vista) ---------- */
 function renderThumb(canvas, item) {
-  // Assets MIGRADOS → miniatura desde el FICHERO real (igual que el popup y el juego). Evita el
-  // bug de pintar el vector de fallback (la miniatura es síncrona y el sprite carga async).
-  if (item.file) { renderFileThumb(canvas, item.file, item.w, item.h); return; }   // SVG suelto (manifiesto)
-  if (item.sprite && AP.SPRITES[item.sprite]) { renderSpriteThumb(canvas, item.sprite); return; }
-  renderViewPixel(canvas, item.views[0], curInk(), curInk2(), THUMB_NW, THUMB_NH, THUMB_ZOOM);   // escala COMÚN
-}
-/* Carga (cacheada) un fichero SVG suelto a su tamaño nativo (silueta neutra). */
-function ensureFile(file, w, h, cb) {
-  if (_fileCache[file]) { cb(_fileCache[file]); return; }
-  const img = new Image();
-  img.onload = () => { const c = document.createElement("canvas"); c.width = w; c.height = h;
-    c.getContext("2d").drawImage(img, 0, 0, w, h); _fileCache[file] = c; cb(c); };
-  img.onerror = () => cb(null);
-  img.src = "/assets/svg/" + file + "?cb=" + Date.now();
-}
-/* Miniatura de un fichero SVG suelto: silueta plana teñida (primario), centrada. */
-function renderFileThumb(canvas, file, w, h) {
-  ensureFile(file, w, h, (neutral) => {
-    if (!neutral) return;
-    const z = THUMB_ZOOM, W = THUMB_NW * z, Hc = THUMB_NH * z; canvas.width = W; canvas.height = Hc;   // escala COMÚN
-    const x = canvas.getContext("2d"); x.imageSmoothingEnabled = false;
-    x.fillStyle = "#000"; x.fillRect(0, 0, W, Hc);
-    x.drawImage(tintSrc(neutral, curInk()), Math.round((W - w * z) / 2), Math.round((Hc - h * z) / 2), w * z, h * z);
-  });
-}
-/* Miniatura de un sprite migrado: se pinta desde su FICHERO, con la MISMA prioridad que el juego
-   (PNG si ASSET_USE_PNG y existe; si no, el SVG), teñido y centrado. */
-function renderSpriteThumb(canvas, name) {
-  const def = AP.SPRITES[name]; if (!def) return;
-  ensureSpriteSources(name, (sources) => {
-    if (!sources.length) return;
-    const png = sources.find(s => s.tag === "PNG"), svg = sources.find(s => s.tag === "SVG");
-    const chosen = (ASSET_USE_PNG && png) ? png : (svg || png);
-    const z = THUMB_ZOOM, W = THUMB_NW * z, H = THUMB_NH * z; canvas.width = W; canvas.height = H;   // escala COMÚN
-    const x = canvas.getContext("2d"); x.imageSmoothingEnabled = false;
-    x.fillStyle = "#000"; x.fillRect(0, 0, W, H);
-    const ink = name.startsWith("prop_") ? curInk2() : curInk();   // circuitos en secundario (como el juego)
-    const tinted = tintSrc(chosen.neutral, ink);
-    x.drawImage(tinted, Math.round((W - def.w * z) / 2), Math.round((H - def.h * z) / 2), def.w * z, def.h * z);
-  });
+  renderViewPixel(canvas, item.views[0], curInk(), curInk2(), THUMB_NW, THUMB_NH, THUMB_ZOOM);   // escala común
 }
 
-/* ---------- Catálogo de miniaturas agrupadas ---------- */
-// AUTO-DESCUBRIMIENTO: cualquier sprite de AP.SPRITES sin ficha en GROUPS se añade solo (lee la
-// situación REAL del registro de sprites → los nuevos aparecen sin tocar este fichero).
-{
-  const referenced = new Set();
-  for (const g of GROUPS) for (const it of g.items) if (it.sprite) referenced.add(it.sprite);
-  const extra = Object.keys(AP.SPRITES).filter(n => !referenced.has(n));
-  if (extra.length) GROUPS.push({ title: "Otros sprites (auto · de AP.SPRITES)",
-    items: extra.map(n => ({ name: n, sprite: n, spriteOnly: true, views: [{ label: n }] })) });
-}
-
-/* GU (ancho×largo×alto en celdas), BOX (AABB de mundo) y REF (punto de anclaje iso) NO se declaran
-   aquí: se LEEN del registro único `src/data/assets.js` por el `asset` id de cada item (y por `variant`
-   en las vistas con orientación: puerta eje x/y, robot ±x/±y). Cero geometría hardcodeada en la tool. */
+/* GU (celdas), BOX (AABB de mundo) y REF (punto de anclaje) se LEEN del registro por el
+   `asset` id (y por `variant` en vistas con orientación). Cero geometría en la tool. */
 for (const g of GROUPS) for (const it of g.items) {
   if (!it.asset || !ASSETS[it.asset]) continue;
   const f = assetFoot(it.asset);
@@ -315,13 +253,10 @@ for (const g of GROUPS) for (const it of g.items) {
   for (const v of it.views) if (v.variant) { v.box = assetBox(it.asset, v.variant); v.ref = assetRef(it.asset, v.variant); }
 }
 
-/* ===================== ESCALA COMÚN (px por unidad de juego CONSTANTE) =====================
-   TODOS los assets se dibujan a la MISMA escala (la proyección nativa ya codifica los tamaños
-   reales; sólo multiplicamos por un ZOOM ENTERO ÚNICO). Así una celda de juego mide los MISMOS
-   píxeles en cualquier asset: el Bloque sale grande y el domo pequeño porque LO SON, no por un
-   zoom distinto. El zoom se elige para que el asset MÁS GRANDE (su región) quepa en ~BIG_TARGET px;
-   cada celda se dimensiona a la región de SU asset (no se rellena a la del mayor), pero la escala
-   es común. El <canvas> se ajusta por CSS (max-width) si una vista múltiple se sale. */
+/* ===================== ESCALA COMÚN (px por unidad de juego constante) =====================
+   Todos los assets se dibujan a la misma escala (proyección nativa × un zoom entero único),
+   así una celda mide los mismos píxeles en cualquier asset. El zoom se elige para que el asset
+   más grande (su región) quepa en ~BIG_TARGET px. */
 const P_NATIVE = AP.projector(0, 0, { TILE_W: 34, TILE_H: 17, BLOCK_H: 17 });
 let _maxDim = 1;
 for (const g of GROUPS) for (const it of g.items) {
@@ -354,38 +289,8 @@ for (const g of GROUPS) {
   }
 }
 
-// Re-render diferido: sprites y tiles de pared cargan async → repinta las miniaturas cuando estén
-// listas (si no, las recetas async como la pared se quedan con el fallback vector del 1er frame).
+// Re-render diferido: sprites y tiles de pared cargan async → repinta cuando estén listos.
 setTimeout(() => thumbs.forEach(t => renderThumb(t.canvas, t.item)), 500);
-
-// AUTO desde el MANIFIESTO: añade una ficha por CADA .svg del manifiesto que no esté ya en el
-// catálogo (silueta plana). Así salen TODOS los assets, se usen o no en el juego.
-(async () => {
-  let manifest = [];
-  try { manifest = await (await fetch("/assets/svg/manifest.json?cb=" + Date.now())).json(); } catch { return; }
-  const repr = new Set();
-  for (const g of GROUPS) for (const it of g.items) {
-    if (it.sprite) repr.add(it.sprite + ".svg");
-    if (it.wallTile) repr.add(it.wallTile + ".svg");
-    if (it.files) it.files.forEach(f => repr.add(f));
-  }
-  const rest = manifest.filter(e => !repr.has(e.file));
-  if (!rest.length) return;
-  const cat = document.getElementById("catalog");
-  const h = document.createElement("h2"); h.textContent = "Otros ficheros SVG (sin uso en juego)"; cat.appendChild(h);
-  const grid = document.createElement("div"); grid.className = "grid"; cat.appendChild(grid);
-  for (const e of rest) {
-    const item = { name: e.name, file: e.file, w: e.w, h: e.h };
-    const tile = document.createElement("button"); tile.className = "tile";
-    const cv = document.createElement("canvas"); cv.width = 150; cv.height = 120;
-    renderFileThumb(cv, e.file, e.w, e.h);
-    tile.appendChild(cv);
-    const nm = document.createElement("span"); nm.className = "name"; nm.textContent = e.name; tile.appendChild(nm);
-    tile.addEventListener("click", () => openOverlay(item));
-    grid.appendChild(tile);
-    thumbs.push({ canvas: cv, item });
-  }
-})();
 
 /* ---------- Overlay grande (con la paleta global) ---------- */
 const overlay = document.getElementById("overlay");
@@ -393,9 +298,9 @@ const bigCanvas = document.getElementById("bigCanvas");
 const bigTitle = document.getElementById("bigTitle");
 const swatches = document.getElementById("swatches");
 let curItem = null, curMode = "view";   // "view" = asset existente · "create" = SVG nuevo editable
-let showCube = false;                    // cubo-contenedor EXACTO (ancho×largo×alto) en color complementario
-let showRegion = false;                  // región estándar = ceil de cada dim (0→1), en secundario oscuro
-let showPoint = false;                   // punto de anclaje isométrico (donde el juego ancla el sprite), secundario brillante
+let showCube = false;                    // cubo-contenedor exacto (ancho×largo×alto)
+let showRegion = false;                  // región estándar = ceil de cada dim
+let showPoint = false;                   // punto de anclaje iso (donde el juego ancla el sprite)
 
 /* Teñido (multiply) de una silueta gris a la tinta de sala — para comparar SVG vs PNG. */
 function tintSrc(src, ink) {
@@ -406,70 +311,17 @@ function tintSrc(src, ink) {
   x.globalCompositeOperation = "destination-in"; x.drawImage(src, 0, 0);
   return c;
 }
-/* Carga (una vez) las fuentes de un sprite migrado: SVG (siempre) + PNG (si existe), a
-   resolución de juego. Cachea las siluetas neutras por nombre (_cmpCache, declarado arriba). */
-function ensureSpriteSources(name, cb) {
-  if (_cmpCache[name]) { cb(_cmpCache[name]); return; }
-  const def = AP.SPRITES[name]; if (!def) { cb([]); return; }
-  const srcs = [["SVG", "/assets/svg/" + name + ".svg"], ["PNG", "/assets/png/" + name + ".png"]];
-  const out = []; let pending = srcs.length;
-  srcs.forEach(([tag, url], order) => {
-    const img = new Image();
-    img.onload = () => { const cv = document.createElement("canvas"); cv.width = def.w; cv.height = def.h;
-      cv.getContext("2d").drawImage(img, 0, 0, def.w, def.h); out.push({ tag, order, neutral: cv }); fin(); };
-    img.onerror = () => fin();
-    img.src = url + "?cb=" + Date.now();
-  });
-  function fin() { if (--pending === 0) { out.sort((a, b) => a.order - b.order); _cmpCache[name] = out; cb(out); } }
-}
-/* Vista grande COMPARATIVA de un sprite migrado: un panel por fuente disponible (SVG, PNG),
-   teñido y a zoom pixelado, diciendo cuál es cuál. */
-function renderBigSprite(name) {
-  const def = AP.SPRITES[name], ink = name.startsWith("prop_") ? curInk2() : curInk();
-  ensureSpriteSources(name, (sources) => {
-    if (!curItem || curItem.sprite !== name) return;       // cambió de item mientras cargaba
-    const ZOOM = BIG_ZOOM, GW = def.w * ZOOM, GH = def.h * ZOOM, pad = 26, labelH = 34;   // escala COMÚN
-    const cells = sources.length || 1, maxGW = (def.w) * ZOOM;
-    bigCanvas.width = cells * (maxGW + pad) + pad; bigCanvas.height = GH + labelH + pad;
-    const c = bigCanvas.getContext("2d");
-    c.fillStyle = "#000"; c.fillRect(0, 0, bigCanvas.width, bigCanvas.height);
-    c.imageSmoothingEnabled = false;
-    if (!sources.length) { c.fillStyle = "#889"; c.font = "14px 'Courier New', monospace"; c.fillText("(sin ficheros)", 20, 30); return; }
-    sources.forEach((s, i) => {
-      const x = pad + i * (maxGW + pad);
-      c.drawImage(tintSrc(s.neutral, ink), x, pad, def.w * ZOOM, GH);
-      c.fillStyle = ink; c.font = "bold 16px 'Courier New', monospace"; c.textAlign = "center"; c.textBaseline = "top";
-      c.fillText(s.tag, x + def.w * ZOOM / 2, pad + GH + 12);   // etiqueta DEBAJO de la imagen (no la tapa)
-    });
-    c.textBaseline = "alphabetic";
-  });
-}
-
-/* Vista grande de un fichero SVG suelto: silueta plana teñida, a zoom pixelado. */
-function renderBigFile(item) {
-  ensureFile(item.file, item.w, item.h, (neutral) => {
-    if (!curItem || curItem.file !== item.file || !neutral) return;
-    const z = BIG_ZOOM, W = item.w * z, Hh = item.h * z, pad = 26;   // escala COMÚN
-    bigCanvas.width = W + pad * 2; bigCanvas.height = Hh + pad * 2;
-    const c = bigCanvas.getContext("2d"); c.imageSmoothingEnabled = false;
-    c.fillStyle = "#000"; c.fillRect(0, 0, bigCanvas.width, bigCanvas.height);
-    c.drawImage(tintSrc(neutral, curInk()), pad, pad, W, Hh);
-  });
-}
-
-/* Render por VISTAS (px de juego + zoom NN). Si el asset tiene CAJA, el marco se dimensiona SIEMPRE al
-   cubo-contenedor (constante: igual se muestre o no el cubo) y se AMPLÍA para que el cubo (y el asset
-   dentro) ocupe casi toda la ventana, dejando un pequeño margen. El cubo se dibuja sólo si withCube.
-   Sin caja → tamaño fijo previo (96×96 ×3). */
+/* Render por VISTAS (px de juego + zoom NN). Con caja, el marco se dimensiona al
+   cubo-contenedor; el cubo se dibuja sólo si withCube. Sin caja → 96×96. */
 function renderViews(item, withCube, withRegion, withPoint) {
   const views = item.views, n = views.length, box = item.box;
   const TW = 34, TH = 17, BH = 17, P0 = AP.projector(0, 0, { TILE_W: TW, TILE_H: TH, BLOCK_H: BH });
-  // box/ref PUEDEN ser POR VISTA (la puerta: eje x / eje y con orientaciones distintas).
+  // box/ref pueden ser POR VISTA (p. ej. puerta eje x / eje y).
   const vbox = v => v.box || box, vref = v => v.ref || item.ref;
   let cw, ch, bbs = null;
-  const ZOOM = BIG_ZOOM;                                    // ZOOM ÚNICO (escala común a TODOS los assets)
+  const ZOOM = BIG_ZOOM;                                    // zoom único (escala común)
   if (box) {
-    // bbox de la REGIÓN de cada vista (contenedor mayor); la celda = la MAYOR → encaja todas las vistas.
+    // bbox de la región de cada vista; la celda = la mayor → encaja todas las vistas.
     bbs = views.map(v => boxBBox(regionOf(vbox(v)), P0));
     const maxW = Math.max(...bbs.map(b => b.w)), maxH = Math.max(...bbs.map(b => b.h)), nm = 4;
     cw = Math.ceil(maxW) + 2 * nm; ch = Math.ceil(maxH) + 2 * nm;
@@ -489,7 +341,7 @@ function renderViews(item, withCube, withRegion, withPoint) {
     const cx = cell.getContext("2d");
     let P;
     if (box) {
-      const b = vbox(v), bb = bbs[i];                      // origen que CENTRA esta vista en la celda
+      const b = vbox(v), bb = bbs[i];                      // origen que centra esta vista en la celda
       const ox = Math.round((cw - bb.w) / 2) - bb.minx, oy = Math.round((ch - bb.h) / 2) - bb.miny;
       P = AP.projector(ox, oy, { TILE_W: TW, TILE_H: TH, BLOCK_H: BH });
       if (regC) drawRefCube(cx, P, regionOf(b), regC);     // región estándar (detrás)
@@ -499,7 +351,7 @@ function renderViews(item, withCube, withRegion, withPoint) {
     c.imageSmoothingEnabled = false;
     c.drawImage(cell, i * colW, 0, colW, ch * ZOOM);
     const rf = vref(v);
-    if (ptC && P && rf) {                                  // punto de anclaje iso: marcador NÍTIDO sobre el canvas final
+    if (ptC && P && rf) {                                  // punto de anclaje iso: marcador sobre el canvas final
       const pr = P(rf.x, rf.y, rf.z), fx = i * colW + pr.x * ZOOM, fy = pr.y * ZOOM;
       c.beginPath(); c.arc(fx, fy, 5, 0, Math.PI * 2); c.fillStyle = ptC; c.fill();
       c.lineWidth = 1.5; c.strokeStyle = "#000"; c.stroke();
@@ -511,11 +363,7 @@ function renderViews(item, withCube, withRegion, withPoint) {
 
 function renderBig() {
   if (!curItem) return;
-  // Asset con caja → marco SIEMPRE dimensionado a la REGIÓN (constante); cubo/región/punto según sus toggles.
-  if (curItem.box && curItem.views && curItem.views[0] && curItem.views[0].draw) { renderViews(curItem, showCube, showRegion, showPoint); return; }
-  if (curItem.file) { renderBigFile(curItem); return; }
-  if (curItem.sprite && AP.SPRITES[curItem.sprite]) { renderBigSprite(curItem.sprite); return; }
-  renderViews(curItem, false);
+  renderViews(curItem, showCube, showRegion, showPoint);
 }
 function openOverlay(item) {
   curMode = "view"; curItem = item;
@@ -523,15 +371,15 @@ function openOverlay(item) {
   cubeBtn.classList.remove("on"); regionBtn.classList.remove("on"); pointBtn.classList.remove("on");
   cubeBtn.disabled = !item.box; regionBtn.disabled = !item.box; pointBtn.disabled = !item.ref;   // referencias sólo si hay datos
   bigTitle.textContent = item.name; renderBig(); setupSvgPane(item); overlay.classList.add("open");
-  if (item.box) setTimeout(() => { if (curItem === item) renderBig(); }, 350);   // repinta cuando cargue el sprite (drawSprite async)
+  if (item.box) setTimeout(() => { if (curItem === item) renderBig(); }, 350);   // repinta cuando cargue el sprite (async)
 }
 function closeOverlay() { overlay.classList.remove("open"); }
 document.getElementById("closeBtn").addEventListener("click", closeOverlay);
 overlay.addEventListener("click", (e) => { if (e.target === overlay) closeOverlay(); });
 addEventListener("keydown", (e) => { if (e.key === "Escape") closeOverlay(); });
 
-/* ---------- SELECTOR DE PALETA: en la cabecera (principal) + copia en el overlay ----------
-   Ambos llaman a setPalette → recolorea TODO (miniaturas + overlay) y sincroniza la selección. */
+/* ---------- SELECTOR DE PALETA: cabecera (principal) + copia en el overlay ----------
+   Ambos llaman a setPalette → recolorea miniaturas + overlay y sincroniza la selección. */
 const palDiv = document.getElementById("palette");
 function setPalette(i) {
   palIdx = i;
@@ -560,9 +408,9 @@ for (const e of PALENTRIES) {
   swatches.appendChild(b);
 }
 
-/* ===================== VISOR / EDITOR DE SVG (absorbe la antigua tools/svg2png.html) =====================
-   La tool SOLO carga ficheros: no genera nada procedural. En un asset existente muestra su SVG (lectura)
-   y exporta el PNG NEUTRO (sin color). "Crear SVG" abre un editor con un cubo a tamaño de juego. */
+/* ===================== VISOR / EDITOR DE SVG =====================
+   La tool SOLO carga ficheros (nada procedural). En un asset existente muestra su SVG
+   (lectura) y exporta el PNG NEUTRO. "Crear SVG" abre un editor con un cubo a tamaño de juego. */
 const svgPane = document.getElementById("svgPane");
 const svgMsg = document.getElementById("svgMsg");
 const svgSrc = document.getElementById("svgSrc");
@@ -592,15 +440,9 @@ const DEFAULT_SVG = `<svg viewBox="-17 -17 34 34" xmlns="http://www.w3.org/2000/
   <path d="M-17 -8.5 L0 0 L0 17 L-17 8.5 Z" fill="rgb(209,209,209)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
 </svg>`;
 
-// Ruta del SVG de un asset, o null si es procedural (sin SVG): migrado→<sprite>.svg, suelto→file,
-// pared→<wallTile>.svg, puerta→primer file, solo-views (robot/zócalo/domo/cilindro/suelo/columna/dron)→null.
+// Ruta del SVG de un asset (primer file), o null si es procedural (sin fichero).
 function svgPathFor(item) {
-  if (!item) return null;
-  if (item.file) return "/assets/svg/" + item.file;
-  if (item.sprite && AP.SPRITES[item.sprite]) return "/assets/svg/" + item.sprite + ".svg";
-  if (item.wallTile) return "/assets/svg/" + item.wallTile + ".svg";
-  if (item.files && item.files.length) return "/assets/svg/" + item.files[0];
-  return null;
+  return (item && item.files && item.files.length) ? "/assets/svg/" + item.files[0] : null;
 }
 // Tamaño nativo (px de juego) desde el viewBox del SVG; fallback 34×34. (Sin inputs de W/H.)
 function svgSize(svgText) {

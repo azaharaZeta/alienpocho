@@ -2,8 +2,8 @@
    ALIEN POCHO — INPUT (input.js)
    -----------------------------------------------------------------------------
    Estado de teclado + detección de flancos + helpers held/pressed según CONTROLS.
-   El acceso al DOM (addEventListener, botones táctiles) está DIFERIDO a init():
-   así el módulo se puede importar en Node (tests) sin tocar `window`/`document`.
+   El acceso al DOM (addEventListener, botones táctiles) se difiere a init*() → el
+   módulo se importa en tests Node sin tocar `window`/`document`.
    ============================================================================= */
 "use strict";
 
@@ -14,15 +14,14 @@ export const keys = Object.create(null);
 const prevKeys = Object.create(null);
 const BOUND_CODES = new Set(Object.values(CONTROLS).flat());
 
-/* Detección de flancos de teclado (pulsación nueva este frame) */
+/* Flanco de teclado: pulsación nueva este frame. */
 function edge(code) { return keys[code] && !prevKeys[code]; }
 
-/* Helpers de acciones según CONTROLS (parametrizable) */
+/* Helpers de acciones según CONTROLS: held = mantenida, pressed = flanco. */
 export const held    = (action) => CONTROLS[action].some(c => keys[c]);
 export const pressed = (action) => CONTROLS[action].some(c => edge(c));
 
-/* Snapshot de teclas para los flancos del próximo frame: lo llama el bucle UNA
-   vez por frame, tras actualizar todas las entidades. */
+/* Snapshot de teclas para los flancos del próximo frame (lo llama el bucle). */
 export function snapshotKeys() {
   for (const k in keys) prevKeys[k] = keys[k];
 }
@@ -36,8 +35,8 @@ export function initInput() {
   addEventListener("keyup", e => { keys[e.code] = false; });
 }
 
-/* Controles táctiles en pantalla → reusan el teclado del juego (mismos códigos,
-   así el salto corto/largo depende también de cuánto mantengas pulsado). */
+/* Controles táctiles → reusan el teclado (mismos códigos, así el salto corto/largo
+   también depende de cuánto se mantenga pulsado). */
 export function initTouch() {
   const send = (code, down) =>
     window.dispatchEvent(new KeyboardEvent(down ? "keydown" : "keyup", { code, bubbles: true }));

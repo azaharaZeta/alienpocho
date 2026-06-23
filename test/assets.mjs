@@ -2,11 +2,11 @@
    ALIEN POCHO — TEST DE ASSETS / FUENTE ÚNICA (test/assets.mjs)
    -----------------------------------------------------------------------------
    Guarda que `src/data/assets.js` siga siendo la ÚNICA fuente de verdad de los
-   assets (ver docs/AUDITORIA-ASSETS.md):
+   assets (ver docs/ARQUITECTURA.md):
      1) Coherencia interna del registro (cada asset bien formado; helpers derivan bien).
      2) NO-DERIVA contra los artefactos: manifest.json y los sprites de AP cuadran
         con el registro; los ficheros referenciados existen en disco.
-     3) GUARDARRAÍL: la tool tools/assets.html NO reintroduce geometría hardcodeada.
+     3) GUARDARRAÍL: la tool tools/tool-assets.html NO reintroduce geometría hardcodeada.
    Ejecutar:  node test/assets.mjs   (o  npm test)
    ============================================================================= */
 import assert from "node:assert/strict";
@@ -14,7 +14,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { ASSETS, assetBox, assetRef, assetFoot, assetRegion, assetsByGroup, GROUP_ORDER, PROP, ROBOT, DOOR, SOCKET, WALL_H } from "../src/data/assets.js";
-import { AP } from "../src/assets.js";
+import { AP } from "../src/draw.js";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 let passed = 0, failed = 0;
@@ -36,12 +36,17 @@ test("cada asset tiene draw y (foot | variants con box/foot)", () => {
   }
 });
 
-test("cada asset DECLARA group, behavior y physics.solid (modularidad: el asset se describe a sí mismo)", () => {
-  const BEHAVIORS = new Set(["structure", "block", "carriable", "target", "hazard", "decor", "player"]);
+test("cada asset DECLARA kind, group y traits (clase + propiedades componibles)", () => {
+  const KINDS = new Set(["structure", "individual", "object"]);
+  const TRAITS = new Set(["solid", "movable", "carriable", "falls", "hazard", "receptacle", "stateful", "controlled"]);
   for (const [id, a] of Object.entries(ASSETS)) {
+    assert.ok(KINDS.has(a.kind), `${id}: kind "${a.kind}" desconocido`);
     assert.ok(GROUP_ORDER.includes(a.group), `${id}: group "${a.group}" no está en GROUP_ORDER`);
-    assert.ok(BEHAVIORS.has(a.behavior), `${id}: behavior "${a.behavior}" desconocido`);
-    assert.equal(typeof (a.physics && a.physics.solid), "boolean", `${id}: falta physics.solid`);
+    assert.equal(typeof a.traits, "object", `${id}: falta traits`);
+    for (const [t, v] of Object.entries(a.traits)) {
+      assert.ok(TRAITS.has(t), `${id}: trait "${t}" desconocido`);
+      assert.equal(typeof v, "boolean", `${id}.traits.${t} debe ser boolean`);
+    }
   }
 });
 
@@ -110,8 +115,8 @@ test("los ficheros SVG/PNG referenciados por el registro existen en disco", () =
 });
 
 /* ---------- 3) GUARDARRAÍL: la tool no re-hardcodea geometría ---------- */
-test("tools/assets.html no contiene mapas de geometría hardcodeada (GU/BOX/REF/box*)", () => {
-  const html = readFileSync(new URL("../tools/assets.html", import.meta.url), "utf8");
+test("tools/tool-assets.html no contiene mapas de geometría hardcodeada (GU/BOX/REF/box*)", () => {
+  const html = readFileSync(new URL("../tools/tool-assets.html", import.meta.url), "utf8");
   for (const bad of [/\bconst\s+GU\s*=/, /\bconst\s+BOX\s*=/, /\bconst\s+REF\s*=/,
                      /\bconst\s+boxProp\s*=/, /\bconst\s+boxSocket\s*=/, /\bconst\s+guProp\s*=/, /\bconst\s+guSocket\s*=/])
     assert.ok(!bad.test(html), `la tool reintrodujo un mapa de geometría: ${bad}`);

@@ -3,13 +3,13 @@
    -----------------------------------------------------------------------------
    Pantallas de no-juego: por ahora la PANTALLA DE TÍTULO (marco sci-fi pixel-art +
    logo neón + mascota + créditos + prompt parpadeante). Recibe la paleta como
-   parámetro (no lee estado global) → reutilizable para victoria/game over (Fase 8).
+   parámetro (no lee estado global).
    ============================================================================= */
 "use strict";
 
 import { CFG } from "./config.js";
 import { ENGINE } from "./engine.js";
-import { AP } from "./assets.js";
+import { AP } from "./draw.js";
 import { ctx } from "./view.js";
 
 // Marco grande estilo panel de nave: doble borde, línea segmentada, corchetes de

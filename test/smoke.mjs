@@ -17,7 +17,7 @@ import { game, room, interact, checkExits, resetGame } from "../src/game.js";
 import { player } from "../src/player.js";
 import { updateObjects, blocksHoriz, supportHeight, roomSolids, socketTop } from "../src/physics.js";
 import { CFG, SOCKET } from "../src/config.js";
-import { ASSETS } from "../src/data/assets.js";
+import { ASSETS, assetHas } from "../src/data/assets.js";
 
 /* ---- mini-runner sin dependencias ---- */
 let passed = 0, failed = 0;
@@ -58,7 +58,7 @@ test("roomThings: lista uniforme coherente y SÓLIDOS equivalentes a roomSolids 
       return m;
     };
     const a = topByCell(roomSolids(room));
-    const b = topByCell(things.filter(t => ASSETS[t.asset].physics.solid));
+    const b = topByCell(things.filter(t => assetHas(t.asset, "solid")));
     assert.deepEqual([...b.entries()].sort(), [...a.entries()].sort(),
       `${key}: la cima sólida por celda difiere entre roomThings y roomSolids`);
   }

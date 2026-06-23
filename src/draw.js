@@ -1,18 +1,15 @@
 /* =============================================================================
-   ALIEN POCHO — Biblioteca de ASSETS (assets.js)
+   ALIEN POCHO — Dibujo de ASSETS (draw.js)
    -----------------------------------------------------------------------------
    Líneas y caras sobre negro. Cada sala tiene DOS tintas (ver palette.js): una
-   PRIMARIA (suelo, paredes, bloques, robot) y una SECUNDARIA complementaria
-   (circuitos, zócalos, textos del HUD). Las formas se definen con CONTORNOS NEGROS
-   (teselado limpio); el color cambia por sala y las caras en sombra se "oscurecen"
-   con sombreado plano (darken).
+   PRIMARIA (suelo, paredes, bloques, robot) y una SECUNDARIA (circuitos, zócalos,
+   HUD). Formas con contornos negros; el color cambia por sala y las caras en sombra
+   se oscurecen (sombreado plano, darken).
    - Paredes: PLANAS y teseladas (panal), no cubos.
    - Puertas: marco 3D (postes + dintel con ranuras) que sobresale del borde.
-   - Bloques: cubo iso simple (el dibujo bueno vive en su SVG/PNG; el vector es solo fallback).
-   - El robot se pinta en la tinta que se le pasa (en juego, la PRIMARIA de la sala);
-     su color por defecto (ROBOT_INK) solo se usa si no se indica ninguno.
+   - El robot se pinta en la tinta que se le pasa; ROBOT_INK solo si no se indica ninguna.
    Uso:  AP.<asset>(ctx, p, ..., col)   con p = AP.projector(ox, oy)
-   Catálogo visual interactivo (tool de dev): tools/assets.html
+   Catálogo visual interactivo (tool de dev): tools/tool-assets.html
    ============================================================================= */
 "use strict";
 
@@ -23,20 +20,17 @@ import { ASSETS, WALL_H } from "./data/assets.js";   // FUENTE ÚNICA: encuadre 
 
 export const AP = (() => {
 
-  // Primitivas genéricas del motor (proyección, cajas, panal, painter…).
+  // Primitivas genéricas del motor (proyección, cajas, painter…).
   const ENG = ENGINE;
   const { BLACK, darken, lighten, projector, poly, facePt, edgeLine, box } = ENG;
 
-  // Paletas (INKS/INK2/ROBOT_INK desde palette.js) y geometría compartida (DOOR/PROP/ROBOT/
-  // SOCKET desde config.js): su FUENTE vive fuera; aquí solo se usan y se reexportan en AP.
+  // Paletas (palette.js) y geometría compartida (config.js): se usan aquí y se reexportan en AP.
 
   /* ===================== SPRITES EXTERNOS (flujo PNG/SVG, ver docs/ASSETS.md) =====================
-     Los assets fijos MIGRADOS se dibujan desde un fichero (PNG editado si ASSET_USE_PNG y existe;
-     si no, su SVG generado) teñido por sala. Si no está migrado o aún no cargó, drawSprite devuelve
-     false y el llamador pinta el VECTOR de siempre (degradado elegante + funciona en Node/tests).
-     minX/minY = offset del bbox respecto al punto de referencia P(coords) del asset (lo calcula
-     tools/gen-svg.mjs); w/h = tamaño nativo del sprite.
-     Ya NO se declara aquí: se DERIVA del registro único `src/data/assets.js` (los assets con `sprite`). */
+     Los assets migrados se dibujan desde un fichero (PNG editado si ASSET_USE_PNG y existe; si no,
+     su SVG) teñido por sala. Si no está migrado o aún no cargó, drawSprite devuelve false y el
+     llamador pinta el vector (también para Node/tests). minX/minY = offset del bbox respecto al
+     punto de referencia P(coords); w/h = tamaño nativo. Se derivan del registro `src/data/assets.js`. */
   const SPRITES = Object.fromEntries(
     Object.entries(ASSETS).filter(([, a]) => a.sprite).map(([id, a]) => [id, a.sprite])
   );
@@ -50,7 +44,7 @@ export const AP = (() => {
     if (ASSET_USE_PNG) load("/assets/png/" + name + ".png", () => load("/assets/svg/" + name + ".svg"));
     else load("/assets/svg/" + name + ".svg");
   }
-  function _tintSprite(neutral, col) {   // gris·col por multiply (== darken(col,f)), remáscara al alfa
+  function _tintSprite(neutral, col) {   // tiñe el gris por multiply y remáscara al alfa original
     const c = document.createElement("canvas"); c.width = neutral.width; c.height = neutral.height;
     const x = c.getContext("2d");
     x.drawImage(neutral, 0, 0);
@@ -70,11 +64,10 @@ export const AP = (() => {
     return true;
   }
 
-  /* ── PARED por TILE (panal SVG/PNG): la pared es una TIRA de N tiles de ancho × 3 de alto, YA
-     DIBUJADA EN PERSPECTIVA en assets/svg/<variant>.svg (la genera tools/gen-walls.mjs proyectando
-     los hexágonos). El juego solo BLITTEA la tira teselada a lo largo del muro (sin transform); para
-     el muro del eje y la voltea en horizontal. N = ancho del hexágono = ancho de la celda.
-     {N, w, h, minX, minY}: tamaño del bbox y offset del bbox respecto a la esquina inf-izq (BL=P(a,fixed,0)). ── */
+  /* ── PARED por TILE (panal SVG/PNG): tira de N tiles de ancho × 3 de alto, ya dibujada EN
+     PERSPECTIVA en assets/svg/<variant>.svg. El juego blitea la tira teselada a lo largo del muro
+     (sin transform); el muro del eje y se voltea en horizontal. N = ancho del hexágono = ancho de
+     celda. {N,w,h,minX,minY}: bbox y su offset respecto a la esquina inf-izq (BL=P(a,fixed,0)). ── */
   const WALL_TILES = {
     wall1: { N: 1, w: 17, h: 60, minX: 0, minY: -51 },
     wall2: { N: 2, w: 34, h: 68, minX: 0, minY: -51 },
@@ -104,7 +97,7 @@ export const AP = (() => {
     const flip = (axis === "y");
     ctx.save();
     ctx.beginPath(); ctx.moveTo(At.x, At.y); ctx.lineTo(Bt.x, Bt.y); ctx.lineTo(B.x, B.y); ctx.lineTo(A.x, A.y);
-    ctx.closePath(); ctx.clip();                            // recorta a la cara (últimas tiras parciales)
+    ctx.closePath(); ctx.clip();                            // recorta a la cara (tiras parciales del borde)
     ctx.imageSmoothingEnabled = false;
     for (let i = 0; i * def.N < nW + 1e-3; i++) {           // tiras de N tiles a lo largo del muro
       const bx = A.x + i * def.N * ux, by = A.y + i * def.N * uy;   // esquina inf-izq de la tira i
@@ -116,9 +109,9 @@ export const AP = (() => {
     return true;
   }
 
-  /* ── PUERTA por SPRITE (marco SVG/PNG ya en perspectiva, altura fija): la genera tools/gen-doors.mjs
-     desde AP.door. "front" = marco del frente (vano transparente → se ve al robot al cruzar); "back" =
-     marco del muro de fondo (se le añade el hueco negro detrás). El eje y se voltea en horizontal.
+  /* ── PUERTA por SPRITE (marco SVG/PNG ya en perspectiva, altura fija): assets/svg/door_front|back.svg.
+     "front" = marco del frente (vano transparente → se ve al robot al cruzar); "back" = marco del muro
+     de fondo (con hueco negro detrás). El eje y se voltea en horizontal.
      {w,h,minX,minY}: bbox del sprite y offset respecto a la esquina del vano P(a0,fixed,0). ── */
   const DOOR_TILES = {
     front: { w: 45, h: 74, minX: -6, minY: -51 },
@@ -160,7 +153,7 @@ export const AP = (() => {
     poly(ctx, [a, b, c, d], ((cx + cy) & 1) ? darken(col, 0.10) : "#020303", darken(col, 0.30));
   }
 
-  // Bloque: SOLO desde fichero (PNG si existe, si no SVG). Ya migrado → sin fallback procedural.
+  // Bloque: desde fichero (PNG si existe, si no SVG).
   function cube(ctx, p, cx, cy, cz, col) {
     drawSprite("cube", ctx, p(cx, cy, cz), col);
   }
@@ -172,8 +165,8 @@ export const AP = (() => {
     if (axis === "x") { A = p(a0, fixed, 0); B = p(a1, fixed, 0); Bt = p(a1, fixed, H); At = p(a0, fixed, H); }
     else { A = p(fixed, a0, 0); B = p(fixed, a1, 0); Bt = p(fixed, a1, H); At = p(fixed, a0, H); }
     const L = [At, Bt, B, A];
-    poly(ctx, L, BLACK, BLACK);          // fondo NEGRO: mientras carga la imagen, el muro queda negro
-    // PANAL: tira PNG/SVG (ya en perspectiva) teselada a lo largo del muro. SOLO fichero, sin fallback.
+    poly(ctx, L, BLACK, BLACK);          // fondo NEGRO mientras carga la imagen
+    // PANAL: tira PNG/SVG (ya en perspectiva) teselada a lo largo del muro.
     const variant = tile || (typeof window !== "undefined" && window.__wall) || WALL_TILE;
     fillWall(ctx, axis, A, B, Bt, At, a1 - a0, variant, col);
     poly(ctx, L, null, BLACK);           // recontorno limpio
@@ -185,8 +178,8 @@ export const AP = (() => {
     if (axis === "x") poly(ctx, [p(a0 + w, fixed, l), p(a1 - w, fixed, l), p(a1 - w, fixed, 0), p(a0 + w, fixed, 0)], BLACK, null);
     else              poly(ctx, [p(fixed, a0 + w, l), p(fixed, a1 - w, l), p(fixed, a1 - w, 0), p(fixed, a0 + w, 0)], BLACK, null);
   }
-  // PUERTA: SOLO desde fichero (PNG si existe, si no SVG). "front" = marco con vano transparente;
-  // "back" = marco del fondo + hueco negro detrás (lo añade drawDoorSprite). Ya migrada → sin fallback.
+  // PUERTA: desde fichero (PNG si existe, si no SVG). "front" = marco con vano transparente;
+  // "back" = marco del fondo + hueco negro detrás (lo añade drawDoorSprite).
   function door(ctx, p, axis, fixed, a0, a1, H, col, hole) {
     drawDoorSprite(ctx, p, axis, fixed, a0, a1, H, hole, col);
   }
@@ -197,25 +190,23 @@ export const AP = (() => {
     box(ctx, p, cx + m, cy + m, cx + 1 - m, cy + 1 - m, 0, h, col);
   }
 
-  // ---- Circuitos (4 formas) — figuras geométricas vistosas, monocromas ----
+  // ---- Circuitos (4 formas geométricas monocromas) ----
   // Huella y alto los dicta el registro (PROP.HALF / PROP.H): el dibujo LLENA su huella física.
   function circuit(ctx, p, x, y, z, shape, col) {
     const r = PROP.HALF, hh = PROP.H;
     if (shape === "cube") {
       box(ctx, p, x - r, y - r, x + r, y + r, z, z + hh, col);
     } else if (shape === "pyramid") {
-      const ap = p(x, y, z + hh);   // medio bloque, como el resto de objetos
+      const ap = p(x, y, z + hh);
       const b1 = p(x - r, y - r, z), b2 = p(x + r, y - r, z), b3 = p(x + r, y + r, z), b4 = p(x - r, y + r, z);
-      // Orden de pintado atrás→delante: las dos caras TRASERAS (-x,-y) primero y
-      // las dos FRONTALES (+x,+y, que comparten la arista delantera b3) encima.
+      // Pintado atrás→delante: caras TRASERAS (-x,-y) primero, FRONTALES (+x,+y) encima.
       poly(ctx, [b1, b2, ap], darken(col, 0.45), BLACK);   // trasera (-y)
       poly(ctx, [b1, b4, ap], darken(col, 0.45), BLACK);   // trasera (-x)
       poly(ctx, [b4, b3, ap], col, BLACK);                 // frontal izquierda (+y), iluminada
       poly(ctx, [b2, b3, ap], darken(col, 0.62), BLACK);   // frontal derecha (+x)
     } else if (shape === "dome") {
-      // Semiesfera de CRISTAL transparente: relleno muy tenue (se ve a través), aro de
-      // base completo (trasera visible), contorno del casquete y brillo especular.
-      const rr = 0.34, c = p(x, y, z), rx = rr * p.TW / 2, ry = rr * p.TH / 2, dh = hh * p.BH;   // cúpula de cristal (rr propio); alto = PROP.H
+      // Semiesfera de cristal: relleno muy tenue, aro de base, contorno del casquete y brillo.
+      const rr = 0.34, c = p(x, y, z), rx = rr * p.TW / 2, ry = rr * p.TH / 2, dh = hh * p.BH;   // radio propio rr; alto = PROP.H
       const cap = () => {
         ctx.beginPath(); ctx.moveTo(c.x - rx, c.y);
         ctx.bezierCurveTo(c.x - rx, c.y - dh, c.x + rx, c.y - dh, c.x + rx, c.y);
@@ -237,13 +228,12 @@ export const AP = (() => {
     }
   }
 
-  // OBJETO FÍSICO transportable: SE DIBUJA COMO LA FIGURA DEL CIRCUITO (sin base ni
-  // pedestal). Es SÓLIDO en el juego (se empuja, se sube uno encima, se apila); su
-  // caja física —HALF/H— se ajusta al tamaño visible de la figura.
+  // OBJETO FÍSICO transportable: se dibuja como la figura del circuito (sin base). Su caja
+  // física (HALF/H) se ajusta al tamaño visible de la figura.
   function prop(ctx, p, x, y, z, shape, col) {
     const name = "prop_" + shape;
-    if (SPRITES[name]) { drawSprite(name, ctx, p(x, y, z), col); return; }  // cube/pyramid: migrados → PNG→SVG, sin fallback
-    circuit(ctx, p, x, y, z, shape, col);   // domo/cilindro: AÚN procedurales (pendientes de migrar)
+    if (SPRITES[name]) { drawSprite(name, ctx, p(x, y, z), col); return; }  // cube/pyramid: sprite PNG→SVG
+    circuit(ctx, p, x, y, z, shape, col);   // domo/cilindro: procedurales
   }
 
   // Zócalo / pedestal
@@ -259,12 +249,12 @@ export const AP = (() => {
     if (active) circuit(ctx, p, x, y, z + SOCKET.BASE_H, shape, col);
   }
 
-  // Pinchos (peligro): SOLO desde fichero (PNG→SVG). Ya migrado → sin fallback procedural.
+  // Pinchos (peligro): desde fichero (PNG→SVG).
   function spikes(ctx, p, x, y, z, col) {
     drawSprite("spikes", ctx, p(x, y, z), col);
   }
 
-  // Planta decorativa: SOLO desde fichero (PNG→SVG). Ya migrado → sin fallback procedural.
+  // Planta decorativa: desde fichero (PNG→SVG).
   function plant(ctx, p, x, y, z, col) {
     drawSprite("plant", ctx, p(x, y, z), col);
   }
@@ -296,16 +286,16 @@ export const AP = (() => {
     const feet = [fA, fB].sort((a, b) => (a.x + a.y) - (b.x + b.y));
     for (const q of feet) box(ctx, p, q.x - fw, q.y - fw, q.x + fw, q.y + fw, z, z + 0.22, col);
 
-    // --- BRAZOS + MANITAS: cuelgan a los lados del torso y balancean opuestos a los pies ---
+    // --- BRAZOS: cuelgan a los lados del torso y balancean opuestos a los pies ---
     const armW = 0.075, sh = ROBOT.WID * 0.92;                 // semigrosor del brazo · separación al hombro
     const az0 = z + 0.30, az1 = z + 0.90, armSwing = -swing;   // cadera → hombro · balanceo opuesto a piernas
     const drawArm = (s) => {
       const ax = x + perp.x * sh * s + dir.dx * armSwing * s;
       const ay = y + perp.y * sh * s + dir.dy * armSwing * s;
-      box(ctx, p, ax - armW, ay - armW, ax + armW, ay + armW, az0, az1, col);   // brazo (sin mano, más simple)
+      box(ctx, p, ax - armW, ay - armW, ax + armW, ay + armW, az0, az1, col);
     };
     const backS = (perp.x + perp.y < 0) ? 1 : -1;   // lado que queda DETRÁS del torso (orden de pintado)
-    drawArm(backS);                                  // brazo trasero (lo tapará el torso)
+    drawArm(backS);                                  // brazo trasero (lo tapa el torso)
 
     box(ctx, p, x - bX, y - bY, x + bX, y + bY, z + 0.22, z + 0.98, col);
     const hz0 = z + 0.98, hz1 = z + ROBOT.H;
@@ -343,23 +333,25 @@ export const AP = (() => {
   }
 
   /* ===================== DRAWERS — DIBUJO NORMALIZADO POR CLAVE `draw` =====================
-     Firma ÚNICA `(ctx, P, t, col)` donde `t` = placement { asset, x, y, z, ...estado }
-     (x,y,z = punto de ANCLAJE en mundo, igual que assetRef). Cada drawer traduce el placement
-     a su primitiva (forma desde la clave `draw`, estado desde `t`). Así un motor de dibujo
-     GENÉRICO hace `drawAsset(ctx, P, t, col)` sin saber qué asset es (ver docs/AUDITORIA-MODULARIDAD.md). */
+     Firma única `(ctx, P, t, col)` con `t` = placement { asset, x, y, z, ...estado } (x,y,z =
+     punto de ANCLAJE en mundo, igual que assetRef). Cada drawer traduce el placement a su
+     primitiva (forma desde la clave `draw`, estado desde `t`), de modo que `drawAsset` dibuja
+     cualquier asset sin saber cuál es (ver docs/ARQUITECTURA.md). */
   const _shapeOf = t => { const d = ASSETS[t.asset].draw, i = d.indexOf(":"); return i < 0 ? null : d.slice(i + 1); };
   const DRAWERS = {
+    // GENÉRICO: cualquier asset de sprite (PNG→SVG). Uno nuevo se dibuja por aquí sin tocar este
+    // fichero: basta su entrada en ASSETS con `draw:"sprite"` + su .svg.
+    sprite:   (c, P, t, col) => drawSprite(t.asset, c, P(t.x, t.y, t.z), col),
+    // Procedurales / paramétricos (bespoke):
     floor:    (c, P, t, col) => floor(c, P, t.x, t.y, col),
     cube:     (c, P, t, col) => cube(c, P, t.x, t.y, t.z, col),
     pillar:   (c, P, t, col) => pillar(c, P, t.x, t.y, ASSETS[t.asset].foot.h, col),
-    spikes:   (c, P, t, col) => spikes(c, P, t.x, t.y, t.z, col),
-    plant:    (c, P, t, col) => plant(c, P, t.x, t.y, t.z, col),
     drone:    (c, P, t, col) => drone(c, P, t.x, t.y, t.z, col),
     robot:    (c, P, t, col) => robot(c, P, t.x, t.y, t.z, t.facing || 0, col),
     circuit:  (c, P, t, col) => prop(c, P, t.x, t.y, t.z, _shapeOf(t), col),          // PNG→SVG→procedural
     socket:   (c, P, t, col) => socket(c, P, t.x, t.y, t.z, _shapeOf(t), !!t.active, col),
     // Estructura (paramétrica): la sala la dibuja en su capa propia; estos drawers son para
-    // PREVIEWS sueltos (la tool) — dibujan una instancia de muestra a partir de la huella.
+    // PREVIEWS sueltos de la tool, dibujando una instancia de muestra a partir de la huella.
     flatWall: (c, P, t, col) => { const a = ASSETS[t.asset]; flatWall(c, P, t.axis || "x", t.fixed || 0, t.a0 || 0, (t.a0 || 0) + a.foot.w, a.foot.h, col, t.asset); },
     door:     (c, P, t, col) => { const a0 = t.a0 != null ? t.a0 : 1.5 - DOOR.SPAN_HALF, a1 = t.a1 != null ? t.a1 : 1.5 + DOOR.SPAN_HALF;
                                   door(c, P, t.axis || "x", t.fixed || 0, a0, a1, WALL_H, col, t.hole != null ? t.hole : true); },
@@ -367,12 +359,13 @@ export const AP = (() => {
   // Punto de entrada genérico: resuelve la clave base (antes de ":") y delega en su drawer.
   function drawAsset(ctx, P, t, col) { return DRAWERS[ASSETS[t.asset].draw.split(":")[0]](ctx, P, t, col); }
 
+  /* SUPERFICIE PÚBLICA. Lo COLOCABLE se dibuja por `drawAsset`/`DRAWERS`, no por una función por
+     asset. Aquí van: constantes/helpers, la API genérica, y las primitivas referenciadas POR NOMBRE
+     desde fuera (cáscara estructural en render, robot/sombra en player/screens, generadores tools/gen-*). */
   return {
-    INKS, INK2, ROBOT_INK, DIRS, ROBOT, BLACK, DOOR, darken, lighten,
-    projector, poly, box, facePt, edgeLine,
-    floor, cube, flatWall, door, doorHole,
-    pillar, circuit, prop, PROP, socket, spikes, plant, drone, robot, shadow,
-    DRAWERS, drawAsset,   // motor de dibujo GENÉRICO por asset (modularidad)
-    SPRITES   // registro de sprites migrados {name:{minX,minY,w,h}} (lo usa el catálogo)
+    INKS, INK2, ROBOT_INK, DIRS, ROBOT, BLACK, DOOR, PROP, darken, lighten,   // constantes + helpers
+    projector, poly, box, facePt, edgeLine,                                   // primitivas de motor
+    DRAWERS, drawAsset, SPRITES,                                              // API de dibujo genérica
+    floor, flatWall, door, cube, prop, circuit, spikes, plant, robot, shadow, // primitivas usadas por nombre
   };
 })();

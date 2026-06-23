@@ -58,5 +58,11 @@
     "file": "example.svg",
     "w": 34,
     "h": 34
+  },
+  {
+    "name": "Ordenador",
+    "file": "computer.svg",
+    "w": 18,
+    "h": 22
   }
 ]

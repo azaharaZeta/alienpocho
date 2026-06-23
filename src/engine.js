@@ -2,9 +2,8 @@
    ALIEN POCHO — MOTOR ISO genérico (engine.js)
    -----------------------------------------------------------------------------
    Primitivas reutilizables: proyección isométrica 2:1, dibujo de polígonos y
-   cajas, teselado de paredes y el ORDEN DE PINTADO por cajas (painter topológico).
-   No sabe nada de salas, robot ni circuitos: eso vive en assets.js / game.js.
-   Módulo HOJA (no importa nada). Expone el objeto `ENGINE`.
+   cajas, y el ORDEN DE PINTADO por cajas (painter topológico). Genérico: no
+   sabe de salas, robot ni circuitos. Módulo HOJA. Expone el objeto `ENGINE`.
    ============================================================================= */
 "use strict";
 
@@ -59,8 +58,8 @@ export const ENGINE = (() => {
     ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(c.x, c.y); ctx.stroke();
   }
 
-  // Caja iso: tinta con SOMBREADO PLANO suave (caras un poco más oscuras, mismo
-  // tono) y contornos negros. Limpio, sin puntos.
+  // Caja iso con sombreado plano: techo en el tono base, caras más oscuras,
+  // contornos negros.
   function box(ctx, p, x0, y0, x1, y1, z0, z1, col) {
     const A = p(x0, y0, z1), B = p(x1, y0, z1), C = p(x1, y1, z1), D = p(x0, y1, z1);
     const Bb = p(x1, y0, z0), Cb = p(x1, y1, z0), Db = p(x0, y1, z0);
@@ -72,39 +71,20 @@ export const ENGINE = (() => {
 
   /* ---- ORDEN DE PINTADO: painter por cajas (escena isométrica correcta) ----
      Cada objeto es una caja 3D [x0,y0,z0]–[x1,y1,z1]. Con la cámara en la esquina (+,+,+),
-     una caja está DETRÁS de otra cuando un PLANO perpendicular a un eje las separa y ella
-     queda del lado lejano (menor x, o menor y, o menor z). Esa relación de separación
-     (`order`, abajo) es un orden PARCIAL: solo opina cuando la oclusión es inequívoca.
-     Un orden topológico DETERMINISTA (Kahn, eligiendo por una clave canónica) lo extiende
-     a la secuencia completa de pintado. Devuelve las cajas ya ordenadas. `order`:
+     una caja está DETRÁS de otra cuando un plano perpendicular a un eje las separa y ella
+     queda del lado lejano (menor x, o menor y, o menor z). Esa relación (`order`) es un orden
+     PARCIAL: solo opina cuando la oclusión es inequívoca. Un orden topológico determinista
+     (Kahn + clave canónica) lo extiende a la secuencia completa. Devuelve las cajas ordenadas.
         -1: A va antes (detrás)   +1: B va antes   0: ambiguo (lo zanja la clave canónica).
-
-     DETERMINISMO: el orden es función del CONJUNTO de cajas, no del orden en que llegan
-     (antes, un DFS dependía de la inserción → el mismo escenario podía pintarse distinto y
-     causar parpadeo). Aquí Kahn emite primero las cajas SIN nadie detrás (las más al fondo)
-     eligiendo por la clave canónica → resultado estable.
-
-     CICLOS: el gating por pantalla (abajo) elimina los ciclos ESPURIOS, pero la oclusión
-     cíclica REAL (3+ cajas que se tapan en anillo) existe y NINGÚN orden la resuelve. Antes
-     el DFS la rompía de forma muda y según la inserción; ahora, si Kahn se queda sin cajas de
-     grado 0, se ROMPE el ciclo forzando la de MENOR grado de entrada (menos aristas "detrás"
-     violadas), desempatando por la clave → degradación acotada y determinista.
-
-     CLAVE anti-CICLOS espurios: solo se ordenan los pares que SE SOLAPAN EN PANTALLA. El orden
-     de dos cajas que no se solapan en pantalla es irrelevante; crear aristas entre
-     ellas (p. ej. el robot asomado a un borde y un cubo lejano que no tapa) mete
-     aristas espurias que forman ciclos y hacen que el pintor viole un "detrás" real.
-     Para gatear necesitamos el proyector `p` (TW/TH/BH); sin él, no se gatea. */
+     Solo se ordenan pares que SE SOLAPAN EN PANTALLA: aristas entre cajas que no se tapan
+     serían espurias y podrían crear ciclos. El gateo necesita el proyector `p` (TW/TH/BH).
+     Detalle del algoritmo: docs/ARQUITECTURA.md. */
   function depthSort(boxes, p) {
     const n = boxes.length, E = 1e-6;
-    // Relación de oclusión INEQUÍVOCA por SEPARACIÓN de ejes (mismo epsilon en los tres:
-    // tolera caras coplanares de forma simétrica). A está DETRÁS si cae al lado lejano de B
-    // por algún eje (x/y/z); B detrás si cae al lado lejano de A. Solo es decisiva cuando una
-    // sola dirección se cumple: si AMBAS (separación contradictoria: delante por un eje, detrás
-    // por otro) o NINGUNA (se interpenetran) el orden es AMBIGUO → 0 (sin arista) y lo zanja la
-    // clave canónica del topo-sort. Antes esto se forzaba jerárquico (x→y→z) y un desempate por
-    // centro-Z; pero decidir un par ambiguo metía aristas que falseaban un "detrás" REAL de otro
-    // par. Mejor no opinar de lo ambiguo y dejar que el orden global (Kahn + clave) lo resuelva.
+    // Oclusión inequívoca por separación de ejes (mismo epsilon en los tres → tolera caras
+    // coplanares simétricamente). A está DETRÁS si cae al lado lejano de B por algún eje; B
+    // detrás si cae al lado lejano de A. Solo decide cuando se cumple una sola dirección; si
+    // ambas (contradictorio) o ninguna (interpenetración) → 0 (ambiguo), lo zanja la clave.
     const order = (A, B) => {
       const aBehind = A.x1 <= B.x0 + E || A.y1 <= B.y0 + E || A.z1 <= B.z0 + E;
       const bBehind = B.x1 <= A.x0 + E || B.y1 <= A.y0 + E || B.z1 <= A.z0 + E;
@@ -132,22 +112,19 @@ export const ENGINE = (() => {
       if (o < 0) { adj[i].push(j); indeg[j]++; }       // i antes que j
       else if (o > 0) { adj[j].push(i); indeg[i]++; }  // j antes que i
     }
-    // Clave canónica de DESEMPATE (orden total por geometría) que usa Kahn entre las cajas listas
-    // (las que no tienen ninguna relación de oclusión entre sí: o no se solapan en pantalla, o se
-    // INTERPENETRAN). cmp(a,b)<0 ⇒ a va antes (más al fondo). Para el caso que importa —dos cajas en
-    // el MISMO espacio, p. ej. el robot pisando la celda de un zócalo/objeto— manda primero el CENTRO-Z:
-    // la caja más BAJA (menor centro-z) se pinta antes y la más ALTA queda DELANTE (el robot, alto, tapa
-    // al zócalo/objeto bajo). Sin esto, ordenar por suelo (x0+y0) volteaba el orden según la posición
-    // sub-celda del robot (zócalo dibujándose sobre el robot al entrar por detrás de la celda). Después
-    // del centro-z, profundidad de suelo y el resto de coords solo para que el orden sea TOTAL (determinista).
+    // Clave canónica de desempate (orden total por geometría) que usa Kahn entre las cajas
+    // listas. cmp(a,b)<0 ⇒ a va antes (más al fondo). Manda primero el CENTRO-Z: la caja más
+    // baja se pinta antes y la más alta queda delante (el robot tapa al zócalo/objeto bajo de
+    // su misma celda). Tras el centro-z, profundidad de suelo y demás coords solo para que el
+    // orden sea TOTAL y determinista.
     const cmp = (a, b) => {
       const A = boxes[a], B = boxes[b];
       return (A.z0 + A.z1) - (B.z0 + B.z1) || (A.x0 + A.y0) - (B.x0 + B.y0)
            || A.z0 - B.z0 || A.x0 - B.x0 || A.y0 - B.y0 || A.x1 - B.x1 || A.y1 - B.y1;
     };
-    // Orden topológico DETERMINISTA (Kahn): cada paso emite la caja de grado 0 (sin nadie
-    // detrás) más al fondo según la clave. Si NINGUNA tiene grado 0 hay un ciclo de oclusión
-    // REAL → se rompe forzando la de MENOR grado (menos "detrás" violados), luego la clave.
+    // Orden topológico determinista (Kahn): cada paso emite la caja de grado 0 (sin nadie
+    // detrás) más al fondo según la clave. Si ninguna tiene grado 0 hay un ciclo de oclusión
+    // real → se rompe forzando la de MENOR grado de entrada, luego la clave.
     const done = new Array(n).fill(false), out = [];
     for (let k = 0; k < n; k++) {
       let best = -1;

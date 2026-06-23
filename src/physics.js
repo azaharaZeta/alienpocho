@@ -3,24 +3,26 @@
    -----------------------------------------------------------------------------
    Geometría y colisión PURAS de la sala: límites/puertas, cajas sólidas, apoyo,
    colisión horizontal, sitio para ponerse de pie, empuje/caída de objetos.
-   Todas operan sobre (room, x, y, …): NO conocen al jugador (eso vive en player.js),
-   así que esto es reutilizable por cualquier entidad. Fuente ÚNICA de sólidos
-   (roomSolids) → física y render nunca se contradicen.
+   Operan sobre (room, x, y, …): no conocen al jugador → reutilizable por cualquier
+   entidad. Fuente única de sólidos (roomSolids), compartida con render.
    ============================================================================= */
 "use strict";
 
 import { CFG, PROP, ROBOT, SOCKET, DOOR } from "./config.js";
-import { ASSETS, socketTop } from "./data/assets.js";   // registro (physics.solid) + cima del zócalo (re-exportada)
-import { roomThings } from "./world.js";                // lista uniforme de placements (sólidos genéricos)
-export { socketTop };
+import { assetHas, assetFoot, socketTop } from "./data/assets.js";   // traits + huella + cima del zócalo
+import { roomThings, objAsset } from "./world.js";      // placements uniformes + asset de un móvil
+export { socketTop, objAsset };
 
-/* ¿Está la coord. dentro del HUECO de la puerta? Vano estrecho: el robot (semiancho
-   ~0.5) pasa con un poco de margen. Coincide con el hueco visual entre postes. */
+// Semilado / alto de un MÓVIL según la huella de su asset.
+const objHalf = o => (assetFoot(objAsset(o)) || { w: PROP.HALF * 2 }).w / 2;
+const objTopH = o => (assetFoot(objAsset(o)) || { h: PROP.H }).h;
+
+/* ¿Está la coord. dentro del HUECO de la puerta? Coincide con el hueco visual entre postes. */
 const DOOR_HALF = DOOR.SPAN_HALF - DOOR.POST_W;   // hueco passable = vano − postes (≈ 0.72)
 function inDoor(coord, n) { return Math.abs(coord - n / 2) <= DOOR_HALF; }
 
-/* ¿Cae fuera del suelo? Solo se puede cruzar un borde si tiene salida Y por el
-   HUECO de su puerta; el resto del borde es pared sólida (no se atraviesa). */
+/* ¿Cae fuera del suelo? Solo se cruza un borde si tiene salida Y por el hueco de su
+   puerta; el resto del borde es pared sólida. */
 export function outOfBounds(room, fx, fy) {
   if (fx < 0)        return !(room.exits.xm && inDoor(fy, room.h));
   if (fx >= room.w)  return !(room.exits.xp && inDoor(fy, room.h));
@@ -29,22 +31,20 @@ export function outOfBounds(room, fx, fy) {
   return false;
 }
 
-/* Caja física de un OBJETO transportable, centrada en su celda. Misma geometría
-   para colisión, apoyo, empuje y dibujo (AP.prop) → nunca se solapa con el robot. */
+/* Caja física de un MÓVIL, centrada en su celda, con la huella del asset. Misma geometría
+   para colisión, apoyo, empuje y dibujo. o.x,o.y = centro continuo (como el jugador). */
 export function objBox(o) {
-  const m = PROP.HALF;   // o.x,o.y = CENTRO continuo (igual convención que el jugador)
-  return { x0: o.x - m, y0: o.y - m, x1: o.x + m, y1: o.y + m, z0: o.z, top: o.z + PROP.H, obj: o };
+  const m = objHalf(o);
+  return { x0: o.x - m, y0: o.y - m, x1: o.x + m, y1: o.y + m, z0: o.z, top: o.z + objTopH(o), obj: o };
 }
 
-/* CAJAS SÓLIDAS de la sala — fuente ÚNICA para colisión y apoyo. GENÉRICA: NO enumera tipos.
-   Recorre la lista uniforme de placements (world.roomThings) e incluye los cuyo asset declara
-   `physics.solid` (cubos, circuitos, zócalos…); excluye lo no sólido (pinchos, decoración). La caja
-   (aabb) y la cima (con el zócalo ACTIVO ya sumando el circuito) las trae el placement → física y
-   render comparten exactamente la misma geometría. `obj` = objeto fuente (para no chocar consigo). */
+/* CAJAS SÓLIDAS de la sala — fuente única para colisión y apoyo. Recorre la lista uniforme de
+   placements e incluye los que declaran el trait `solid`. La caja (aabb) y la cima (zócalo activo
+   ya con el circuito sumado) las trae el placement. `obj` = objeto fuente (para no chocar consigo). */
 export function roomSolids(room) {
   const s = [];
   for (const t of roomThings(room)) {
-    if (!ASSETS[t.asset].physics.solid) continue;
+    if (!assetHas(t.asset, "solid")) continue;
     const a = t.aabb;
     s.push({ x0: a.x0, y0: a.y0, z0: a.z0, x1: a.x1, y1: a.y1, top: a.z1, obj: t.src });
   }
@@ -59,9 +59,8 @@ export function overlapsBox(b, x, y) {
 }
 
 /* ¿El movimiento horizontal a (nx,ny) choca, con los pies a feetZ?
-   Un sólido solo bloquea si su cima queda POR ENCIMA del pie (no se sube
-   andando: hay que SALTAR). Sólidos al nivel del pie o por debajo son
-   pisables/transitables. */
+   Un sólido solo bloquea si su cima queda por encima del pie (no se sube andando:
+   hay que saltar); al nivel del pie o por debajo es pisable/transitable. */
 export function blocksHoriz(room, nx, ny, feetZ) {
   const r = CFG.PRAD;
   if (outOfBounds(room, nx - r, ny - r) || outOfBounds(room, nx + r, ny - r) ||
@@ -81,8 +80,8 @@ export function supportHeight(room, x, y, feetZ) {
 }
 
 /* ¿Cabe el robot DE PIE con los pies a feetZ en (x,y)? (límites + que ningún sólido
-   invada el volumen del cuerpo por encima de los pies). Se usa para decidir si se
-   puede soltar un objeto bajo el robot y subirse encima. */
+   invada el volumen del cuerpo por encima de los pies). Decide si se puede soltar un
+   objeto bajo el robot y subirse encima. */
 export function canStandOn(room, x, y, feetZ) {
   const m = CFG.PRAD, headZ = feetZ + ROBOT.H;
   if (outOfBounds(room, x - m, y - m) || outOfBounds(room, x + m, y - m) ||
@@ -94,11 +93,10 @@ export function canStandOn(room, x, y, feetZ) {
   return true;
 }
 
-/* ¿Puede el objeto `obj` ocupar el centro (nx,ny) a su altura actual? No si se
-   sale de la sala o si pisa otro sólido (bloque/objeto/zócalo) cuya cima quede por
-   encima de su base. Empuje en PLANO: no se empuja un objeto hacia arriba. */
+/* ¿Puede el objeto `obj` ocupar el centro (nx,ny) a su altura actual? No si se sale de
+   la sala o si pisa otro sólido cuya cima quede por encima de su base. Empuje en plano. */
 export function objBlocked(room, obj, nx, ny) {
-  const m = PROP.HALF;
+  const m = objHalf(obj);
   // Los objetos NO cruzan puertas (solo el robot): chocan con TODO el borde de la sala.
   if (nx - m < 0 || nx + m > room.w || ny - m < 0 || ny + m > room.h) return true;
   for (const b of roomSolids(room)) {
@@ -110,9 +108,9 @@ export function objBlocked(room, obj, nx, ny) {
 }
 
 /* Superficie de apoyo bajo un objeto (cima del sólido más alto que pisa, sin contarse a
-   sí mismo); el suelo (0) si no hay nada. Sirve para que los objetos CAIGAN. */
+   sí mismo); el suelo (0) si no hay nada. */
 export function objSupport(room, o) {
-  const m = PROP.HALF; let h = 0;
+  const m = objHalf(o); let h = 0;
   for (const b of roomSolids(room)) {
     if (b.obj === o) continue;
     const ov = (o.x - m) < b.x1 && (o.x + m) > b.x0 && (o.y - m) < b.y1 && (o.y + m) > b.y0;
@@ -121,10 +119,11 @@ export function objSupport(room, o) {
   return h;
 }
 
-/* Gravedad de los OBJETOS: si quedan en el aire (p. ej. tras empujarlos fuera de una
-   plataforma), caen hasta su superficie de apoyo. Se llama una vez por frame. */
+/* Gravedad de los OBJETOS: si quedan en el aire, caen hasta su superficie de apoyo.
+   Se llama una vez por frame. */
 export function updateObjects(room, dt) {
   for (const o of room.objects) {
+    if (!assetHas(objAsset(o), "falls")) continue;   // solo caen los móviles con gravedad
     const s = objSupport(room, o);
     if (o.z > s + 1e-3 || o.vz) {
       o.vz = (o.vz || 0) - CFG.GRAVITY * dt;

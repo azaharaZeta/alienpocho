@@ -7,7 +7,7 @@ navegador cachee los .js/.svg de forma heurística. Al editar el código acabas 
 (p. ej. `config.js` nuevo pero `physics.js` cacheado) y hace falta un hard-refresh. Este servidor
 añade cabeceras no-cache en CADA respuesta → el navegador revalida siempre. SOLO para desarrollo.
 
-Uso:  python3 server.py [puerto]      (por defecto 8123; es lo que lanza `npm run serve`)
+Uso:  python3 server.py [puerto]      (por defecto 8000; es lo que lanza `npm run serve`)
 Sirve el directorio actual, así que ejecútalo desde la raíz del proyecto. Ctrl+C para parar.
 """
 import sys

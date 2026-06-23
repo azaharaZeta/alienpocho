@@ -1,7 +1,7 @@
 # ASSETS.md — Flujo de assets de Alien Pocho
 
 Cómo se crean y mejoran los gráficos del juego. Resumen rápido: **Claude propone, la usuaria
-afina el pixel, el juego tiñe y coloca.** Los assets nacen vectoriales (`src/assets.js`) y se
+afina el pixel, el juego tiñe y coloca.** Los assets nacen vectoriales (`src/draw.js`) y se
 migran a **PNG editado a mano** caso por caso, cuando merece la pena.
 
 > **Por qué este flujo.** El dibujo isométrico 3D es el punto flaco de Claude (la oclusión y la
@@ -12,12 +12,11 @@ migran a **PNG editado a mano** caso por caso, cuando merece la pena.
 
 ## ⚠️ Principio rector (NO olvidar)
 
-- **`tools/` es UTILLAJE DE DESARROLLO, NO es el juego.** La tool unificada [`tools/assets.html`](../tools/assets.html)
-  (catálogo + visor/editor SVG; ver/crear SVG y descargar PNG neutro) y los generadores `gen-*.mjs` los
-  usa **la usuaria** para autoría de assets. **No se publican** (ver [`.vercelignore`](../.vercelignore)),
-  **no son funcionalidad del juego** y **NO entran en el análisis del juego** — van aparte.
+- **`tools/` es UTILLAJE DE DESARROLLO, NO es el juego.** La tool [`tools/tool-assets.html`](../tools/tool-assets.html)
+  (catálogo + visor/editor SVG; ver/crear SVG y descargar PNG neutro) la usa **la usuaria** para autoría de
+  assets. **No se publica** (ver [`.vercelignore`](../.vercelignore)) ni cuenta en el análisis del juego.
 - **El juego solo dibuja de DOS formas: PNG si existe; si no, SVG.** Nada más debería usarse en runtime.
-- **El vector procedural (`AP.*` en `src/assets.js`) es RESIDUAL.** Hoy cumple tres papeles que NO son
+- **El vector procedural (`AP.*` en `src/draw.js`) es RESIDUAL.** Hoy cumple tres papeles que NO son
   "el juego en producción": (a) es la **entrada de la tool** para generar SVG/PNG, (b) **fallback**
   mientras carga la imagen / en Node-tests, (c) **única vía** de los assets aún no migrados. El objetivo
   es que **desaparezca del runtime**. Los assets que todavía se dibujan procedural (robot, zócalo,
@@ -32,15 +31,15 @@ migran a **PNG editado a mano** caso por caso, cuando merece la pena.
 2. **SVG** (fallback) — `assets/svg/<id>.svg`, silueta neutra; se usa **si no hay PNG**.
 
 En ambos casos el juego **tiñe** la silueta a la tinta de la sala (multiply) y la ancla en
-`ref + (minX, minY)` a tamaño `w×h` (registro `SPRITES` en [`src/assets.js`](../src/assets.js); PNG y SVG
-comparten ese encuadre). El vector procedural es solo el fallback residual descrito arriba, no una 3ª vía
-deseada. Migrar un asset a PNG/SVG es **gradual y opcional**, asset por asset.
+`ref + (minX, minY)` a tamaño `w×h` (el encuadre `sprite{w,h,minX,minY}` está en el registro
+[`src/data/assets.js`](../src/data/assets.js); PNG y SVG lo comparten). El vector procedural es solo el
+fallback residual. Migrar un asset a PNG/SVG es **gradual y opcional**, asset por asset.
 
 ---
 
 ## La tubería (ver/crear SVG → PNG → juego)
 
-1. **Ver o crear** el SVG en la tool [`tools/assets.html`](../tools/assets.html) (catálogo + visor/editor
+1. **Ver o crear** el SVG en la tool [`tools/tool-assets.html`](../tools/tool-assets.html) (catálogo + visor/editor
    de assets; **NO pública**, **NO ejecuta funciones del juego** — solo carga ficheros):
    - **Asset existente**: pínchalo en el catálogo → el popup muestra su **SVG en modo lectura** y permite
      **descargar el PNG neutro**. Si es procedural (sin SVG), la tool lo avisa (no hay fichero que ver/exportar).
@@ -65,7 +64,7 @@ y se escala con **vecino-más-próximo** (bloques nítidos).
   resolución: reescalar mete AA/borrosidad y rompe la rejilla de píxel. (Solo tendría sentido
   subir la resolución interna de TODO el juego — decisión aparte.)
 - **Toda vista grande es un ZOOM pixelado** del render nativo (`imageSmoothingEnabled = false`),
-  **nunca** un re-render del vector a otra resolución. Aplica a la tool [`tools/assets.html`](../tools/assets.html)
+  **nunca** un re-render del vector a otra resolución. Aplica a la tool [`tools/tool-assets.html`](../tools/tool-assets.html)
   (helpers `renderViewPixel` / `drawViewGame`).
 
 ### Teñido (mantener el monocromo-por-sala)
@@ -80,56 +79,54 @@ sombreado. Se cachea por tinta. Ver `tintedCubePng()` en [`src/render.js`](../sr
 
 ### Anclaje (automático)
 Cada sprite se ancla en `P(coords) + (minX, minY)`, donde `(coords)` son los argumentos de la
-función del asset y `(minX,minY)` es el offset del *bounding box* (lo calcula el generador, ver
-abajo). Mismo encaje que el vector → el painter (`depthSort`) no cambia (ocupa la misma caja).
+función del asset y `(minX,minY)` (del registro) es el offset del *bounding box*. Mismo encaje que el
+vector → el painter (`depthSort`) ocupa la misma caja.
 
 ### Carpetas y publicación
 - `assets/png/` — PNG finales (editados a mano). **SE PUBLICAN**.
 - `assets/svg/` — SVG fuente/fallback + `manifest.json`. **SE PUBLICAN** (el juego los carga en
   runtime como fallback).
-- `tools/` — tool + generador. **NO se publica** (en [`.vercelignore`](../.vercelignore)).
+- `tools/` — la tool de assets. **NO se publica** (en [`.vercelignore`](../.vercelignore)).
 
 ---
 
 ## El sistema de sprites en el juego
 
-Vive en [`src/assets.js`](../src/assets.js) (no en `render.js`): así un asset migrado se dibuja igual
+Vive en [`src/draw.js`](../src/draw.js) (no en `render.js`): así un asset migrado se dibuja igual
 desde cualquier sitio que llame a su `AP.*`.
 
 - **Parámetro global** `ASSET_USE_PNG` en [`src/config.js`](../src/config.js): si `true`, un asset
   migrado usa su PNG (`assets/png/<name>.png`) si existe; si no, su SVG (`assets/svg/<name>.svg`).
   Si `false`, siempre el SVG.
-- **Registro `SPRITES`** en `assets.js`: por asset, `{ minX, minY, w, h }`.
+- **Encuadre del sprite** (`{ minX, minY, w, h }`) por asset: en el registro `src/data/assets.js`
+  (`AP.SPRITES` en draw.js lo deriva de ahí).
 - **`drawSprite(name, ctx, ref, col)`**: carga (PNG→SVG) y rasteriza a `w×h` (cacheado), tiñe por
   `col` (multiply, cacheado) y dibuja en `ref+(minX,minY)`. Devuelve `false` si **no está migrado**,
   **aún carga** o **no hay DOM** (Node/tests) → el llamador pinta el **vector** (degradado elegante).
 - **Guarda** en cada `AP.*` migrado, p. ej.:
   `function cube(ctx,p,cx,cy,cz,col){ if (drawSprite("cube", ctx, p(cx,cy,cz), col)) return; /* vector */ }`
 
-### Generar los SVG (fieles, sin dibujar a mano)
-[`tools/gen-svg.mjs`](../tools/gen-svg.mjs) (Node) pasa a cada `AP.*` un **ctx grabador** que registra
-los polígonos que pinta la función (con tinta blanca) y emite el `.svg` + el registro `{minX,minY,w,h}`.
-Como `assets.js` es puro, corre **sin navegador**: `node tools/gen-svg.mjs`.
+### Sin generadores (todo es fichero fuente)
+> 🗑️ **Los generadores `gen-svg.mjs`/`gen-doors.mjs`/`gen-walls.mjs` se ELIMINARON (2026-06-23).** Los dos
+> primeros generaban el SVG ejecutando `AP.*`, pero los assets ya están migrados a sprite (`AP.*` solo hace
+> `drawSprite`) → en Node dibujaban VACÍO y **machacaban** los SVG buenos. `gen-walls` aún funcionaba (panal
+> procedural), pero las tiras de pared `wall1/2.svg` ya están versionadas y se editan a mano como cualquier
+> otro asset. **La fuente de cada SVG es ahora el propio fichero** (editado a mano o creado con la tool); no
+> se regeneran ejecutando funciones. En `tools/` solo queda `tool-assets.html`.
 
-> ⚠️ **OJO (tras quitar el procedural de los migrados):** `gen-svg.mjs`/`gen-doors.mjs` generan el SVG
-> ejecutando la función `AP.*`. Para los assets YA migrados (cube, prop_cube/pyramid, spikes, plant, pared,
-> puerta) esa función ya no dibuja nada (solo `drawSprite`) → **ejecutar el generador produciría un SVG
-> VACÍO y machacaría el bueno. NO correrlos para esos.** Su SVG es ahora la fuente; se edita con
-> `tools/assets.html` (Crear SVG / a mano). Los generadores solo sirven ya para assets aún procedurales.
-
-### La tool lee la situación REAL (sin listas a mano)
-- [`tools/assets.html`](../tools/assets.html) muestra el catálogo completo: lista los SVG del
-  `manifest.json` + auto-descubre los sprites de `AP.SPRITES`. Para poder VERLOS, los assets procedurales
-  se renderizan (única forma de mostrar robot/zócalo/domo/…); pero el **SVG-fuente** y el **export-PNG**
-  solo existen para los assets con SVG — de los procedurales la tool avisa "sin SVG".
+### La tool lee del registro (sin listas a mano)
+- [`tools/tool-assets.html`](../tools/tool-assets.html) toma **todos** los assets de `src/data/assets.js`
+  tal cual, los agrupa por su `group` y muestra sus `traits`. Cada asset se dibuja con el motor genérico
+  `AP.drawAsset` (la tool no sabe de nombres ni tipos). El **SVG-fuente** y el **export-PNG** existen solo
+  para los assets con `files`; de los procedurales la tool avisa "sin SVG".
 
 ---
 
 ## Estado actual
 
-- ✅ Tool unificada `tools/assets.html` (catálogo + visor/editor SVG) + generadores `tools/gen-*.mjs` (dev).
+- ✅ Tool unificada `tools/tool-assets.html` (catálogo + visor/editor SVG). Es lo único en `tools/`.
 - ✅ **Migrados** (sprite SVG fiel + PNG si existe): `cube`, `prop_cube`, `prop_pyramid`, `spikes`,
   `plant`. El bloque usa además `assets/png/cube.png` (editado a mano).
 - ⬜ **No migrables aún** (no son sprites fijos): robot (animado), props domo/cilindro (cristal/curvos),
-  zócalo (con estado), y los paramétricos (pared, suelo, puerta, columna). Ver idea en
-  [PENDIENTES.md](PENDIENTES.md) sobre cómo "fijarlos".
+  zócalo (con estado), y los paramétricos (pared, suelo, puerta, columna). Ideas en
+  [ideas/ideas.md](ideas/ideas.md) sobre cómo "fijarlos".

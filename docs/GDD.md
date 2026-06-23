@@ -1,7 +1,9 @@
-# GDD.md — *Alien Pocho* (Game Design Document, Fase 1)
+# GDD.md — *Alien Pocho* (Game Design Document)
 
-> Homenaje jugable a *Alien 8* (Ultimate, 1985). Ver investigación en [RESEARCH.md](RESEARCH.md).
-> Decisiones validadas con el usuario: **4-6 salas · paleta monocromo Spectrum · drones pospuestos · sistema de vidas**.
+> Homenaje jugable a *Alien 8* (Ultimate, 1985). Investigación: [RESEARCH.md](RESEARCH.md) · arquitectura
+> de código: [ARQUITECTURA.md](ARQUITECTURA.md).
+> Decisiones de diseño: **4-6 salas · paleta monocromo Spectrum · controles tipo tanque · sistema de vidas ·
+> drones/enemigos aparcados** (ver [ideas/ideas.md](ideas/ideas.md)).
 
 ---
 
@@ -49,8 +51,8 @@ colocar todos → victoria antes de que el reloj de años luz llegue a 0.
   sx = origenX + (wx - wy) * (TILE_W / 2)
   sy = origenY + (wx + wy) * (TILE_H / 2) - wz * BLOCK_H
   ```
-- **Orden de dibujado:** ascendente por `wx + wy + wz` (atrás→delante, abajo→arriba).
-  El jugador y entidades se insertan en ese orden → desaparecen tras los bloques.
+- **Orden de dibujado:** painter por profundidad (`depthSort` en engine.js; ver [ARQUITECTURA.md](ARQUITECTURA.md)).
+  El jugador y entidades entran en ese orden → desaparecen tras los bloques.
 
 ---
 
@@ -138,66 +140,28 @@ Modelo tipo tanque (ver §4):
 | Avanzar (recto, hacia donde mira) | ↑ / W |
 | Saltar (en su dirección) — **un solo botón** | ESPACIO |
 | → pulsación **corta** = salto bajo/corto · pulsación **larga** = salto alto/largo | (mismo botón) |
-| Recoger / Soltar circuito | E o Intro *(pend. Fase 5)* |
-| Pausa | P *(pend.)* |
-| Empezar / Reiniciar | Intro *(pend.)* |
+| Recoger / Soltar circuito | E o Intro |
+| Empezar / Reiniciar | Intro |
 
 ---
 
 ## 10. Contrato técnico
 
-- **HTML5 + JavaScript vanilla**, render en `<canvas>` 2D. Sin frameworks.
-- **Dos archivos** que funcionan abriendo `index.html` en el navegador (sin build):
-  `index.html` (HTML + CSS + motor/físicas/salas/HUD) y `assets.js` (biblioteca de dibujo `AP.*`).
-  *(El plan inicial era un solo archivo; el dibujo se extrajo a `assets.js` por claridad.)*
-- **Gráficos por código** (formas/sprites dibujados con primitivas o sprites generados),
+- **HTML5 + JavaScript vanilla**, render en `<canvas>` 2D. Sin frameworks, **sin build** (ES modules nativos).
+- **Gráficos por código / sprites neutros teñidos por sala** (PNG→SVG→vector residual; ver [ASSETS.md](ASSETS.md)),
   paleta monocroma estilo Spectrum. **Sin assets con copyright.**
-- Resolución lógica fija (p. ej. 320×240 escalada con `image-rendering: pixelated`) para look retro.
-- Bucle de juego con `requestAnimationFrame` y delta-time.
-- Audio: efectos sencillos con **WebAudio** (beeps tipo Spectrum), opcional/desactivable.
+- Resolución lógica fija (320×240, escalada con `image-rendering: pixelated`) para look retro.
+- Bucle con `requestAnimationFrame` y delta-time.
+- Audio (pendiente): efectos sencillos con WebAudio, opcional.
+
+> **Estructura de código** (motor / datos / simulación / presentación, módulos bajo `src/`): ver
+> [ARQUITECTURA.md](ARQUITECTURA.md).
 
 ---
 
-## 11. Arquitectura de código (módulos lógicos dentro del archivo)
+## 11. Estado
 
-```
-- config        constantes (TILE_W, TILE_H, BLOCK_H, paleta, controles)
-- iso           proyección mundo→pantalla + helpers de depth sort
-- input         estado de teclado
-- rooms         definición de las salas (datos: rejilla, bloques, peligros, circuitos, zócalos, salidas)
-- entities      jugador, enemigos, circuitos (estado + update)
-- physics       movimiento, colisiones, salto
-- render        dibujo de rejilla, bloques, entidades en orden correcto + HUD
-- game          máquina de estados, reloj, vidas, condición victoria/derrota
-- main          bucle requestAnimationFrame
-```
-
----
-
-## 12. Plan de fases (con puertas de validación)
-
-Cada fase termina con algo **ejecutable y revisable**. Espero tu OK antes de seguir.
-
-- **Fase 2 — Render isométrico + 1 sala estática.**
-  Validar: se ve una habitación isométrica (suelo + paredes + algún bloque) con la estética correcta.
-- **Fase 3 — Movimiento + colisiones.**
-  Validar: el robot se mueve en 4 diagonales, choca con bloques y respeta el depth-sort (pasa por detrás).
-- **Fase 4 — Salto + alturas (eje Z).**
-  Validar: el robot salta y puede subirse a plataformas de 1 nivel.
-- **Fase 5 — Circuitos: recoger, llevar y colocar en zócalos.**
-  Validar: recoges una pieza, la llevas, y solo encaja en el zócalo de su forma.
-- **Fase 6 — Peligros + enemigos + vidas.**
-  Validar: pinchos y enemigos quitan vida; reaparición; Game Over a 0 vidas.
-- **Fase 7 — Flip-screen entre salas (4-6 salas) + reloj años luz.**
-  Validar: cruzas bordes y cambias de sala; el reloj corre; victoria al colocar todos los circuitos.
-- **Fase 8 — HUD, pantallas (título/victoria/game over), audio y pulido.**
-  Validar: juego completo de principio a fin con look & feel retro.
-
----
-
-## 13. Decisiones cerradas (Fase 1)
-
-- Salas: **4-6**.
-- Paleta: **monocromo Spectrum** (trazos claros sobre negro).
-- Drones: **pospuestos**.
-- Daño/derrota: **sistema de vidas** (3 vidas) + reloj global como límite.
+Implementadas las mecánicas núcleo: render iso + painter, movimiento tipo tanque, salto, alturas, recoger/
+colocar circuitos, empujar objetos, flip-screen entre salas, HUD y minimapa. **Aparcado** (ver
+[ideas/ideas.md](ideas/ideas.md)): enemigos, pinchos letales, audio, y pantallas de victoria/game-over con
+entidad propia (hoy banner).

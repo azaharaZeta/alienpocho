@@ -1,8 +1,7 @@
-# RESEARCH.md — Investigación de *Alien 8* (Fase 0)
+# RESEARCH.md — Investigación de *Alien 8*
 
-> Documento base para *Alien Pocho*, homenaje jugable a *Alien 8*.
-> Objetivo de esta fase: entender qué era *Alien 8* (jugabilidad + motor gráfico)
-> para poder recrearlo con fidelidad antes de escribir una línea de código de juego.
+> Documento de referencia para *Alien Pocho* (homenaje a *Alien 8*): qué era *Alien 8*
+> (jugabilidad + motor gráfico Filmation), para recrearlo con fidelidad. Diseño en [GDD.md](GDD.md).
 
 ---
 

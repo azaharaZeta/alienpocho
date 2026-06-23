@@ -1,19 +1,18 @@
 /* =============================================================================
    ALIEN POCHO — RENDER de escena + HUD (render.js)
    -----------------------------------------------------------------------------
-   Pinta la SALA en juego: suelo, paredes/puertas, y objetos+entidades ordenados por
-   profundidad (painter de engine.js), más el HUD (marcador estilo Alien 8), el
-   minimapa cenital y el banner de victoria. Lee el estado de la simulación (game.js)
-   y dibuja con las primitivas de assets.js usando el contexto/proyector de view.js.
-   Expone render(room); lo llama el bucle (main.js) cada frame de juego.
+   Pinta la sala: suelo, paredes/puertas, y objetos+entidades ordenados por
+   profundidad (painter de engine.js), más el HUD, el minimapa cenital y el banner
+   de victoria. Lee el estado de game.js y dibuja con las primitivas de draw.js.
+   Expone render(room); lo llama el bucle (main.js) cada frame.
    ============================================================================= */
 "use strict";
 
 import { CFG, WALL_H } from "./config.js";
 import { ENGINE } from "./engine.js";
-import { AP } from "./assets.js";
-import { roomThings } from "./world.js";          // lista uniforme de placements (fuente del mapeo)
-import { assetTint } from "./data/assets.js";     // primario/secundario por asset (sin enumerar tipos)
+import { AP } from "./draw.js";
+import { roomThings } from "./world.js";          // lista uniforme de placements
+import { assetTint } from "./data/assets.js";     // tinte primario/secundario por asset
 import { ctx, P, setProjector, applyRoomTheme } from "./view.js";
 import { entities } from "./player.js";
 import { game, world, room } from "./game.js";
@@ -22,42 +21,40 @@ let _themeRoom = null;
 
 export function render(room) {
   if (room !== _themeRoom) { applyRoomTheme(room); _themeRoom = room; }
-  setProjector(room);                     // proyector centrado para el tamaño de esta sala
+  setProjector(room);                     // proyector centrado para esta sala
   ctx.fillStyle = CFG.COL.bg;
   ctx.fillRect(0, 0, CFG.W, CFG.H);
 
-  const ink = room.ink, ink2 = room.ink2 || ink, WH = WALL_H, D = AP.DOOR;   // altura de pared GLOBAL (config.js)
-  const doorSpan = (n) => [n / 2 - AP.DOOR.SPAN_HALF, n / 2 + AP.DOOR.SPAN_HALF]; // vano (semiancho SPAN_HALF)
+  const ink = room.ink, ink2 = room.ink2 || ink, WH = WALL_H, D = AP.DOOR;   // WH: altura de pared (config.js)
+  const doorSpan = (n) => [n / 2 - AP.DOOR.SPAN_HALF, n / 2 + AP.DOOR.SPAN_HALF]; // vano centrado en el borde
 
-  // 1) Suelo (plano en z=0, nunca ocluye → pre-pase al fondo)
+  // 1) Suelo (plano en z=0; nunca ocluye, se pinta al fondo)
   for (let y = 0; y < room.h; y++)
     for (let x = 0; x < room.w; x++)
       AP.floor(ctx, P, x, y, ink);
 
-  // 1b) Paredes/puertas del FONDO (siempre detrás de todo → pre-pase)
+  // 1b) Paredes/puertas del FONDO (siempre detrás de todo)
   AP.flatWall(ctx, P, "x", 0, 0, room.w, WH, ink, room.wallTile);        // borde y=0 (atrás-dcha)
   if (room.exits.ym) { const [s0, s1] = doorSpan(room.w); AP.door(ctx, P, "x", 0, s0, s1, WH, ink, true); }
   AP.flatWall(ctx, P, "y", 0, 0, room.h, WH, ink, room.wallTile);        // borde x=0 (atrás-izq)
   if (room.exits.xm) { const [s0, s1] = doorSpan(room.h); AP.door(ctx, P, "y", 0, s0, s1, WH, ink, true); }
 
-  // 2) Lo COLOCABLE como CAJAS para el pintor topológico — GENÉRICO: render NO conoce los assets.
-  //    Itera la lista uniforme de la sala (world.roomThings) y, por cada placement, usa su caja
-  //    (aabb, derivada del registro) + su drawer (AP.drawAsset). Añadir un asset nuevo NO toca esto.
+  // 2) Lo COLOCABLE como cajas para el painter — genérico: itera la lista uniforme de la sala
+  //    y por cada placement usa su caja (aabb) + su drawer (AP.drawAsset).
   const draws = [];
   const box3 = (x0, y0, z0, x1, y1, z1, draw) => draws.push({ x0, y0, z0, x1, y1, z1, draw });
 
   for (const t of roomThings(room)) {
-    const col = assetTint(t.asset) === "secondary" ? ink2 : ink;   // primario/secundario lo dicta el asset
+    const col = assetTint(t.asset) === "secondary" ? ink2 : ink;
     const a = t.aabb;
     box3(a.x0, a.y0, a.z0, a.x1, a.y1, a.z1, () => AP.drawAsset(ctx, P, t, col));
   }
 
-  // entidades (jugador y, en Fase 6, pinchos/enemigos): cada una añade su caja al orden.
+  // entidades (jugador, etc.): cada una añade su caja al orden.
   for (const e of entities) e.addDraws(draws, room);
 
-  // puertas del FRENTE: el MARCO (sprite, vano transparente) entra en el painter como UNA caja
-  // a lo largo del borde; el robot, al cruzar, queda detrás del marco → los postes lo tapan y el
-  // vano lo deja ver (se intercala solo). hole=false → marco del frente.
+  // puertas del FRENTE: el MARCO entra en el painter como UNA caja a lo largo del borde; el robot,
+  // al cruzar, se intercala solo (los postes lo tapan, el vano lo deja ver). hole=false → marco frontal.
   if (room.exits.yp) {
     const [s0, s1] = doorSpan(room.w), h = room.h;
     box3(s0, h, 0, s1, h + D.T, WH, () => AP.door(ctx, P, "x", h, s0, s1, WH, ink, false));
@@ -75,12 +72,12 @@ export function render(room) {
   if (game.won) drawWinBanner();
 }
 
-/* Banner de victoria (provisional; la pantalla final llega en la Fase 8) */
+/* Banner de victoria */
 function drawWinBanner() {
   const ink = room.ink, ink2 = room.ink2 || ink;
   ctx.fillStyle = "rgba(0,0,0,0.55)";
   ctx.fillRect(0, CFG.H / 2 - 22, CFG.W, 44);
-  ctx.fillStyle = ink2;   // título en secundario (de la sala)
+  ctx.fillStyle = ink2;   // título en secundario
   ctx.font = "14px 'Courier New', monospace";
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
   ctx.fillText("¡MISION COMPLETA!", CFG.W / 2, CFG.H / 2 - 4);
@@ -107,8 +104,7 @@ function drawCarrySlot(cx, cy, shape, frameCol, circuitCol) {
   AP.circuit(ctx, AP.projector(cx, cy + 4), 0, 0, 0, shape, circuitCol);   // circuito en SECUNDARIO
   ctx.restore();
 }
-// Mini robot (icono de vidas) — estilo LÍNEA, CENTRADO en (cx,cy) para alinearlo con
-// el número. Más grande, a juego con la tipografía del marcador.
+// Mini robot (icono de vidas) en estilo línea, centrado en (cx,cy).
 function drawMiniRobot(cx, cy, col) {
   col = col || CFG.COL.hud;
   const w = 12, h = 9.5, x = cx - w / 2, yTop = cy - h / 2;
@@ -127,19 +123,17 @@ function drawMiniRobot(cx, cy, col) {
   ctx.beginPath(); ctx.arc(cx + 3, cy + 0.5, 1.05, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 }
-/* MINIMAPA (arriba-izquierda): VISIÓN CENITAL real. Cada sala se dibuja como su
-   rectángulo w×h en las coords de mundo (wx,wy) del plano coherente, a escala fija,
-   centrado SIEMPRE en la sala actual. Se recorta al viewport: lo que se sale, no se ve. */
-// La sala ANCHA (w>h) deja libre la zona superior derecha → mapa a la DERECHA.
-// La ALTA o cuadrada deja libre la izquierda → mapa a la IZQUIERDA (por defecto).
+/* MINIMAPA: visión cenital. Cada sala es su rectángulo w×h en coords de mundo (wx,wy),
+   a escala fija, centrado en la sala actual; se recorta al viewport. */
+// Sala ancha (w>h) → mapa a la DERECHA; alta o cuadrada → a la IZQUIERDA (zona libre del HUD).
 function minimapOnRight() { return room.w > room.h; }
 
 function drawMinimap() {
   if (room.wx === undefined) return;
   const ink = room.ink, ink2 = room.ink2 || ink;
-  const MM = 45, oy = 18;                   // viewport cuadrado; bajado para dejar hueco al nombre encima
+  const MM = 45, oy = 18;                   // viewport cuadrado (oy deja hueco al nombre encima)
   const ox = minimapOnRight() ? (CFG.W - MM - 8) : 8;
-  const WS = 26, sc = MM / WS, INS = 0.6;   // INS: medio hueco entre salas (= pared, sin doblar)
+  const WS = 26, sc = MM / WS, INS = 0.6;   // INS: medio hueco entre salas (= pared)
   const ccx = room.wx + room.w / 2, ccy = room.wy + room.h / 2;   // centro de la sala actual
   const toX = wx => ox + MM / 2 + (wx - ccx) * sc, toY = wy => oy + MM / 2 + (wy - ccy) * sc;
   // fondo + marco
@@ -148,7 +142,7 @@ function drawMinimap() {
   ctx.strokeRect(ox - 3.5, oy - 3.5, MM + 7, MM + 7);
   ctx.save();
   ctx.beginPath(); ctx.rect(ox, oy, MM, MM); ctx.clip();
-  // salas como rectángulos reales; el INSET deja un hueco negro entre vecinas = pared única
+  // salas como rectángulos; el INSET deja un hueco negro entre vecinas = pared única
   for (const k of Object.keys(world.rooms)) {
     const Rm = world.rooms[k]; if (Rm.wx === undefined) continue;
     ctx.fillStyle = (Rm === room) ? ink2 : ENGINE.darken(ink, 0.32);
@@ -171,8 +165,7 @@ function drawMinimap() {
   }
   ctx.restore();
 
-  // Nombre de la sala JUSTO ENCIMA del minimapa (misma esquina/zona que el mapa): alineado
-  // al borde del recuadro, en el secundario de la sala.
+  // Nombre de la sala encima del minimapa, alineado a su borde, en secundario.
   if (room.name) {
     ctx.fillStyle = ink2; ctx.font = "10px 'Courier New', monospace"; ctx.textBaseline = "top";
     if (minimapOnRight()) { ctx.textAlign = "right"; ctx.fillText(room.name, ox + MM + 4, oy - 16); }
@@ -181,19 +174,16 @@ function drawMinimap() {
   }
 }
 
-/* HUD — el marcador (circuitos + vidas + título) va DENTRO del triángulo negro más grande
-   que deja el rombo del suelo abajo, repartido en VARIAS FILAS. Sin años luz. */
+/* HUD — el marcador (circuitos + vidas + título) va dentro del triángulo negro mayor
+   que deja el rombo del suelo abajo, repartido en varias filas. */
 function drawHUD() {
   const C = CFG.COL, W = CFG.W;
   ctx.textBaseline = "top";
 
-  const ink2 = room.ink2 || C.roomName;   // secundario de la sala para los TEXTOS del HUD
-  // (El nombre de la sala se dibuja ENCIMA del minimapa, ver drawMinimap.)
+  const ink2 = room.ink2 || C.roomName;   // secundario de la sala para los textos del HUD
 
-  // ── Marco inferior (homenaje Alien 8): barras segmentadas a los lados + aristas en "V"
-  //    PARALELAS a los bordes frontales del rombo (pendiente ±0.5), del color de la sala.
-  //    Prolongan la silueta del suelo y enmarcan la zona del marcador. Se dibuja PRIMERO,
-  //    así la info del triángulo queda por encima.
+  // ── Marco inferior: barras segmentadas a los lados + aristas en "V" PARALELAS a los bordes
+  //    frontales del rombo (pendiente ±0.5). Se dibuja PRIMERO, el marcador queda por encima.
   const ink = room.ink, fc = P(room.w, room.h, 0);   // pico frontal del rombo (proyectado)
   const GAP = Math.round(AP.DOOR.T * CFG.TILE_W);     // hueco bajo el pico (= ancho iso de puerta)
   const vx = Math.round(fc.x);
@@ -203,28 +193,21 @@ function drawHUD() {
   drawSegBar(W - 6, Math.round(rightTopY), 236, ink);
   ctx.strokeStyle = ink; ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(6, leftTopY);      ctx.lineTo(vx, vy);   // arista izquierda  (∥ borde sala)
+  ctx.moveTo(6, leftTopY);      ctx.lineTo(vx, vy);   // arista izquierda
   ctx.moveTo(W - 6, rightTopY); ctx.lineTo(vx, vy);   // arista derecha
   ctx.stroke();
 
-  // ── MARCADOR dentro del TRIÁNGULO grande de la zona inferior ──
-  // El rombo del suelo deja dos triángulos negros abajo, uno a cada lado del pico frontal.
-  // Metemos TODA la info en el MÁS GRANDE —el del lado OPUESTO al minimapa— repartida en
-  // VARIAS FILAS ancladas a ese borde de pantalla. El triángulo se ensancha hacia abajo, así
-  // que la fila inferior (la más ancha) lleva lo más largo —el título— y las de arriba los
-  // iconos (circuitos y vidas), más estrechos.
-  const onRight = !minimapOnRight();                  // HUD en el triángulo opuesto al mapa (el mayor)
+  // ── MARCADOR en el triángulo mayor (el opuesto al minimapa). El triángulo se ensancha hacia
+  //    abajo: la fila inferior (más ancha) lleva el título; las de arriba, los iconos.
+  const onRight = !minimapOnRight();
   const PAD = 20, ax = onRight ? W - PAD : PAD;        // borde de anclaje (margen dentro del marco)
   const dy = 20, yTitle = 222, yCirc = yTitle - dy, yLife = yCirc - dy;
 
-  // Fila inferior (la más ancha): TÍTULO "ALIEN POCHO" (una sola frase, junta), anclado al borde.
-  drawTitle(ax, yTitle, onRight);
-  // Fila media: CIRCUITOS — casilla (lo que llevas) + N/M.
+  drawTitle(ax, yTitle, onRight);                                  // título "ALIEN POCHO"
   drawStat(ax, yCirc, onRight, 18, (cx, cy) => drawCarrySlot(cx, cy, game.carried, ink, ink2),
-           game.circuits + "/" + game.circuitsTotal, ink2);
-  // Fila superior (la más estrecha): VIDAS — carita + ×N.
+           game.circuits + "/" + game.circuitsTotal, ink2);        // circuitos: casilla + N/M
   drawStat(ax, yLife, onRight, 14, (cx, cy) => drawMiniRobot(cx, cy, ink2),
-           "×" + game.lives, ink2);
+           "×" + game.lives, ink2);                                // vidas: carita + ×N
 }
 
 /* Una FILA del marcador anclada a un borde: ICONO + NÚMERO (en este orden si va a la
@@ -244,8 +227,8 @@ function drawStat(ax, y, onRight, iw, drawIcon, text, col) {
   ctx.textAlign = "left";
 }
 
-/* Título con look "neón futurista": glow en el color de la sala + núcleo brillante con
-   contorno. UNA sola frase "ALIEN POCHO" anclada al borde (izq/dcha) — nunca cortada. */
+/* Título "ALIEN POCHO" con look neón: glow en el color de la sala + núcleo brillante.
+   Anclado al borde (izq/dcha) según onRight. */
 function drawTitle(ax, vy, onRight) {
   const ink = room.ink, y = vy + 2;
   ctx.save();

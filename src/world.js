@@ -1,26 +1,24 @@
 /* =============================================================================
    ALIEN POCHO — MOTOR DE MUNDO (world.js)
    -----------------------------------------------------------------------------
-   El código que INTERPRETA los datos del mapa (data/rooms.js):
-     - makeRoom: aplica límites de tamaño, deriva el set `solid` y CLONA los arrays
+   Interpreta los datos del mapa (data/rooms.js):
+     - makeRoom: aplica límites de tamaño, deriva el set `solid` y clona los arrays
        mutables (objetos/zócalos…) para que cada partida arranque limpia.
      - buildWorld: resuelve la paleta por índice, construye todas las salas y calcula
        el PLANO CENITAL (wx,wy) para el minimapa.
-   No sabe de render ni de física: solo arma el mundo a partir de los datos.
+   No sabe de render ni de física.
    ============================================================================= */
 "use strict";
 
 import { INKS, INK2 } from "./palette.js";
 import { ROOMS, START } from "./data/rooms.js";
-import { assetBox, assetRef, socketTop } from "./data/assets.js";   // huellas/anclaje para armar los placements
+import { ASSETS, assetBox, assetRef, socketTop } from "./data/assets.js";   // registro + huellas/anclaje
 
 /* Construye una sala a partir de su definición (datos).
-   Salas rectangulares con LÍMITES: ancho/largo ∈ [3,13] y ancho+largo ≤ 16 (para que
-   el rombo y el HUD adaptado siempre quepan en pantalla). Se recortan si se exceden.
-
-   CLONA blocks/objects/sockets/hazards (y sus elementos): durante la partida se
-   mutan (empujar/coger objetos, activar zócalos), y `resetGame` reconstruye el mundo;
-   sin clonar, una nueva partida heredaría el estado mutado de los datos compartidos. */
+   Límites de tamaño: ancho/largo ∈ [3,13] y ancho+largo ≤ 16 (para que el rombo y el HUD
+   siempre quepan en pantalla). Se recortan si se exceden.
+   Clona blocks/objects/sockets/hazards (y sus elementos): se mutan en partida (empujar/coger,
+   activar zócalos) y `resetGame` reconstruye el mundo; sin clonar arrastraría estado. */
 export function makeRoom(o) {
   let w = Math.min(13, Math.max(3, o.w || 8));
   let h = Math.min(13, Math.max(3, o.h || 8));
@@ -34,24 +32,28 @@ export function makeRoom(o) {
     objects: (o.objects || []).map(e => ({ ...e })),
     sockets: (o.sockets || []).map(e => ({ ...e })),
     hazards: (o.hazards || []).map(e => ({ ...e })),
+    things:  (o.things  || []).map(e => ({ ...e })),   // assets sueltos por id (decoración, etc.)
     ink: o.ink, ink2: o.ink2, exits: o.exits || {}, name: o.name || "",
     wallTile: o.wallTile   // variante de panal por sala (opcional; si undefined → global WALL_TILE)
   };
 }
 
-/* AABB de mundo {x0,y0,z0,x1,y1,z1} de un asset colocado con su ANCLAJE en (ax,ay,az).
-   Deriva de assetBox/assetRef (frame local del asset) + el offset del anclaje. `top` opcional
-   sobreescribe la cima (zócalo activo). La usan a la vez render (painter) y física (sólidos). */
+/* Asset id de una entrada de `room.objects`. Un circuito que solo trae `shape` se resuelve a
+   "prop_<shape>"; cualquier otro móvil trae `asset` explícito (p.ej. computer). */
+export function objAsset(o) { return o.asset || "prop_" + o.shape; }
+
+/* AABB de mundo {x0,y0,z0,x1,y1,z1} de un asset colocado con su anclaje en (ax,ay,az).
+   Deriva de assetBox/assetRef (frame local) + offset del anclaje. `top` opcional sobreescribe
+   la cima (zócalo activo). La usan a la vez render (painter) y física (sólidos). */
 function placeAabb(id, ax, ay, az, top) {
   const b = assetBox(id), r = assetRef(id);
   const x0 = b.x + (ax - r.x), y0 = b.y + (ay - r.y), z0 = b.z + (az - r.z);
   return { x0, y0, z0, x1: x0 + b.w, y1: y0 + b.l, z1: top != null ? top : z0 + b.h };
 }
 
-/* LISTA UNIFORME de placements de la sala (lo COLOCABLE; la cáscara suelo/pared/puerta va aparte).
-   ES LA FUENTE ÚNICA del mapeo "cubetas del mapa → assets": render y física la consumen
-   GENÉRICAMENTE (sin enumerar tipos). Se calcula EN VIVO desde las cubetas (los objetos se mueven,
-   los zócalos se activan) → nunca se desincroniza. Cada placement:
+/* LISTA UNIFORME de placements de la sala (lo COLOCABLE; suelo/pared/puerta van aparte).
+   Fuente única del mapeo "cubetas del mapa → assets", que consumen render y física. Se calcula
+   en vivo desde las cubetas (objetos que se mueven, zócalos que se activan). Cada placement:
      { asset, x, y, z, ...estado, src?, aabb }  (x,y,z = anclaje en mundo; aabb = caja painter/sólido). */
 export function roomThings(room) {
   const t = [];
@@ -60,9 +62,10 @@ export function roomThings(room) {
       const z = (b.z || 0) + k;
       t.push({ asset: "cube", x: b.x, y: b.y, z, aabb: placeAabb("cube", b.x, b.y, z) });
     }
-  for (const o of room.objects)                                  // circuitos transportables (vivos: se mueven)
-    t.push({ asset: "prop_" + o.shape, x: o.x, y: o.y, z: o.z, shape: o.shape, src: o,
-             aabb: placeAabb("prop_" + o.shape, o.x, o.y, o.z) });
+  for (const o of room.objects) {                                // MÓVILES (circuitos, ordenadores… · vivos)
+    const id = objAsset(o);
+    t.push({ asset: id, x: o.x, y: o.y, z: o.z, shape: o.shape, src: o, aabb: placeAabb(id, o.x, o.y, o.z) });
+  }
   for (const s of room.sockets) {                                // zócalos (vivos: se activan → más altos)
     const cx = s.cx + 0.5, cy = s.cy + 0.5, z = s.z || 0;
     t.push({ asset: "socket_" + s.shape, x: cx, y: cy, z, shape: s.shape, active: s.active, src: s,
@@ -71,13 +74,23 @@ export function roomThings(room) {
   for (const h of room.hazards)                                  // pinchos (decorativos, estáticos)
     t.push({ asset: "spikes", x: h.cx + 0.5, y: h.cy + 0.5, z: 0, src: h,
              aabb: placeAabb("spikes", h.cx + 0.5, h.cy + 0.5, 0) });
+  // cubeta GENÉRICA: cualquier asset por id. Se coloca por celda (cx,cy) o por punto continuo
+  // (x,y); el anclaje (centro/esquina) lo dicta el asset.
+  for (const g of room.things) {
+    const a = ASSETS[g.asset]; if (!a) continue;
+    const center = a.anchor === "center";
+    const ax = g.x != null ? g.x : (center ? g.cx + 0.5 : g.cx);
+    const ay = g.y != null ? g.y : (center ? g.cy + 0.5 : g.cy);
+    const az = g.z || 0;
+    const { asset, cx, cy, x, y, z, ...state } = g;
+    t.push({ asset, x: ax, y: ay, z: az, ...state, src: g, aabb: placeAabb(asset, ax, ay, az) });
+  }
   return t;
 }
 
-/* Construye el mundo entero desde los datos: resuelve color por índice de paleta y
-   coloca cada sala en un PLANO CENITAL coherente (sin solapes) para el minimapa real.
-   El layout parte de la sala inicial y pega cada vecina ALINEANDO la puerta (centro
-   con centro, igual que el recentrado de checkExits). */
+/* Construye el mundo entero: resuelve color por índice de paleta y coloca cada sala en un
+   PLANO CENITAL coherente (sin solapes) para el minimapa. El layout parte de la sala inicial
+   y pega cada vecina ALINEANDO la puerta (centro con centro). */
 export function buildWorld() {
   const rooms = {};
   for (const [key, def] of Object.entries(ROOMS)) {
