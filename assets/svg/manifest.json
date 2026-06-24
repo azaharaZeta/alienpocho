@@ -30,6 +30,12 @@
     "h": 18
   },
   {
+    "name": "Zócalo (peana)",
+    "file": "socket.svg",
+    "w": 32,
+    "h": 20
+  },
+  {
     "name": "Dron",
     "file": "drone.svg",
     "w": 12,

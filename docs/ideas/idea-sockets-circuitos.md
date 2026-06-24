@@ -255,3 +255,30 @@ fantasma, lleno con base iluminada, oclusión correcta).
 
 **Pendiente (fase siguiente, a petición de la usuaria):** colocar **reversible** (poder sacar el circuito) →
 modelo Path 2 (§5) + recalcular victoria (todos puestos a la vez). Al cerrarlo, archivar en `docs/ideas/archivo/`.
+
+---
+
+## 11. Migración del zócalo a SVG (Opción A) — IMPLEMENTADO (2026-06-24)
+
+Petición: que el zócalo se dibuje desde **SVG**, sin dibujo programático salvo "temas avanzados que no entran
+en los estándares de SVG". Reencuadre: el `socket()` mezclaba 3 cosas y solo UNA era dibujo de formas.
+
+- **Forma estática (peana + indentación) → `assets/svg/socket.svg`** (gris neutro: techo claro, caras medias,
+  cavidad oscura). Generado desde la geometría EXACTA del drawer procedural (encaje perfecto con el registro y
+  con la posición del circuito); afinable a mano (flujo de siempre). Registro: `files.svg` +
+  `sprite{w:32,h:20,minX:-16,minY:-12}` + entrada en `manifest.json`.
+- **Estado por TINTE** (sin SVG por estado): el drawer tiñe el MISMO `socket.svg` con `darken(col,0.5)` (vacío)
+  o `lighten(col,0.30)` (lleno) → la base "se ilumina" al recibir el circuito, vía el sistema de tinte que ya
+  existe (`drawSprite(name,ctx,ref,col)`). Ahora ilumina TODA la peana (antes solo el cuerpo) → más contraste.
+- **Drawer = solo composición de sprites** (CERO `box`/`poly`): `drawSprite("socket", tinte)` +
+  `drawSprite(circuito|fantasma)`. Lo que queda en código NO es dibujo de formas, es composición/estado (qué
+  tinte según `filled`, alpha del fantasma, posicionar el circuito) — la frontera que pidió la usuaria.
+- **Opción A** (un solo SVG): se deja caer el re-pintado del labio frontal sobre el circuito; el circuito casi
+  llena el zócalo y la peana mayor + cavidad ya dan el "encaje". Verificado en preview: lleno con base
+  iluminada y oclusión correcta; vacío con fantasma.
+- **Fantasma más transparente**: `globalAlpha` 0.30 → **0.20** (a petición de la usuaria).
+- **Trade-off** (igual que todo sprite): cambiar `SOCKET.*` obliga a regenerar `socket.svg` (lo guarda el test
+  `manifest ⇄ registro`). El drawer procedural anterior (con `box`/`poly`, descrito en §7) queda SUPERSEDIDO.
+
+Ficheros: `assets/svg/socket.svg` (nuevo), `data/assets.js` (files+sprite), `draw.js` (drawer SVG-composite),
+`manifest.json`. `npm test` (34 ✓) + preview.

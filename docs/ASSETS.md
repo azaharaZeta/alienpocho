@@ -20,9 +20,10 @@ migran a **PNG editado a mano** caso por caso, cuando merece la pena.
   (PNG→SVG) por la vía única `AP.drawSprite`; mientras la imagen carga, no se pinta (de ahí la idea de
   **precargar**, ver [`docs/ideas/ideas.md`](ideas/ideas.md)).
 - **El dibujo procedural (`AP.*` en `src/draw.js`) queda solo para lo que NO es un sprite fijo**: robot
-  (animado), peana del zócalo (con estado), columna y la cáscara estructural (suelo/pared/puerta,
-  paramétricas por tamaño de sala). Es además la entrada con la que la tool genera el SVG inicial. El
-  objetivo a futuro es reducir el procedural al mínimo imprescindible (lo animado/paramétrico).
+  (animado), columna y la cáscara estructural (suelo/pared/puerta, paramétricas por tamaño de sala). Es
+  además la entrada con la que la tool genera el SVG inicial. El objetivo a futuro es reducir el procedural
+  al mínimo imprescindible (lo animado/paramétrico). El **zócalo** ya NO es procedural: su peana es
+  `socket.svg` y el drawer solo COMPONE sprites (peana teñida por estado + circuito/fantasma), sin `box`/`poly`.
 
 ---
 
@@ -129,9 +130,12 @@ desde cualquier sitio que llame a su `AP.*`.
 - ✅ **Migrados** (sprite SVG; `draw:"sprite"`): `cube` (+`cube.png` editado a mano), `prop_cube`,
   `prop_pyramid`, `prop_dome`, `prop_cylinder`, `spikes`, `plant`, `computer`, `drone`. Al migrarlos
   se borró su dibujo procedural (`drone()`, el router `prop()` y `circuit()`).
+- ✅ **Zócalo** (`socket`, 2026-06-24): la peana+indentación migrada a `socket.svg`; mantiene drawer propio
+  (`draw:"socket"`) porque COMPONE varios sprites según estado (peana teñida vacío/lleno + circuito o
+  fantasma). Sin `box`/`poly`. Patrón para assets CON ESTADO: la forma en SVG, el código solo la composición.
 - ✅ **Ruta ÚNICA de sprites**: todo objeto-sprite (en sala, encima de un zócalo, en brazos del robot
   o en el icono del HUD) se pinta SIEMPRE por `AP.drawSprite(name, ctx, ref, col)` (`ref` = punto de
   pantalla). Se alcanza vía `drawAsset` (salas) o por llamada directa (zócalo/brazos/HUD); el mapeo
   forma→asset es `propAsset()` en [`src/data/assets.js`](../src/data/assets.js). Ya no hay `circuit()`.
-- ⬜ **No migrables aún** (no son sprites fijos): robot (animado), zócalos (peana con estado), y los
-  paramétricos (pared, suelo, puerta, columna). Ideas en [ideas/ideas.md](ideas/ideas.md) sobre cómo "fijarlos".
+- ⬜ **No migrables aún** (no son sprites fijos): robot (animado) y los paramétricos (pared, suelo, puerta,
+  columna). Ideas en [ideas/ideas.md](ideas/ideas.md) sobre cómo "fijarlos".

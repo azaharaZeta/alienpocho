@@ -114,7 +114,8 @@ export const ASSETS = {
   //     ilumina. Qué circuito PIDE (requires) y cuál tiene PUESTO (filled) son datos de INSTANCIA
   //     (data/rooms.js + estado de partida), no del asset → acepta circuitos nuevos sin tocarlo. ---
   socket: { label: "Zócalo", kind: "object", group: "Receptáculos", traits: { solid: true, receptacle: true, stateful: true },
-            draw: "socket", anchor: "center", foot: { w: SH2, l: SH2, h: SOCKET.BASE_H } },
+            draw: "socket", anchor: "center", foot: { w: SH2, l: SH2, h: SOCKET.BASE_H },
+            files: { svg: "socket.svg", png: null }, sprite: { w: 32, h: 20, minX: -16, minY: -12 } },
 
   // --- Peligros ---
   spikes: { label: "Pinchos", kind: "object", group: "Peligros", traits: { hazard: true },

@@ -190,40 +190,18 @@ export const AP = (() => {
     box(ctx, p, cx + m, cy + m, cx + 1 - m, cy + 1 - m, 0, h, col);
   }
 
-  // Zócalo: peana con INDENTACIÓN cuadrada que aloja el circuito. Vacío → fantasma (atenuado) del
-  // circuito que PIDE; lleno → circuito a color + base ILUMINADA. Genérico: el circuito se dibuja con
-  // su propio sprite (drawSprite) → un circuito nuevo no toca este drawer. requires/filled = tokens.
+  // Zócalo: peana con indentación cuadrada desde SVG (socket.svg), teñida por ESTADO (vacío =
+  // atenuada, lleno = ILUMINADA). El circuito incrustado / fantasma se componen encima con su propio
+  // sprite. SIN dibujo programático: solo composición de sprites (drawSprite) + tinte/alpha por estado.
   function socket(ctx, p, x, y, z, requires, filled, col) {
-    const H = SOCKET.HALF, rH = SOCKET.RECESS_HALF;
-    const zt = z + SOCKET.BASE_H, zf = zt - SOCKET.RECESS_DEPTH;       // cima de la peana · suelo de la cavidad
-    const x0 = x - H, x1 = x + H, y0 = y - H, y1 = y + H;              // huella de la peana
-    const lit = filled ? lighten(col, 0.30) : darken(col, 0.5);       // base ILUMINADA al recibir circuito
-
-    // Peana: caras laterales visibles (+x, +y) + techo/reborde (como box() pero con el techo aparte).
-    const A = p(x0, y0, zt), B = p(x1, y0, zt), C = p(x1, y1, zt), D = p(x0, y1, zt);
-    const Bb = p(x1, y0, z), Cb = p(x1, y1, z), Db = p(x0, y1, z);
-    poly(ctx, [B, C, Cb, Bb], darken(lit, 0.62), BLACK);              // cara +x
-    poly(ctx, [D, C, Cb, Db], darken(lit, 0.82), BLACK);             // cara +y
-    poly(ctx, [A, B, C, D], lit, BLACK);                             // techo / reborde
-
-    // Indentación cuadrada: paredes traseras (−x, −y) + suelo, en sombra.
-    const rx0 = x - rH, rx1 = x + rH, ry0 = y - rH, ry1 = y + rH;
-    const RB = p(rx1, ry0, zt), RC = p(rx1, ry1, zt), RD = p(rx0, ry1, zt);
-    const FA = p(rx0, ry0, zf), FB = p(rx1, ry0, zf), FC = p(rx1, ry1, zf), FD = p(rx0, ry1, zf);
-    poly(ctx, [p(rx0, ry0, zt), RB, FB, FA], darken(col, 0.40), BLACK);   // pared −y (mira a +y)
-    poly(ctx, [p(rx0, ry0, zt), RD, FD, FA], darken(col, 0.30), BLACK);   // pared −x (mira a +x)
-    poly(ctx, [FA, FB, FC, FD], darken(col, 0.22), BLACK);               // suelo de la cavidad
-
-    // Circuito: lleno = sprite a color; vacío = fantasma (sprite atenuado) del que pide.
+    const base = filled ? lighten(col, 0.30) : darken(col, 0.5);    // la peana se ILUMINA al recibir circuito
+    drawSprite("socket", ctx, p(x, y, z), base);                    // peana + indentación (SVG)
     const which = filled || requires;
     if (which) {
-      const ref = p(x, y, zf);
+      const ref = p(x, y, z + SOCKET.BASE_H - SOCKET.RECESS_DEPTH); // circuito hundido en la cavidad
       if (filled) drawSprite(propAsset(filled), ctx, ref, col);
-      else { ctx.save(); ctx.globalAlpha = 0.30; drawSprite(propAsset(requires), ctx, ref, col); ctx.restore(); }
+      else { ctx.save(); ctx.globalAlpha = 0.20; drawSprite(propAsset(requires), ctx, ref, col); ctx.restore(); }  // fantasma del que pide
     }
-    // Reborde FRONTAL re-pintado SOBRE el circuito → lo "encaja" (tapa su base frontal).
-    poly(ctx, [RB, B, C, RC], lit, BLACK);                          // franja +x
-    poly(ctx, [RD, RC, C, D], lit, BLACK);                          // franja +y
   }
 
   // Pinchos (peligro): desde fichero (PNG→SVG).
