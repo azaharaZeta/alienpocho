@@ -159,7 +159,7 @@ test("colocar la forma correcta en su zócalo lo activa y suma circuito", () => 
   const before = game.circuits;
   interact(entrada);
   assert.equal(game.carried, null, "el circuito se coloca");
-  assert.equal(entrada.sockets[0].active, true, "el zócalo queda activado");
+  assert.equal(entrada.sockets[0].filled, "cube", "el zócalo queda con el circuito puesto");
   assert.equal(game.circuits, before + 1, "el contador de circuitos sube");
 });
 
@@ -194,7 +194,7 @@ test("resetGame reconstruye el mundo sin arrastrar estado mutado", () => {
   assert.equal(room.name, "ENTRADA", "vuelve a la entrada");
   assert.equal(player.x, 1.5); assert.equal(player.y, 6.5);
   assert.equal(room.objects.length, 1, "el objeto de ENTRADA vuelve a estar (clones frescos)");
-  assert.equal(room.sockets[0].active, false, "el zócalo vuelve a estar inactivo");
+  assert.equal(room.sockets[0].filled, null, "el zócalo vuelve a estar vacío");
 });
 
 /* --------------------------------------------------------------- RESUMEN --- */

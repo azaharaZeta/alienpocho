@@ -22,15 +22,18 @@
 "use strict";
 
 /* ---------- Geometría primitiva compartida (hogar canónico) ---------- */
-// Circuito transportable: semilado en planta y alto (medio bloque).
-export const PROP = { HALF: 0.28, H: 0.5 };
+// Circuito transportable: semilado en planta y alto. Cubo de bounding box 0.66³.
+export const PROP = { HALF: 0.33, H: 0.66 };
 // Robot Pocho: semianchos del cuerpo (ancho/profundidad) y alto total.
 export const ROBOT = { WID: 0.50, DEP: 0.33, H: 1.50 };
 // Puerta: grosor del marco (T), ancho de poste (POST_W), alto del dintel (LINTEL_H) y
 // semiancho del vano visual (SPAN_HALF). El hueco físico se deriva: SPAN_HALF − POST_W.
 export const DOOR = { T: 0.34, POST_W: 0.40, LINTEL_H: 0.46, SPAN_HALF: 1.12 };
-// Zócalo: alto de la peana + semilado de la huella (peana de 0.68×0.68 en planta).
-export const SOCKET = { BASE_H: 0.2, HALF: 0.34 };
+// Zócalo (receptáculo): peana de 0.90×0.90 en planta (HALF) con una INDENTACIÓN cuadrada
+// (RECESS_HALF, hundida RECESS_DEPTH) que aloja el circuito. La peana es mayor que el circuito
+// (PROP.HALF) → queda un reborde alrededor. BASE_H = alto de la peana; se mantiene ≤ CFG.STEP
+// para que el robot se suba andando a la peana vacía y pueda colocar el circuito (lo fija smoke.mjs).
+export const SOCKET = { BASE_H: 0.24, HALF: 0.45, RECESS_HALF: 0.35, RECESS_DEPTH: 0.14 };
 // Altura (en celdas) de las paredes de todas las salas.
 export const WALL_H = 3;
 
@@ -96,26 +99,22 @@ export const ASSETS = {
   // --- Transportables (circuitos): sólidos, empujables, recogibles y caen ---
   prop_cube:     { label: "Cubo", kind: "object", group: "Transportables", traits: { solid: true, movable: true, carriable: true, falls: true },
                    draw: "sprite", anchor: "center", foot: { w: P2, l: P2, h: PROP.H },
-                   files: { svg: "prop_cube.svg", png: null }, sprite: { w: 18, h: 18, minX: -9, minY: -13 } },
+                   files: { svg: "prop_cube.svg", png: null }, sprite: { w: 22, h: 22, minX: -11, minY: -16 } },
   prop_pyramid:  { label: "Pirámide", kind: "object", group: "Transportables", traits: { solid: true, movable: true, carriable: true, falls: true },
                    draw: "sprite", anchor: "center", foot: { w: P2, l: P2, h: PROP.H },
-                   files: { svg: "prop_pyramid.svg", png: null }, sprite: { w: 18, h: 14, minX: -9, minY: -9 } },
+                   files: { svg: "prop_pyramid.svg", png: null }, sprite: { w: 22, h: 17, minX: -11, minY: -11 } },
   prop_dome:     { label: "Domo", kind: "object", group: "Transportables", traits: { solid: true, movable: true, carriable: true, falls: true },
                    draw: "sprite", anchor: "center", foot: { w: P2, l: P2, h: PROP.H },
-                   files: { svg: "prop_dome.svg", png: null }, sprite: { w: 14, h: 11, minX: -7, minY: -7 } },
+                   files: { svg: "prop_dome.svg", png: null }, sprite: { w: 17, h: 13, minX: -9, minY: -9 } },
   prop_cylinder: { label: "Cilindro", kind: "object", group: "Transportables", traits: { solid: true, movable: true, carriable: true, falls: true },
                    draw: "sprite", anchor: "center", foot: { w: P2, l: P2, h: PROP.H },
-                   files: { svg: "prop_cylinder.svg", png: null }, sprite: { w: 12, h: 15, minX: -6, minY: -12 } },
+                   files: { svg: "prop_cylinder.svg", png: null }, sprite: { w: 15, h: 18, minX: -8, minY: -15 } },
 
-  // --- Receptáculos (zócalos): sólidos, reciben un transportable compatible y cambian de estado ---
-  socket_cube:     { label: "Zócalo cubo", kind: "object", group: "Receptáculos", traits: { solid: true, receptacle: true, stateful: true },
-                     draw: "socket:cube",     anchor: "center", foot: { w: SH2, l: SH2, h: SOCKET.BASE_H } },
-  socket_pyramid:  { label: "Zócalo pirámide", kind: "object", group: "Receptáculos", traits: { solid: true, receptacle: true, stateful: true },
-                     draw: "socket:pyramid",  anchor: "center", foot: { w: SH2, l: SH2, h: SOCKET.BASE_H } },
-  socket_dome:     { label: "Zócalo domo", kind: "object", group: "Receptáculos", traits: { solid: true, receptacle: true, stateful: true },
-                     draw: "socket:dome",     anchor: "center", foot: { w: SH2, l: SH2, h: SOCKET.BASE_H } },
-  socket_cylinder: { label: "Zócalo cilindro", kind: "object", group: "Receptáculos", traits: { solid: true, receptacle: true, stateful: true },
-                     draw: "socket:cylinder", anchor: "center", foot: { w: SH2, l: SH2, h: SOCKET.BASE_H } },
+  // --- Receptáculo (zócalo): UN asset genérico, sólido, que recibe un circuito compatible y se
+  //     ilumina. Qué circuito PIDE (requires) y cuál tiene PUESTO (filled) son datos de INSTANCIA
+  //     (data/rooms.js + estado de partida), no del asset → acepta circuitos nuevos sin tocarlo. ---
+  socket: { label: "Zócalo", kind: "object", group: "Receptáculos", traits: { solid: true, receptacle: true, stateful: true },
+            draw: "socket", anchor: "center", foot: { w: SH2, l: SH2, h: SOCKET.BASE_H } },
 
   // --- Peligros ---
   spikes: { label: "Pinchos", kind: "object", group: "Peligros", traits: { hazard: true },
@@ -193,9 +192,13 @@ export function assetRegion(id, variant) {
   return { x: x0, y: y0, z: z0, w: x1 - x0, l: y1 - y0, h: z1 - z0 };
 }
 
-// Cima sólida de un zócalo según su estado: peana (BASE_H) más, si está activo, el
-// circuito encajado encima (PROP.H). Fuente única (física, render y armado de things).
-export function socketTop(s) { return (s.z || 0) + SOCKET.BASE_H + (s.active ? PROP.H : 0); }
+// Cima sólida de un zócalo según su estado: la peana (BASE_H) y, si tiene circuito puesto
+// (filled), el circuito hundido en la indentación (sube PROP.H − RECESS_DEPTH sobre la peana).
+// Fuente única (física, render y armado de things).
+export function socketTop(s) {
+  const base = (s.z || 0) + SOCKET.BASE_H;
+  return s.filled ? base - SOCKET.RECESS_DEPTH + PROP.H : base;
+}
 
 // --- Acceso a clase y propiedades ---
 export function assetKind(id) { const a = ASSETS[id]; return a ? a.kind : null; }

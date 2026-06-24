@@ -15,7 +15,8 @@
                   Cada salida debe tener su RECÍPROCA en la sala destino.
      blocks       cubos sólidos { x, y, z, h } (h = nº de capas). Suelo z:0 = andable.
      objects      circuitos físicos { x, y, z, shape } (empujables/llevables/caen).
-     sockets      zócalos-destino { cx, cy, z, shape, active }.
+     sockets      zócalos-destino { cx, cy, z, requires, filled }: `requires` = circuito que
+                  PIDE (token de forma); `filled` = circuito PUESTO (token o null).
      hazards      pinchos { cx, cy } (decorativos).
 
    COORDENADAS — DOS convenciones (el nombre del campo la delata):
@@ -39,7 +40,7 @@ export const ROOMS = {
     exits: { xp: "1,0" },
     blocks:  [{ x: 2, y: 2, z: 0, h: 1 }],
     objects: [{ x: 3.5, y: 5.5, z: 0, shape: "cube" }],
-    sockets: [{ cx: 6, cy: 5, z: 0, shape: "cube", active: false }] },
+    sockets: [{ cx: 6, cy: 5, z: 0, requires: "cube", filled: null }] },
 
   // GALERÍA — pasillo ANCHO máximo 13×3.
   "1,0": { name: "GALERIA", paletteIndex: 2, w: 13, h: 3,
@@ -51,7 +52,7 @@ export const ROOMS = {
   "2,0": { name: "CELDA", paletteIndex: 3, w: 4, h: 4,
     exits: { xm: "1,0", xp: "3,0", ym: "2,-1" },
     objects: [{ x: 2.5, y: 2.5, z: 0, shape: "pyramid" }],
-    sockets: [{ cx: 1, cy: 1, z: 0, shape: "pyramid", active: false }] },
+    sockets: [{ cx: 1, cy: 1, z: 0, requires: "pyramid", filled: null }] },
 
   // TORRE — pasillo LARGO máximo 3×13.
   "3,0": { name: "TORRE", paletteIndex: 4, w: 3, h: 13,
@@ -64,7 +65,7 @@ export const ROOMS = {
     blocks:  [{ x: 5, y: 2, z: 0, h: 1 }, { x: 7, y: 4, z: 0, h: 2 }],
     objects: [{ x: 2.5, y: 2.5, z: 0, shape: "dome" },
               { asset: "computer", x: 1.5, y: 4.5, z: 0 }, { asset: "computer", x: 8.5, y: 1.5, z: 0 }],
-    sockets: [{ cx: 8, cy: 4, z: 0, shape: "dome", active: false }] },
+    sockets: [{ cx: 8, cy: 4, z: 0, requires: "dome", filled: null }] },
 
   // CONDUCTO — pasillo LARGO 4×12.
   "1,1": { name: "CONDUCTO", paletteIndex: 1, w: 4, h: 12,
@@ -82,5 +83,5 @@ export const ROOMS = {
     blocks:  [{ x: 3, y: 4, z: 0, h: 1 }, { x: 2, y: 6, z: 0, h: 2 }],
     objects: [{ x: 2.5, y: 2.5, z: 0, shape: "cylinder" },
               { asset: "computer", x: 4.5, y: 1.5, z: 0 }, { asset: "computer", x: 1.5, y: 8.5, z: 0 }],
-    sockets: [{ cx: 3, cy: 7, z: 0, shape: "cylinder", active: false }] },
+    sockets: [{ cx: 3, cy: 7, z: 0, requires: "cylinder", filled: null }] },
 };

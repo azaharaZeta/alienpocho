@@ -66,10 +66,10 @@ export function roomThings(room) {
     const id = objAsset(o);
     t.push({ asset: id, x: o.x, y: o.y, z: o.z, shape: o.shape, src: o, aabb: placeAabb(id, o.x, o.y, o.z) });
   }
-  for (const s of room.sockets) {                                // zócalos (vivos: se activan → más altos)
-    const cx = s.cx + 0.5, cy = s.cy + 0.5, z = s.z || 0;
-    t.push({ asset: "socket_" + s.shape, x: cx, y: cy, z, shape: s.shape, active: s.active, src: s,
-             aabb: placeAabb("socket_" + s.shape, cx, cy, z, socketTop(s)) });
+  for (const s of room.sockets) {                                // zócalos (vivos: al llenarse suben)
+    const cx = s.cx + 0.5, cy = s.cy + 0.5, z = s.z || 0;        // requires = circuito que pide, filled = el puesto
+    t.push({ asset: "socket", x: cx, y: cy, z, requires: s.requires, filled: s.filled, src: s,
+             aabb: placeAabb("socket", cx, cy, z, socketTop(s)) });
   }
   for (const h of room.hazards)                                  // pinchos (decorativos, estáticos)
     t.push({ asset: "spikes", x: h.cx + 0.5, y: h.cy + 0.5, z: 0, src: h,

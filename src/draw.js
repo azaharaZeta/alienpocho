@@ -190,18 +190,40 @@ export const AP = (() => {
     box(ctx, p, cx + m, cy + m, cx + 1 - m, cy + 1 - m, 0, h, col);
   }
 
-  // Zócalo / pedestal
-  function socket(ctx, p, x, y, z, shape, active, col) {
-    const c = active ? col : darken(col, 0.4);
-    box(ctx, p, x - 0.34, y - 0.34, x + 0.34, y + 0.34, z, z + SOCKET.BASE_H, c);
-    const top = p(x, y, z + SOCKET.BASE_H), s = 5;
-    ctx.strokeStyle = active ? col : darken(col, 0.7); ctx.lineWidth = 1;
-    if (shape === "cube") ctx.strokeRect(top.x - s, top.y - s / 2, s * 2, s);
-    else if (shape === "pyramid") poly(ctx, [{ x: top.x, y: top.y - s }, { x: top.x + s, y: top.y + s / 2 }, { x: top.x - s, y: top.y + s / 2 }], null, ctx.strokeStyle);
-    else if (shape === "dome") { ctx.beginPath(); ctx.arc(top.x, top.y, s, Math.PI, 0); ctx.stroke(); }
-    else { ctx.beginPath(); ctx.ellipse(top.x, top.y, s, s / 2, 0, 0, Math.PI * 2); ctx.stroke(); }
-    // Circuito encajado encima: MISMO sprite que el transportable suelto (ruta única drawSprite).
-    if (active) drawSprite(propAsset(shape), ctx, p(x, y, z + SOCKET.BASE_H), col);
+  // Zócalo: peana con INDENTACIÓN cuadrada que aloja el circuito. Vacío → fantasma (atenuado) del
+  // circuito que PIDE; lleno → circuito a color + base ILUMINADA. Genérico: el circuito se dibuja con
+  // su propio sprite (drawSprite) → un circuito nuevo no toca este drawer. requires/filled = tokens.
+  function socket(ctx, p, x, y, z, requires, filled, col) {
+    const H = SOCKET.HALF, rH = SOCKET.RECESS_HALF;
+    const zt = z + SOCKET.BASE_H, zf = zt - SOCKET.RECESS_DEPTH;       // cima de la peana · suelo de la cavidad
+    const x0 = x - H, x1 = x + H, y0 = y - H, y1 = y + H;              // huella de la peana
+    const lit = filled ? lighten(col, 0.30) : darken(col, 0.5);       // base ILUMINADA al recibir circuito
+
+    // Peana: caras laterales visibles (+x, +y) + techo/reborde (como box() pero con el techo aparte).
+    const A = p(x0, y0, zt), B = p(x1, y0, zt), C = p(x1, y1, zt), D = p(x0, y1, zt);
+    const Bb = p(x1, y0, z), Cb = p(x1, y1, z), Db = p(x0, y1, z);
+    poly(ctx, [B, C, Cb, Bb], darken(lit, 0.62), BLACK);              // cara +x
+    poly(ctx, [D, C, Cb, Db], darken(lit, 0.82), BLACK);             // cara +y
+    poly(ctx, [A, B, C, D], lit, BLACK);                             // techo / reborde
+
+    // Indentación cuadrada: paredes traseras (−x, −y) + suelo, en sombra.
+    const rx0 = x - rH, rx1 = x + rH, ry0 = y - rH, ry1 = y + rH;
+    const RB = p(rx1, ry0, zt), RC = p(rx1, ry1, zt), RD = p(rx0, ry1, zt);
+    const FA = p(rx0, ry0, zf), FB = p(rx1, ry0, zf), FC = p(rx1, ry1, zf), FD = p(rx0, ry1, zf);
+    poly(ctx, [p(rx0, ry0, zt), RB, FB, FA], darken(col, 0.40), BLACK);   // pared −y (mira a +y)
+    poly(ctx, [p(rx0, ry0, zt), RD, FD, FA], darken(col, 0.30), BLACK);   // pared −x (mira a +x)
+    poly(ctx, [FA, FB, FC, FD], darken(col, 0.22), BLACK);               // suelo de la cavidad
+
+    // Circuito: lleno = sprite a color; vacío = fantasma (sprite atenuado) del que pide.
+    const which = filled || requires;
+    if (which) {
+      const ref = p(x, y, zf);
+      if (filled) drawSprite(propAsset(filled), ctx, ref, col);
+      else { ctx.save(); ctx.globalAlpha = 0.30; drawSprite(propAsset(requires), ctx, ref, col); ctx.restore(); }
+    }
+    // Reborde FRONTAL re-pintado SOBRE el circuito → lo "encaja" (tapa su base frontal).
+    poly(ctx, [RB, B, C, RC], lit, BLACK);                          // franja +x
+    poly(ctx, [RD, RC, C, D], lit, BLACK);                          // franja +y
   }
 
   // Pinchos (peligro): desde fichero (PNG→SVG).
@@ -283,7 +305,6 @@ export const AP = (() => {
      punto de ANCLAJE en mundo, igual que assetRef). Cada drawer traduce el placement a su
      primitiva (forma desde la clave `draw`, estado desde `t`), de modo que `drawAsset` dibuja
      cualquier asset sin saber cuál es (ver docs/ARQUITECTURA.md). */
-  const _shapeOf = t => { const d = ASSETS[t.asset].draw, i = d.indexOf(":"); return i < 0 ? null : d.slice(i + 1); };
   const DRAWERS = {
     // GENÉRICO: cualquier asset de sprite (PNG→SVG). Uno nuevo se dibuja por aquí sin tocar este
     // fichero: basta su entrada en ASSETS con `draw:"sprite"` + su .svg.
@@ -293,7 +314,7 @@ export const AP = (() => {
     cube:     (c, P, t, col) => cube(c, P, t.x, t.y, t.z, col),
     pillar:   (c, P, t, col) => pillar(c, P, t.x, t.y, ASSETS[t.asset].foot.h, col),
     robot:    (c, P, t, col) => robot(c, P, t.x, t.y, t.z, t.facing || 0, col),
-    socket:   (c, P, t, col) => socket(c, P, t.x, t.y, t.z, _shapeOf(t), !!t.active, col),
+    socket:   (c, P, t, col) => socket(c, P, t.x, t.y, t.z, t.requires, t.filled, col),
     // Estructura (paramétrica): la sala la dibuja en su capa propia; estos drawers son para
     // PREVIEWS sueltos de la tool, dibujando una instancia de muestra a partir de la huella.
     flatWall: (c, P, t, col) => { const a = ASSETS[t.asset]; flatWall(c, P, t.axis || "x", t.fixed || 0, t.a0 || 0, (t.a0 || 0) + a.foot.w, a.foot.h, col, t.asset); },

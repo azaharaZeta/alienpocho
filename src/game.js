@@ -15,9 +15,10 @@ import { canStandOn, socketTop, overlapsBox, objBox } from "./physics.js";
 import { player } from "./player.js";
 import { buildWorld, roomThings } from "./world.js";
 import { assetHas } from "./data/assets.js";   // traits del asset (receptacle/carriable)
+import { missionTotal, missionComplete } from "./data/mission.js";   // meta del puzzle (total + victoria)
 
-/* Estado de partida. */
-export const game = { state: "title", lives: 3, circuits: 0, circuitsTotal: 4, carried: null, lightYears: 9999, won: false };
+/* Estado de partida. circuitsTotal se DERIVA del mapa (ver buildWorld abajo), no se hardcodea. */
+export const game = { state: "title", lives: 3, circuits: 0, circuitsTotal: 0, carried: null, lightYears: 9999, won: false };
 
 /* interact() — interacción vertical con los objetos:
    - LLEVANDO algo: si estás sobre el destino de un zócalo compatible, lo colocas y se
@@ -28,16 +29,16 @@ export function interact(room) {
   const things = roomThings(room);   // lista uniforme; se filtra por comportamiento (trait)
 
   if (game.carried) {
-    // 1) ¿plantado sobre un destino compatible y libre? → colocar y activar
+    // 1) ¿plantado sobre un zócalo que pide ESTE circuito y está libre? → encajarlo
     for (const t of things) {
       if (!assetHas(t.asset, "receptacle")) continue;
       const s = t.src;
-      if (!s.active && t.shape === game.carried &&
+      if (!s.filled && t.requires === game.carried &&
           Math.abs(player.x - t.x) < 0.5 && Math.abs(player.y - t.y) < 0.5 &&
           Math.abs(player.z - t.z) < 0.4) {
-        s.active = true; game.carried = null; game.circuits++;
-        if (game.circuits >= game.circuitsTotal) game.won = true;
-        player.z = socketTop(s); player.vz = 0; player.onGround = true;   // s.active ya true → cima activa
+        s.filled = game.carried; game.carried = null; game.circuits++;   // el circuito se MANTIENE en el zócalo (filled)
+        if (missionComplete(game)) game.won = true;
+        player.z = socketTop(s); player.vz = 0; player.onGround = true;   // s.filled ya puesto → cima con circuito
         return;
       }
     }
@@ -75,6 +76,7 @@ export function interact(room) {
    ========================================================================= */
 export const world = buildWorld();
 export let room = world.rooms[world.start];
+game.circuitsTotal = missionTotal(world.rooms);   // total derivado del mapa (nº de zócalos)
 
 /* Transición flip-screen: al cruzar un borde con salida, cambia de sala y reaparece
    por el borde opuesto, recentrando la coordenada perpendicular en la puerta destino.
@@ -104,5 +106,6 @@ export function resetGame() {
     jumpPending: false, jumpPendTime: 0, jdx: 0, jdy: 0
   });
   game.lives = 3; game.circuits = 0; game.carried = null;
+  game.circuitsTotal = missionTotal(world.rooms);   // re-derivar (mundo reconstruido)
   game.lightYears = 9999; game.won = false;
 }

@@ -8,26 +8,26 @@
   {
     "name": "Prop cubo",
     "file": "prop_cube.svg",
-    "w": 18,
-    "h": 18
+    "w": 22,
+    "h": 22
   },
   {
     "name": "Prop pirámide",
     "file": "prop_pyramid.svg",
-    "w": 18,
-    "h": 14
+    "w": 22,
+    "h": 17
   },
   {
     "name": "Prop domo",
     "file": "prop_dome.svg",
-    "w": 14,
-    "h": 11
+    "w": 17,
+    "h": 13
   },
   {
     "name": "Prop cilindro",
     "file": "prop_cylinder.svg",
-    "w": 12,
-    "h": 15
+    "w": 15,
+    "h": 18
   },
   {
     "name": "Dron",

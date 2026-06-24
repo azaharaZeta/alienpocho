@@ -87,9 +87,13 @@ NO libre en cualquier dirección:
 ## 5. Puzzle de circuitos
 
 - Cada circuito tiene una **forma** (cubo / pirámide / domo / cilindro).
-- Cada **zócalo** acepta **solo** la forma correspondiente.
-- Colocar la forma correcta → el zócalo se "activa" (feedback visual + sonido).
-- **Victoria:** todos los zócalos activados antes de que el reloj llegue a 0.
+- El **zócalo** es **genérico** (un solo asset): qué circuito **pide** (`requires`) es config de cada
+  zócalo, no del asset → diseñado para aceptar circuitos nuevos sin tocarlo.
+- **Zócalo vacío:** muestra un **fantasma** (silueta atenuada) del circuito que pide.
+- **Colocar el circuito correcto** → se **encaja** en la indentación del zócalo y la **base se ilumina**
+  (el circuito se conserva ahí; no desaparece).
+- **Victoria:** todos los zócalos llenos antes de que el reloj llegue a 0. El total se **deriva del mapa**
+  (capa de misión, `data/mission.js`), no se fija a mano.
 
 ---
 

@@ -11,6 +11,7 @@ Dependencias en UNA dirección (hojas abajo → `main` arriba):
 
 - **`data/assets.js`** — FUENTE ÚNICA de los assets (registro `ASSETS` + geometría + helpers). Datos puros, hoja.
 - **`data/rooms.js`** — EL MAPA (salas como datos puros). Hoja.
+- **`data/mission.js`** — LA MISIÓN/PUZZLE: `MISSION` + total de circuitos DERIVADO del mapa (`missionTotal`) + `missionComplete`. Tercera capa de datos (≠ assets/rooms). Hoja pura.
 - **`palette.js`** — colores por sala (`INKS`/`INK2`/`ROBOT_INK`). Hoja.
 - **`config.js`** — parámetros (`CFG`, `CONTROLS`, `SCENE`); re-exporta la geometría desde `data/assets.js`.
 - **`engine.js`** — motor iso genérico: proyección, `box`/`poly`, painter `depthSort`.
@@ -46,7 +47,10 @@ Cada asset se describe a sí mismo:
 - `draw.js` tiene `DRAWERS` (uno por clave `draw`, con un `sprite` genérico que vale para cualquier asset de imagen)
   y `AP.drawAsset(ctx,P,placement,col)`. Dibujar un asset = `drawAsset`, sin saber cuál es.
 - `world.roomThings(room)` mapea las cubetas del mapa (`blocks`/`objects`/`sockets`/`hazards`/`things`) a una lista
-  uniforme de placements `{asset, x, y, z, aabb, src?}` (en vivo: los móviles se mueven, los zócalos se activan).
+  uniforme de placements `{asset, x, y, z, aabb, src?}` (en vivo: los móviles se mueven, los zócalos se llenan).
+  El **zócalo es UN asset genérico** (`socket`); qué circuito pide (`requires`) y cuál tiene puesto (`filled`)
+  son datos de instancia. El circuito incrustado lo dibuja el drawer del socket con el sprite del propio circuito
+  (lleno = a color; vacío = fantasma del que pide) → un circuito nuevo no toca el socket.
 - `render.js`: lo COLOCABLE se pinta en **un solo bucle** (`roomThings` + `aabb` para el painter + `drawAsset`);
   la cáscara suelo/pared/puerta (paramétrica por tamaño de sala) va en una capa estructural aparte.
 - `physics.roomSolids`: incluye los placements con trait `solid`; empuje/gravedad operan por `movable`/`falls` con la

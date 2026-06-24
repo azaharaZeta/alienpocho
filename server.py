@@ -8,12 +8,14 @@ navegador cachee los .js/.svg de forma heurística. Al editar el código acabas 
 añade cabeceras no-cache en CADA respuesta → el navegador revalida siempre. SOLO para desarrollo.
 
 Uso:  python3 server.py [puerto]      (por defecto 8000; es lo que lanza `npm run serve`)
+Puerto: argumento > variable de entorno PORT > 8000 (PORT lo usan herramientas que asignan puerto libre).
 Sirve el directorio actual, así que ejecútalo desde la raíz del proyecto. Ctrl+C para parar.
 """
+import os
 import sys
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
-PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
+PORT = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("PORT", 8000))
 
 
 class NoCacheHandler(SimpleHTTPRequestHandler):
