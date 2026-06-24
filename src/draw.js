@@ -88,34 +88,13 @@ export const AP = (() => {
     if (!s.neutral) return null;
     return s.tints[col] || (s.tints[col] = _tintSprite(s.neutral, col));
   }
-  // Tesela la tira (ya en perspectiva) a lo largo de la cara. A=abajo-izq, B=abajo-dcha (z=0);
-  // Bt/At = arriba. nW = ancho del muro en tiles. eje "y" → se voltea en horizontal (muro espejo).
-  function fillWall(ctx, axis, A, B, Bt, At, nW, variant, col) {
-    const def = WALL_TILES[variant]; if (!def) return false;
-    const tex = _wallTexture(variant, col); if (!tex) return false;
-    const ux = (B.x - A.x) / nW, uy = (B.y - A.y) / nW;     // vector por tile a lo largo del eje
-    const flip = (axis === "y");
-    ctx.save();
-    ctx.beginPath(); ctx.moveTo(At.x, At.y); ctx.lineTo(Bt.x, Bt.y); ctx.lineTo(B.x, B.y); ctx.lineTo(A.x, A.y);
-    ctx.closePath(); ctx.clip();                            // recorta a la cara (tiras parciales del borde)
-    ctx.imageSmoothingEnabled = false;
-    for (let i = 0; i * def.N < nW + 1e-3; i++) {           // tiras de N tiles a lo largo del muro
-      const bx = A.x + i * def.N * ux, by = A.y + i * def.N * uy;   // esquina inf-izq de la tira i
-      if (!flip) ctx.drawImage(tex, Math.round(bx + def.minX), Math.round(by + def.minY));
-      else { ctx.save(); ctx.translate(2 * bx, 0); ctx.scale(-1, 1);
-        ctx.drawImage(tex, Math.round(bx + def.minX), Math.round(by + def.minY)); ctx.restore(); }
-    }
-    ctx.restore();
-    return true;
-  }
-
   /* ── PUERTA por SPRITE (marco SVG/PNG ya en perspectiva, altura fija): assets/svg/door_front|back.svg.
      "front" = marco del frente (vano transparente → se ve al robot al cruzar); "back" = marco del muro
      de fondo (con hueco negro detrás). El eje y se voltea en horizontal.
      {w,h,minX,minY}: bbox del sprite y offset respecto a la esquina del vano P(a0,fixed,0). ── */
-  const DOOR_TILES = {
-    front: { w: 45, h: 74, minX: -6, minY: -51 },
-    back:  { w: 44, h: 74, minX:  0, minY: -54 },
+  const DOOR_TILES = {              // encuadre del sprite (autogenerado por tools/gen-doors.mjs; SPAN_HALF=1)
+    front: { w: 40, h: 71, minX: -6, minY: -51 },
+    back:  { w: 40, h: 71, minX:  0, minY: -54 },
   };
   const _doorTex = {};
   function _loadDoor(variant) {
@@ -135,9 +114,8 @@ export const AP = (() => {
   }
   // Dibuja el marco de puerta desde el sprite (front/back) anclado en P(a0,fixed,0). false = aún no cargó.
   function drawDoorSprite(ctx, p, axis, fixed, a0, a1, H, hole, col) {
-    const variant = hole ? "back" : "front", def = DOOR_TILES[variant];
-    const tex = _doorTexture(variant, col); if (!tex) return false;
-    if (hole) doorHole(ctx, p, axis, fixed, a0, a1, H, col);    // hueco negro detrás del marco
+    const variant = hole ? "back" : "front", def = DOOR_TILES[variant];   // hole solo elige marco fondo/frente
+    const tex = _doorTexture(variant, col); if (!tex) return false;        // el VACÍO negro lo pinta render (pre-pase)
     const ref = (axis === "x") ? p(a0, fixed, 0) : p(fixed, a0, 0);
     const dx = Math.round(ref.x + def.minX), dy = Math.round(ref.y + def.minY);
     if (axis === "x") ctx.drawImage(tex, dx, dy);
@@ -158,35 +136,31 @@ export const AP = (() => {
     drawSprite("cube", ctx, p(cx, cy, cz), col);
   }
 
-  // Pared PLANA y teselada (panal). axis "x": plano en y=fixed recorriendo x. `tile` = variante de
-  // panal (por sala); si no se pasa, override de consola o el global WALL_TILE.
-  // `paint` = [c0,c1] OPCIONAL: sub-rango del muro a pintar (el resto es el VANO de la puerta). El
-  // TESELADO del panal sigue anclado a [a0,a1] (origen del muro completo) para que NO se desfase a
-  // ambos lados del vano; solo se recorta al sub-rango. Sin `paint` ⇒ muro entero (comportamiento previo).
-  function flatWall(ctx, p, axis, fixed, a0, a1, H, col, tile, paint) {
-    const [c0, c1] = paint || [a0, a1];
-    let At, Bt, B, A, cAt, cBt, cB, cA;
-    if (axis === "x") {
-      A = p(a0, fixed, 0); B = p(a1, fixed, 0); Bt = p(a1, fixed, H); At = p(a0, fixed, H);
-      cA = p(c0, fixed, 0); cB = p(c1, fixed, 0); cBt = p(c1, fixed, H); cAt = p(c0, fixed, H);
-    } else {
-      A = p(fixed, a0, 0); B = p(fixed, a1, 0); Bt = p(fixed, a1, H); At = p(fixed, a0, H);
-      cA = p(fixed, c0, 0); cB = p(fixed, c1, 0); cBt = p(fixed, c1, H); cAt = p(fixed, c0, H);
-    }
-    const CL = [cAt, cBt, cB, cA];       // cara del SUB-RANGO = lo que de verdad se pinta
-    ctx.save();
-    ctx.beginPath(); ctx.moveTo(cAt.x, cAt.y); ctx.lineTo(cBt.x, cBt.y); ctx.lineTo(cB.x, cB.y); ctx.lineTo(cA.x, cA.y);
-    ctx.closePath(); ctx.clip();         // recorta TODO al sub-rango (deja el vano libre)
-    poly(ctx, CL, BLACK, BLACK);         // fondo NEGRO mientras carga la imagen
-    // PANAL: tira PNG/SVG (ya en perspectiva) teselada a lo largo del muro, anclada a [a0,a1].
+  // Pared MODULAR: pega las tiras SVG del panal (cada tira = N celdas) celda a celda en el rango
+  // [c0,c1] del muro (axis "x": plano y=fixed recorriendo x; "y": plano x=fixed, espejado). SIN recorte:
+  // cada tira es un rectángulo cuyo SVG ya se recorta a su paralelogramo, así casan canto con canto. La
+  // puerta deja un hueco de 2 celdas que el render simplemente NO incluye en ningún tramo (ver render.js).
+  // `tile` = variante de panal (por sala); si no, override de consola o el global WALL_TILE. El negro lo
+  // aportan el canvas (bg) y el propio tile (cada SVG trae su fondo): aquí NO se pinta nada a mano.
+  function flatWall(ctx, p, axis, fixed, c0, c1, col, tile) {
     const variant = tile || (typeof window !== "undefined" && window.__wall) || WALL_TILE;
-    fillWall(ctx, axis, A, B, Bt, At, a1 - a0, variant, col);
-    ctx.restore();
-    poly(ctx, CL, null, BLACK);          // recontorno limpio del sub-rango
+    const def = WALL_TILES[variant]; const tex = _wallTexture(variant, col);
+    if (!def || !tex) return;                        // aún cargando → nada (el muro queda negro: canvas bg)
+    ctx.imageSmoothingEnabled = false;
+    const flip = (axis === "y");
+    for (let i = c0; i + def.N <= c1 + 1e-6; i += def.N) {    // una tira por cada N celdas del tramo
+      const b = (axis === "x") ? p(i, fixed, 0) : p(fixed, i, 0);   // esquina inf-izq de la tira
+      const dx = Math.round(b.x + def.minX), dy = Math.round(b.y + def.minY);
+      if (!flip) ctx.drawImage(tex, dx, dy);
+      else { ctx.save(); ctx.translate(2 * b.x, 0); ctx.scale(-1, 1); ctx.drawImage(tex, dx, dy); ctx.restore(); }
+    }
   }
 
-  // Hueco negro de la puerta de FONDO. Lo usa drawDoorSprite: lo pinta detrás del marco "back".
-  function doorHole(ctx, p, axis, fixed, a0, a1, H, col) {
+  // VACÍO negro del vano de una puerta de FONDO (lo que se ve "a través"). Lo pinta render como
+  // PRE-PASE de fondo (junto al suelo, antes de las cajas con altura) para que NO tape al robot al
+  // cruzar: si fuese parte de la caja-puerta, su mayor altura ganaría el desempate del painter y su
+  // negro borraría al robot. El marco se compone después como caja normal.
+  function doorHole(ctx, p, axis, fixed, a0, a1, H) {
     const w = DOOR.POST_W, l = H - DOOR.LINTEL_H;
     if (axis === "x") poly(ctx, [p(a0 + w, fixed, l), p(a1 - w, fixed, l), p(a1 - w, fixed, 0), p(a0 + w, fixed, 0)], BLACK, null);
     else              poly(ctx, [p(fixed, a0 + w, l), p(fixed, a1 - w, l), p(fixed, a1 - w, 0), p(fixed, a0 + w, 0)], BLACK, null);
@@ -301,7 +275,7 @@ export const AP = (() => {
     socket:   (c, P, t, col) => socket(c, P, t.x, t.y, t.z, t.requires, t.filled, col),
     // Estructura (paramétrica): la sala la dibuja en su capa propia; estos drawers son para
     // PREVIEWS sueltos de la tool, dibujando una instancia de muestra a partir de la huella.
-    flatWall: (c, P, t, col) => { const a = ASSETS[t.asset]; flatWall(c, P, t.axis || "x", t.fixed || 0, t.a0 || 0, (t.a0 || 0) + a.foot.w, a.foot.h, col, t.asset); },
+    flatWall: (c, P, t, col) => { const a = ASSETS[t.asset]; flatWall(c, P, t.axis || "x", t.fixed || 0, t.a0 || 0, (t.a0 || 0) + a.foot.w, col, t.asset); },
     door:     (c, P, t, col) => { const a0 = t.a0 != null ? t.a0 : 1.5 - DOOR.SPAN_HALF, a1 = t.a1 != null ? t.a1 : 1.5 + DOOR.SPAN_HALF;
                                   door(c, P, t.axis || "x", t.fixed || 0, a0, a1, WALL_H, col, t.hole != null ? t.hole : true); },
   };
@@ -316,6 +290,6 @@ export const AP = (() => {
     INKS, INK2, ROBOT_INK, DIRS, ROBOT, BLACK, DOOR, PROP, darken, lighten,   // constantes + helpers
     projector, poly, box, facePt, edgeLine,                                   // primitivas de motor
     DRAWERS, drawAsset, drawSprite, SPRITES,                                  // API de dibujo genérica
-    floor, flatWall, door, cube, spikes, plant, robot, shadow, // primitivas usadas por nombre
+    floor, flatWall, door, doorHole, cube, spikes, plant, robot, shadow, // primitivas usadas por nombre
   };
 })();

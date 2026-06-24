@@ -28,7 +28,9 @@ export const PROP = { HALF: 0.33, H: 0.66 };
 export const ROBOT = { WID: 0.50, DEP: 0.33, H: 1.50 };
 // Puerta: grosor del marco (T), ancho de poste (POST_W), alto del dintel (LINTEL_H) y
 // semiancho del vano visual (SPAN_HALF). El hueco físico se deriva: SPAN_HALF − POST_W.
-export const DOOR = { T: 0.34, POST_W: 0.40, LINTEL_H: 0.46, SPAN_HALF: 1.12 };
+// SPAN_HALF = 1 → la puerta ocupa EXACTAMENTE 2 celdas: la pared se dibuja como módulos SVG
+// (pared·pared·PUERTA·pared·pared) sin recortes. Requiere salas de dimensión PAR (ver makeRoom).
+export const DOOR = { T: 0.34, POST_W: 0.40, LINTEL_H: 0.46, SPAN_HALF: 1.0 };
 // Zócalo (receptáculo): peana de 0.90×0.90 en planta (HALF) con una INDENTACIÓN cuadrada
 // (RECESS_HALF, hundida RECESS_DEPTH) que aloja el circuito. La peana es mayor que el circuito
 // (PROP.HALF) → queda un reborde alrededor. BASE_H = alto de la peana; se mantiene ≤ CFG.STEP

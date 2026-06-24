@@ -21,12 +21,15 @@ export function initView() {
    las closures de dibujo leen siempre el proyector vigente. */
 export let P = ENGINE.projector(ORIGIN.x, ORIGIN.y, POPT);
 
-/* Proyector centrado para una sala w×h: centra la huella del rombo y fija su centro
-   vertical, para que las salas rectangulares (pasillos) encajen igual. */
+/* Proyector para una sala w×h con MARCO FIJO 8×8 (tamaño máximo): el PICO frontal del suelo (esquina
+   w,h) se ancla SIEMPRE al centro-base del marco — x = W/2, y = base del 8×8. Así el marco del HUD (que
+   se dibuja sobre ese pico) queda centrado y estable, y las salas menores crecen hacia el FONDO desde
+   ese pico común en vez de flotar. Una sala 8×8 queda igual que antes. */
 export function projectorFor(r) {
-  const TW = CFG.TILE_W, TH = CFG.TILE_H;
-  const ox = CFG.W / 2 - (r.w - r.h) * TW / 4;   // centra el ancho del rombo
-  const oy = SCENE.PROJECTOR_OY - (r.w + r.h) * TH / 4 + SCENE.PROJECTOR_DROP;
+  const TW = CFG.TILE_W, TH = CFG.TILE_H, FRAME = 8;
+  const baseY = SCENE.PROJECTOR_OY + SCENE.PROJECTOR_DROP + FRAME * TH / 2;   // base del suelo del marco 8×8
+  const ox = CFG.W / 2 - (r.w - r.h) * TW / 2;                                // pico frontal en x = W/2
+  const oy = baseY - (r.w + r.h) * TH / 2;                                    // pico frontal en y = base
   return ENGINE.projector(ox, oy, POPT);
 }
 

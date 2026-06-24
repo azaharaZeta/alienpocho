@@ -7,8 +7,9 @@
    Cada sala:
      name         nombre mostrado en el HUD.
      paletteIndex índice en INKS/INK2 (palette.js) → color primario/secundario.
-     w, h         tamaño de la rejilla. Límites (los aplica makeRoom): w,h ∈ [3,13]
-                  y w+h ≤ 16, para que el rombo y el HUD quepan en pantalla.
+     w, h         tamaño de la rejilla: SOLO {4, 6, 8} (makeRoom acota a [4,8] y fuerza par, redondeo ↑).
+                  Así la puerta (2 de ancho) cae centrada en celda entera y la pared se dibuja como
+                  módulos SVG sin recorte. Valores impares o fuera de rango se ajustan al {4,6,8} más cercano ↑.
      exits        { xm, xp, ym, yp } → clave de la sala vecina al cruzar ese borde:
                     xm: x<0 (atrás-izq)   xp: x≥w (frente-dcha)
                     ym: y<0 (atrás-dcha)  yp: y≥h (frente-izq)
@@ -48,30 +49,30 @@ export const ROOMS = {
               { x: 3.5, y: 4.5, z: 1, shape: "cube" }],
     sockets: [{ cx: 5, cy: 5, z: 0, id: "e1", filled: null }] },
 
-  // GALERIA — pasillo ANCHO 9×3 (zigzag). Zócalo del CILINDRO.
-  "1,0": { name: "GALERIA", paletteIndex: 2, w: 9, h: 3,
+  // GALERIA — pasillo ANCHO 8×4 (zigzag). Zócalo del CILINDRO.
+  "1,0": { name: "GALERIA", paletteIndex: 2, w: 8, h: 4,
     exits: { xm: "0,0", xp: "2,0", yp: "1,1" },
-    objects: [{ asset: "cube", cx: 3, cy: 0 }, { asset: "cube", cx: 7, cy: 2 }],
+    objects: [{ asset: "cube", cx: 3, cy: 0 }, { asset: "cube", cx: 5, cy: 2 }],   // cx5cy2: fuera del vano de xp
     sockets: [{ cx: 5, cy: 0, z: 0, id: "gal", filled: null }] },
 
-  // NUDO — hub 5×5 (3 salidas). Zócalo del DOMO.
-  "2,0": { name: "NUDO", paletteIndex: 4, w: 5, h: 5,
+  // NUDO — hub 6×6 (3 salidas). Zócalo del DOMO.
+  "2,0": { name: "NUDO", paletteIndex: 4, w: 6, h: 6,
     exits: { xm: "1,0", xp: "3,0", ym: "2,-1" },
     sockets: [{ cx: 3, cy: 2, z: 0, id: "nudo", filled: null }] },
 
-  // CRUCE — 5×5 (bifurca). Laberinto.
-  "3,0": { name: "CRUCE", paletteIndex: 1, w: 5, h: 5,
+  // CRUCE — 6×6 (bifurca). Laberinto.
+  "3,0": { name: "CRUCE", paletteIndex: 1, w: 6, h: 6,
     exits: { xm: "2,0", xp: "4,0", yp: "3,1" },
     objects: [{ asset: "cube", cx: 2, cy: 1 }, { asset: "cube", cx: 4, cy: 3 }] },
 
-  // ARCHIVO — 4×5 (callejón). Zócalo del CUBO (#2).
-  "4,0": { name: "ARCHIVO", paletteIndex: 3, w: 4, h: 5,
+  // ARCHIVO — 4×6 (callejón). Zócalo del CUBO (#2).
+  "4,0": { name: "ARCHIVO", paletteIndex: 3, w: 4, h: 6,
     exits: { xm: "3,0" },
     objects: [{ asset: "cube", cx: 1, cy: 3 }],
     sockets: [{ cx: 2, cy: 2, z: 0, id: "a4", filled: null }] },
 
-  // POZO — 5×6 (callejón). Laberinto.
-  "1,1": { name: "POZO", paletteIndex: 5, w: 5, h: 6,
+  // POZO — 6×6 (callejón). Laberinto.
+  "1,1": { name: "POZO", paletteIndex: 5, w: 6, h: 6,
     exits: { ym: "1,0" },
     objects: [{ asset: "cube", cx: 1, cy: 2 }, { asset: "cube", cx: 3, cy: 4, h: 2 }] },
 
@@ -81,63 +82,63 @@ export const ROOMS = {
     objects: [{ asset: "cube", cx: 2, cy: 1 }, { asset: "cube", cx: 3, cy: 1 },
               { x: 3.5, y: 1.5, z: 1, shape: "pyramid" }] },
 
-  // DESVAN — 5×4 (callejón). Circuito PIRÁMIDE (#2) en plataforma → SALTO.
-  "1,-1": { name: "DESVAN", paletteIndex: 4, w: 5, h: 4,
+  // DESVAN — 6×4 (callejón). Circuito PIRÁMIDE (#2) en plataforma → SALTO.
+  "1,-1": { name: "DESVAN", paletteIndex: 4, w: 6, h: 4,
     exits: { xp: "2,-1" },
     objects: [{ asset: "cube", cx: 1, cy: 1 }, { asset: "cube", cx: 2, cy: 1 },
               { x: 2.5, y: 1.5, z: 1, shape: "pyramid" }] },
 
-  // VERTEDERO — pasillo 7×5 (laberinto + pinchos deco).
-  "3,1": { name: "VERTEDERO", paletteIndex: 5, w: 7, h: 5,
+  // VERTEDERO — pasillo 8×6 (laberinto + pinchos deco).
+  "3,1": { name: "VERTEDERO", paletteIndex: 5, w: 8, h: 6,
     exits: { ym: "3,0", xp: "4,1" },
     objects: [{ asset: "cube", cx: 1, cy: 2 }, { asset: "cube", cx: 3, cy: 4 }, { asset: "cube", cx: 2, cy: 1 }],
     hazards: [{ cx: 1, cy: 3 }] },
 
-  // REACTOR — 7×5 (callejón). Circuito DOMO en plataforma 2-alto → EMPUJA el bloque y SALTA.
-  "4,1": { name: "REACTOR", paletteIndex: 3, w: 7, h: 5,
+  // REACTOR — 8×6 (callejón). Circuito DOMO en plataforma 2-alto → EMPUJA el bloque y SALTA.
+  "4,1": { name: "REACTOR", paletteIndex: 3, w: 8, h: 6,
     exits: { xm: "3,1", yp: "4,2" },
     objects: [{ asset: "cube", cx: 4, cy: 1, h: 2 }, { asset: "cube", cx: 5, cy: 1, h: 2 },   // plataforma 2-alto
               { x: 4.5, y: 1.5, z: 2, shape: "dome" },                                          // circuito DOMO arriba
               { asset: "cube", x: 5.5, y: 3.5, traits: { movable: true, falls: true } }] },     // bloque EMPUJABLE
 
-  // SILO — 6×5 (callejón). Zócalo de la PIRÁMIDE (#2).
-  "4,2": { name: "SILO", paletteIndex: 0, w: 6, h: 5,
+  // SILO — 6×6 (callejón). Zócalo de la PIRÁMIDE (#2).
+  "4,2": { name: "SILO", paletteIndex: 0, w: 6, h: 6,
     exits: { ym: "4,1" },
     objects: [{ asset: "cube", cx: 4, cy: 3 }],
     sockets: [{ cx: 1, cy: 2, z: 0, id: "d3", filled: null }] },
 
-  // CONDUCTO — pasillo alto 4×9. Zócalo de la PIRÁMIDE.
-  "0,1": { name: "CONDUCTO", paletteIndex: 1, w: 4, h: 9,
+  // CONDUCTO — pasillo alto 4×8. Zócalo de la PIRÁMIDE.
+  "0,1": { name: "CONDUCTO", paletteIndex: 1, w: 4, h: 8,
     exits: { ym: "0,0", yp: "0,2" },
-    objects: [{ asset: "cube", cx: 1, cy: 2 }, { asset: "cube", cx: 2, cy: 6 }],
+    objects: [{ asset: "cube", cx: 1, cy: 2 }, { asset: "cube", cx: 2, cy: 5 }],
     sockets: [{ cx: 1, cy: 4, z: 0, id: "cond", filled: null }] },
 
-  // CISTERNA — 7×5 (laberinto + pinchos deco).
-  "0,2": { name: "CISTERNA", paletteIndex: 0, w: 7, h: 5,
+  // CISTERNA — 8×6 (laberinto + pinchos deco).
+  "0,2": { name: "CISTERNA", paletteIndex: 0, w: 8, h: 6,
     exits: { ym: "0,1", xp: "1,2" },
     objects: [{ asset: "cube", cx: 2, cy: 2 }, { asset: "cube", cx: 4, cy: 3, h: 2 }, { asset: "cube", cx: 1, cy: 3 }],
     hazards: [{ cx: 5, cy: 4 }] },
 
-  // TUBO — 5×6 (laberinto).
-  "1,2": { name: "TUBO", paletteIndex: 2, w: 5, h: 6,
+  // TUBO — 6×6 (laberinto).
+  "1,2": { name: "TUBO", paletteIndex: 2, w: 6, h: 6,
     exits: { xm: "0,2", xp: "2,2" },
     objects: [{ asset: "cube", cx: 1, cy: 2 }, { asset: "cube", cx: 2, cy: 4, h: 2 }] },
 
-  // BODEGA — 6×5. Circuito CILINDRO en plataforma 2-alto → SALTO DOBLE (peldaño fijo + plataforma).
-  "2,2": { name: "BODEGA", paletteIndex: 5, w: 6, h: 5,
+  // BODEGA — 6×6. Circuito CILINDRO en plataforma 2-alto → SALTO DOBLE (peldaño fijo + plataforma).
+  "2,2": { name: "BODEGA", paletteIndex: 5, w: 6, h: 6,
     exits: { xm: "1,2", xp: "3,2" },
     objects: [{ asset: "cube", cx: 1, cy: 1 },                                                 // peldaño 1-alto
               { asset: "cube", cx: 2, cy: 1, h: 2 }, { asset: "cube", cx: 3, cy: 1, h: 2 },   // plataforma 2-alto
               { x: 3.5, y: 1.5, z: 2, shape: "cylinder" }] },                                   // circuito CILINDRO arriba
 
-  // ESCLUSA — 5×6. Circuito CUBO (#2) en plataforma → SALTO.
-  "3,2": { name: "ESCLUSA", paletteIndex: 2, w: 5, h: 6,
+  // ESCLUSA — 6×6. Circuito CUBO (#2) en plataforma → SALTO.
+  "3,2": { name: "ESCLUSA", paletteIndex: 2, w: 6, h: 6,
     exits: { xm: "2,2", yp: "3,3" },
     objects: [{ asset: "cube", cx: 2, cy: 1 }, { asset: "cube", cx: 3, cy: 1 },
               { x: 3.5, y: 1.5, z: 1, shape: "cube" }] },
 
-  // FOSA — 5×5 (callejón final). Laberinto.
-  "3,3": { name: "FOSA", paletteIndex: 5, w: 5, h: 5,
+  // FOSA — 6×6 (callejón final). Laberinto.
+  "3,3": { name: "FOSA", paletteIndex: 5, w: 6, h: 6,
     exits: { ym: "3,2" },
     objects: [{ asset: "cube", cx: 1, cy: 2 }, { asset: "cube", cx: 3, cy: 3, h: 2 }] },
 };

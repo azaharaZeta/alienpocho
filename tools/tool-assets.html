@@ -86,10 +86,22 @@
   .actions button { background: var(--dim); color: #fff; border: none; border-radius: 5px; padding: 6px 12px;
     font-family: inherit; font-size: 13px; cursor: pointer; }
   .actions button:hover { background: var(--ink); color: #000; }
-  #cubeBtn.on { background: var(--ink2); color: #000; }
-  #cubeBtn:disabled, #regionBtn:disabled, #pointBtn:disabled { opacity: .4; cursor: not-allowed; }
-  #regionBtn.on { background: var(--ui2-dim, #4a5a3a); color: #fff; }
-  #pointBtn.on { background: var(--ink2); color: #000; }
+  /* Filtro por TRAIT (cabecera): chips con código de color por trait */
+  .filterrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 8px 0 2px; }
+  .filterrow .lbl { font-size: 11px; color: #8fb8c8; }
+  .chip { font-size: 10px; letter-spacing: .5px; font-family: inherit; cursor: pointer;
+    border: 1px solid currentColor; border-radius: 11px; padding: 2px 9px; background: transparent;
+    opacity: .55; transition: opacity .12s, background .12s; }
+  .chip:hover { opacity: .9; }
+  .chip.on { opacity: 1; background: color-mix(in srgb, currentColor 22%, transparent); font-weight: bold; }
+  .chip.clear { color: #8fb8c8; border-style: dashed; }
+
+  /* Lista de traits dentro del overlay (chips coloreados, solo lectura) */
+  .traits { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 10px; }
+  .traits .none { font-size: 11px; color: #6a8; }
+  .tchip { font-size: 10px; letter-spacing: .5px; border-radius: 10px; padding: 2px 9px;
+    border: 1px solid currentColor; background: color-mix(in srgb, currentColor 18%, transparent); }
+
 </style>
 </head>
 <body>
@@ -107,6 +119,7 @@
       <span class="palrow-lbl">paleta de sala:</span><div class="palette" id="palette"></div>
       <button id="createBtn">+ Crear SVG</button>
     </div>
+    <div class="filterrow" id="filterRow"><span class="lbl">filtrar por trait (y):</span></div>
   </header>
   <main id="catalog"></main>
 
@@ -116,6 +129,7 @@
         <h3 id="bigTitle"></h3>
         <button class="close" id="closeBtn" aria-label="cerrar">×</button>
       </div>
+      <div class="traits" id="traitList"></div>
       <div class="modal-body">
         <div class="left">
           <canvas id="bigCanvas"></canvas>
@@ -130,9 +144,6 @@
             <div id="svgMsg"></div>
             <textarea id="svgSrc" spellcheck="false" readonly></textarea>
             <div class="actions">
-              <button id="cubeBtn" title="cubo-contenedor EXACTO (ancho×largo×alto), color complementario">▢ Cubo de referencia</button>
-              <button id="regionBtn" title="región estándar = unidades naturales (ceil) que cubren el asset, secundario oscuro">▣ Región estándar</button>
-              <button id="pointBtn" title="punto de anclaje iso: dónde el juego ancla el sprite (píxel −minX,−minY)">● Punto de anclaje</button>
               <button id="dlPng">Descargar PNG (neutro)</button>
               <button id="dlSvg" hidden>Descargar SVG</button>
             </div>
@@ -146,10 +157,18 @@
 import { AP } from "../src/draw.js";
 import { INKS, INK2 } from "../src/palette.js";
 // FUENTE ÚNICA: la tool LEE todo del registro; no conoce nombres ni tipos de asset.
-import { ASSETS, assetBox, assetRef, assetFoot, assetRegion, assetsByGroup, assetViews, assetTint, assetTraits, WALL_H } from "../src/data/assets.js";
+import { ASSETS, assetRef, assetFoot, assetRegion, assetsByGroup, assetViews, assetTint, assetTraits } from "../src/data/assets.js";
 
 // 0-2: parejas base · 3-5: las mismas invertidas (ver src/palette.js)
 const NAMES = ["cian", "oliva", "magenta", "ámbar", "azul", "verde"];
+
+/* TRAITS: se DERIVAN del registro (unión de los `traits` de todos los assets) → la tool no los
+   hardcodea: aparece cualquier trait que exista en el código. Cada trait recibe un color por su
+   índice de una paleta variada (SOLO en esta tool, para identificarlos de un vistazo). */
+const ALL_TRAITS = [...new Set(Object.keys(ASSETS).flatMap(id => Object.keys(assetTraits(id))))].sort();
+const TRAIT_PALETTE = ["#ff6b6b", "#ffd93d", "#6bcb77", "#4d96ff", "#c77dff", "#ff9f45",
+                       "#2ec4b6", "#f78fb3", "#9b8cff", "#52d1dc", "#e0e060", "#ff7eb6"];
+const traitColor = t => TRAIT_PALETTE[Math.max(0, ALL_TRAITS.indexOf(t)) % TRAIT_PALETTE.length];
 
 /* CATÁLOGO GENÉRICO: toma todos los assets del registro agrupados por su `group`.
    Cada asset se dibuja con el motor genérico `AP.drawAsset`; el badge muestra sus
@@ -168,9 +187,16 @@ function makeItem(id) {
     },
   }));
   const a = ASSETS[id], traits = Object.keys(assetTraits(id));
+  const allFiles = a.files ? [a.files.svg, a.files.png, ...(a.extraFiles || [])].filter(Boolean) : [];
+  const svgFiles = allFiles.filter(f => /\.svg$/i.test(f));
+  // PNG por EXISTENCIA (no por el flag del registro): candidato = mismo basename que cada SVG (+ los
+  // .png que el registro declare). La tool intenta cargarlos y descarta los que no existan (onerror).
+  const pngFiles = [...new Set([...svgFiles.map(f => f.replace(/\.svg$/i, ".png")),
+                                ...allFiles.filter(f => /\.png$/i.test(f))])];
   return {
-    name: a.label || id, asset: id,
-    files: a.files ? [a.files.svg, ...(a.extraFiles || [])].filter(Boolean) : undefined,   // para el panel SVG
+    name: a.label || id, asset: id, traits,
+    files: svgFiles.length ? svgFiles : undefined,   // svg(s) para el panel de código fuente
+    svgFiles, pngFiles,                              // ficheros reales para el comparador SVG/PNG
     badge: traits.length ? traits.join(" · ") : undefined,
     views,
   };
@@ -189,45 +215,14 @@ function renderViewPixel(canvas, view, ink, ink2, nw, nh, zoom) {
 }
 
 /* Dibuja una vista a RESOLUCIÓN DE JUEGO (POPT real: tile 34×17, bloque 17), centrada en
-   (anchorX,anchorY). La vista grande del overlay es un zoom pixelado de esto. */
-function drawViewGame(ctx, anchorX, anchorY, view, ink, ink2, cube) {
+   (anchorX,anchorY). Lo usan las MINIATURAS del catálogo (motor genérico AP.drawAsset). */
+function drawViewGame(ctx, anchorX, anchorY, view, ink, ink2) {
   const c = view.center || { x: 0.5, y: 0.5, z: 0.6 };
   const TW = 34, TH = 17, BH = 17;
   const ox = anchorX - (c.x - c.y) * TW / 2;
   const oy = anchorY - (c.x + c.y) * TH / 2 + c.z * BH;
   const P = AP.projector(ox, oy, { TILE_W: TW, TILE_H: TH, BLOCK_H: BH });
   view.draw(ctx, P, ink, ink2);
-  if (cube) drawRefCube(ctx, P, cube.box, cube.color);   // cubo de referencia (mismo proyector → alineado)
-}
-
-/* Color del cubo de referencia: secundario de la paleta; azul en "sin paleta". */
-const complementColor = () => palIdx < 0 ? "#3aa0ff" : curInk2();
-/* Cubo-contenedor en alambre iso: AABB de mundo {x,y,z,w,l,h} proyectada por P. */
-function drawRefCube(ctx, P, b, color) {
-  const X0 = b.x, Y0 = b.y, Z0 = b.z, X1 = b.x + b.w, Y1 = b.y + b.l, Z1 = b.z + b.h;
-  const v = [[X0,Y0,Z0],[X1,Y0,Z0],[X1,Y1,Z0],[X0,Y1,Z0],[X0,Y0,Z1],[X1,Y0,Z1],[X1,Y1,Z1],[X0,Y1,Z1]].map(c => P(c[0], c[1], c[2]));
-  const edges = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
-  ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.globalAlpha = 0.9;
-  for (const [a, z] of edges) { ctx.beginPath(); ctx.moveTo(v[a].x, v[a].y); ctx.lineTo(v[z].x, v[z].y); ctx.stroke(); }
-  ctx.globalAlpha = 1;
-}
-
-/* Región estándar contenedora: ceil de cada dimensión (mín. 1), alineada a celdas. */
-const regionColor = () => AP.darken(curInk2(), 0.45);
-const pointColor = () => palIdx < 0 ? "#cfe9ff" : AP.lighten(curInk2(), 0.45);   // punto de anclaje: secundario brillante
-function regionOf(b) {
-  const x0 = Math.floor(b.x), x1 = Math.max(x0 + 1, Math.ceil(b.x + b.w));
-  const y0 = Math.floor(b.y), y1 = Math.max(y0 + 1, Math.ceil(b.y + b.l));
-  const z0 = Math.floor(b.z), z1 = Math.max(z0 + 1, Math.ceil(b.z + b.h));
-  return { x: x0, y: y0, z: z0, w: x1 - x0, l: y1 - y0, h: z1 - z0 };
-}
-/* BBox en pantalla de las 8 esquinas de una caja de mundo, vía proyector P. */
-function boxBBox(b, P) {
-  const X1 = b.x + b.w, Y1 = b.y + b.l, Z1 = b.z + b.h;
-  const cs = [[b.x,b.y,b.z],[X1,b.y,b.z],[X1,Y1,b.z],[b.x,Y1,b.z],[b.x,b.y,Z1],[X1,b.y,Z1],[X1,Y1,Z1],[b.x,Y1,Z1]].map(p => P(p[0],p[1],p[2]));
-  let mnx = 1e9, mny = 1e9, mxx = -1e9, mxy = -1e9;
-  for (const p of cs) { mnx = Math.min(mnx, p.x); mny = Math.min(mny, p.y); mxx = Math.max(mxx, p.x); mxy = Math.max(mxy, p.y); }
-  return { minx: mnx, miny: mny, w: mxx - mnx, h: mxy - mny };
 }
 
 /* ---------- Estado global de PALETA (afecta a miniaturas y overlay) ---------- */
@@ -242,40 +237,24 @@ function renderThumb(canvas, item) {
   renderViewPixel(canvas, item.views[0], curInk(), curInk2(), THUMB_NW, THUMB_NH, THUMB_ZOOM);   // escala común
 }
 
-/* GU (celdas), BOX (AABB de mundo) y REF (punto de anclaje) se LEEN del registro por el
-   `asset` id (y por `variant` en vistas con orientación). Cero geometría en la tool. */
+/* GU (celdas) se LEE del registro por el `asset` id → para el cuadro informativo del overlay. */
 for (const g of GROUPS) for (const it of g.items) {
-  if (!it.asset || !ASSETS[it.asset]) continue;
-  const f = assetFoot(it.asset);
+  const f = ASSETS[it.asset] && assetFoot(it.asset);
   if (f) it.gu = { w: f.w, l: f.l, h: f.h };
-  it.box = assetBox(it.asset);     // representativa (habilita botones cubo/región)
-  it.ref = assetRef(it.asset);     // representativa (habilita botón punto de anclaje)
-  for (const v of it.views) if (v.variant) { v.box = assetBox(it.asset, v.variant); v.ref = assetRef(it.asset, v.variant); }
 }
 
-/* ===================== ESCALA COMÚN (px por unidad de juego constante) =====================
-   Todos los assets se dibujan a la misma escala (proyección nativa × un zoom entero único),
-   así una celda mide los mismos píxeles en cualquier asset. El zoom se elige para que el asset
-   más grande (su región) quepa en ~BIG_TARGET px. */
-const P_NATIVE = AP.projector(0, 0, { TILE_W: 34, TILE_H: 17, BLOCK_H: 17 });
-let _maxDim = 1;
-for (const g of GROUPS) for (const it of g.items) {
-  if (!it.box) continue;
-  const boxes = (it.views || []).map(v => v.box).filter(Boolean);
-  for (const b of (boxes.length ? boxes : [it.box])) {
-    const bb = boxBBox(regionOf(b), P_NATIVE); _maxDim = Math.max(_maxDim, bb.w, bb.h);
-  }
-}
-const BIG_TARGET = 380;                                       // lado mayor del asset más grande, en px de pantalla
-const BIG_ZOOM = Math.max(1, Math.floor(BIG_TARGET / (_maxDim + 8)));   // ZOOM ÚNICO del popup (+8 = margen de celda)
-const THUMB_ZOOM = 2;                                         // ZOOM ÚNICO de las miniaturas (escala nativa ×2)
-const THUMB_NW = 84, THUMB_NH = 72;                           // celda nativa común de las miniaturas
+/* Escala de las MINIATURAS: proyección nativa × zoom entero (celda igual en todos los assets). */
+const THUMB_ZOOM = 2;
+const THUMB_NW = 84, THUMB_NH = 72;
 
 const catalog = document.getElementById("catalog");
-const thumbs = [];   // {canvas, item} → para recolorear al cambiar de paleta
+const thumbs = [];     // {canvas, item} → para recolorear al cambiar de paleta
+const tileEls = [];    // {el, item} → para filtrar por trait
+const groupEls = [];   // {header, grid} → ocultar grupos sin tiles visibles
 for (const g of GROUPS) {
   const h = document.createElement("h2"); h.textContent = g.title; catalog.appendChild(h);
   const grid = document.createElement("div"); grid.className = "grid"; catalog.appendChild(grid);
+  groupEls.push({ header: h, grid });
   for (const item of g.items) {
     const tile = document.createElement("button"); tile.className = "tile";
     const cv = document.createElement("canvas"); cv.width = 150; cv.height = 120;
@@ -286,8 +265,34 @@ for (const g of GROUPS) {
     tile.addEventListener("click", () => openOverlay(item));
     grid.appendChild(tile);
     thumbs.push({ canvas: cv, item });
+    tileEls.push({ el: tile, item });
   }
 }
+
+/* ---------- FILTRO POR TRAIT (chips coloreados en la cabecera; AND entre los activos) ---------- */
+const filterRow = document.getElementById("filterRow");
+const activeTraits = new Set();
+function applyFilter() {
+  for (const { el, item } of tileEls)
+    el.style.display = [...activeTraits].every(t => item.traits.includes(t)) ? "" : "none";
+  for (const { header, grid } of groupEls) {
+    const any = [...grid.children].some(c => c.style.display !== "none");
+    header.style.display = grid.style.display = any ? "" : "none";
+  }
+}
+for (const t of ALL_TRAITS) {
+  const chip = document.createElement("button"); chip.className = "chip"; chip.textContent = t;
+  chip.style.color = traitColor(t);
+  chip.addEventListener("click", () => {
+    chip.classList.toggle("on"); activeTraits.has(t) ? activeTraits.delete(t) : activeTraits.add(t); applyFilter();
+  });
+  filterRow.appendChild(chip);
+}
+const clearChip = document.createElement("button"); clearChip.className = "chip clear"; clearChip.textContent = "✕ todos";
+clearChip.addEventListener("click", () => {
+  activeTraits.clear(); filterRow.querySelectorAll(".chip.on").forEach(c => c.classList.remove("on")); applyFilter();
+});
+filterRow.appendChild(clearChip);
 
 // Re-render diferido: sprites y tiles de pared cargan async → repinta cuando estén listos.
 setTimeout(() => thumbs.forEach(t => renderThumb(t.canvas, t.item)), 500);
@@ -297,10 +302,19 @@ const overlay = document.getElementById("overlay");
 const bigCanvas = document.getElementById("bigCanvas");
 const bigTitle = document.getElementById("bigTitle");
 const swatches = document.getElementById("swatches");
+const traitList = document.getElementById("traitList");
+
+/* Lista de traits del asset (chips coloreados, mismo código de color que el filtro). */
+function fillTraits(item) {
+  traitList.innerHTML = "";
+  const ts = (item && item.traits) || [];
+  if (!ts.length) { traitList.innerHTML = '<span class="none">(sin traits)</span>'; return; }
+  for (const t of ts) {
+    const s = document.createElement("span"); s.className = "tchip"; s.textContent = t; s.style.color = traitColor(t);
+    traitList.appendChild(s);
+  }
+}
 let curItem = null, curMode = "view";   // "view" = asset existente · "create" = SVG nuevo editable
-let showCube = false;                    // cubo-contenedor exacto (ancho×largo×alto)
-let showRegion = false;                  // región estándar = ceil de cada dim
-let showPoint = false;                   // punto de anclaje iso (donde el juego ancla el sprite)
 
 /* Teñido (multiply) de una silueta gris a la tinta de sala — para comparar SVG vs PNG. */
 function tintSrc(src, ink) {
@@ -311,67 +325,64 @@ function tintSrc(src, ink) {
   x.globalCompositeOperation = "destination-in"; x.drawImage(src, 0, 0);
   return c;
 }
-/* Render por VISTAS (px de juego + zoom NN). Con caja, el marco se dimensiona al
-   cubo-contenedor; el cubo se dibuja sólo si withCube. Sin caja → 96×96. */
-function renderViews(item, withCube, withRegion, withPoint) {
-  const views = item.views, n = views.length, box = item.box;
-  const TW = 34, TH = 17, BH = 17, P0 = AP.projector(0, 0, { TILE_W: TW, TILE_H: TH, BLOCK_H: BH });
-  // box/ref pueden ser POR VISTA (p. ej. puerta eje x / eje y).
-  const vbox = v => v.box || box, vref = v => v.ref || item.ref;
-  let cw, ch, bbs = null;
-  const ZOOM = BIG_ZOOM;                                    // zoom único (escala común)
-  if (box) {
-    // bbox de la región de cada vista; la celda = la mayor → encaja todas las vistas.
-    bbs = views.map(v => boxBBox(regionOf(vbox(v)), P0));
-    const maxW = Math.max(...bbs.map(b => b.w)), maxH = Math.max(...bbs.map(b => b.h)), nm = 4;
-    cw = Math.ceil(maxW) + 2 * nm; ch = Math.ceil(maxH) + 2 * nm;
-  } else {
-    cw = 96; ch = 96;
+/* Carga (cacheada en item._rasters) los RASTERS neutros de los ficheros del asset: SVG (rasterizado
+   a su tamaño nativo) y PNG (si existe en disco; por EXISTENCIA, no por flag del registro). */
+function loadImgCanvas(url) {
+  return new Promise(res => { const i = new Image();
+    i.onload = () => { const c = document.createElement("canvas"); c.width = i.naturalWidth; c.height = i.naturalHeight;
+      c.getContext("2d").drawImage(i, 0, 0); res(c); };
+    i.onerror = () => res(null); i.src = url; });
+}
+async function ensureRasters(item) {
+  if (item._rasters) return item._rasters;
+  const out = [];
+  for (const f of (item.svgFiles || [])) {
+    try { const txt = await fetch("/assets/svg/" + f + "?cb=" + Date.now()).then(r => r.ok ? r.text() : Promise.reject());
+      const [w, h] = svgSize(txt); out.push({ kind: "SVG", file: f, raster: await rasterizeSVG(txt, w, h) }); } catch (e) {}
   }
-  const colW = cw * ZOOM, H = ch * ZOOM + 30;              // +30 para la etiqueta
-  bigCanvas.width = n * colW; bigCanvas.height = H;
-  const c = bigCanvas.getContext("2d");
-  c.fillStyle = "#000"; c.fillRect(0, 0, bigCanvas.width, H);
-  const ink = curInk(), ink2 = curInk2();
-  const cubeC = (withCube && box) ? complementColor() : null;
-  const regC = (withRegion && box) ? regionColor() : null;
-  const ptC = (withPoint && box) ? pointColor() : null;
-  views.forEach((v, i) => {
-    const cell = document.createElement("canvas"); cell.width = cw; cell.height = ch;
-    const cx = cell.getContext("2d");
-    let P;
-    if (box) {
-      const b = vbox(v), bb = bbs[i];                      // origen que centra esta vista en la celda
-      const ox = Math.round((cw - bb.w) / 2) - bb.minx, oy = Math.round((ch - bb.h) / 2) - bb.miny;
-      P = AP.projector(ox, oy, { TILE_W: TW, TILE_H: TH, BLOCK_H: BH });
-      if (regC) drawRefCube(cx, P, regionOf(b), regC);     // región estándar (detrás)
-      v.draw(cx, P, ink, ink2);
-      if (cubeC) drawRefCube(cx, P, b, cubeC);             // cubo exacto (delante)
-    } else drawViewGame(cx, cw / 2, ch * 0.56, v, ink, ink2, null);
-    c.imageSmoothingEnabled = false;
-    c.drawImage(cell, i * colW, 0, colW, ch * ZOOM);
-    const rf = vref(v);
-    if (ptC && P && rf) {                                  // punto de anclaje iso: marcador sobre el canvas final
-      const pr = P(rf.x, rf.y, rf.z), fx = i * colW + pr.x * ZOOM, fy = pr.y * ZOOM;
-      c.beginPath(); c.arc(fx, fy, 5, 0, Math.PI * 2); c.fillStyle = ptC; c.fill();
-      c.lineWidth = 1.5; c.strokeStyle = "#000"; c.stroke();
-    }
-    c.fillStyle = ink; c.font = "14px 'Courier New', monospace"; c.textAlign = "center"; c.textBaseline = "alphabetic";
-    c.fillText(v.label, colW * (i + 0.5), H - 10);
-  });
+  for (const f of (item.pngFiles || [])) {                 // si el PNG no está en disco, loadImgCanvas → null y se omite
+    const c = await loadImgCanvas("/assets/png/" + f + "?cb=" + Date.now()); if (c) out.push({ kind: "PNG", file: f, raster: c });
+  }
+  return item._rasters = out;
 }
 
-function renderBig() {
-  if (!curItem) return;
-  renderViews(curItem, showCube, showRegion, showPoint);
+/* FORMATO GRANDE ×2: cada fichero (SVG y PNG) grande y TEÑIDO con la paleta, uno bajo otro,
+   etiquetado con su tipo (verde=SVG, azul=PNG). Sin paleta (palIdx<0) → neutro. */
+const KIND_COL = { SVG: "#6bcb77", PNG: "#4d96ff" };
+function drawBigFiles(item) {
+  const c = bigCanvas.getContext("2d"), rs = item._rasters || [], neutral = palIdx < 0;
+  if (!rs.length) {                                         // asset procedural (sin ficheros)
+    bigCanvas.width = 280; bigCanvas.height = 80;
+    c.fillStyle = "#000"; c.fillRect(0, 0, bigCanvas.width, bigCanvas.height);
+    c.fillStyle = "#6a8"; c.font = "12px 'Courier New', monospace"; c.textAlign = "center"; c.textBaseline = "middle";
+    c.fillText("(sin ficheros — asset procedural)", bigCanvas.width / 2, bigCanvas.height / 2);
+    c.textAlign = "left"; c.textBaseline = "alphabetic"; return;
+  }
+  const maxW = Math.max(...rs.map(r => r.raster.width));
+  const ZOOM = Math.max(2, Math.min(8, Math.floor(220 / maxW)));   // grande, capado para no desbordar el popup
+  const lblH = 22, pad = 10;
+  bigCanvas.width = maxW * ZOOM + pad * 2;
+  bigCanvas.height = pad + rs.reduce((s, r) => s + lblH + r.raster.height * ZOOM + pad, 0);
+  c.fillStyle = "#000"; c.fillRect(0, 0, bigCanvas.width, bigCanvas.height);
+  c.imageSmoothingEnabled = false;
+  let y = pad;
+  for (const r of rs) {
+    c.fillStyle = KIND_COL[r.kind]; c.font = "bold 13px 'Courier New', monospace"; c.textAlign = "left"; c.textBaseline = "top";
+    c.fillText(r.kind + " · " + r.file, pad, y); y += lblH;
+    c.drawImage(neutral ? r.raster : tintSrc(r.raster, curInk()), pad, y, r.raster.width * ZOOM, r.raster.height * ZOOM);
+    y += r.raster.height * ZOOM + pad;
+  }
+  c.textBaseline = "alphabetic";
+}
+async function renderBig() {
+  if (!curItem || curMode !== "view") return;
+  await ensureRasters(curItem);
+  if (curItem && curMode === "view") drawBigFiles(curItem);
 }
 function openOverlay(item) {
   curMode = "view"; curItem = item;
-  showCube = false; showRegion = false; showPoint = false;
-  cubeBtn.classList.remove("on"); regionBtn.classList.remove("on"); pointBtn.classList.remove("on");
-  cubeBtn.disabled = !item.box; regionBtn.disabled = !item.box; pointBtn.disabled = !item.ref;   // referencias sólo si hay datos
-  bigTitle.textContent = item.name; renderBig(); setupSvgPane(item); overlay.classList.add("open");
-  if (item.box) setTimeout(() => { if (curItem === item) renderBig(); }, 350);   // repinta cuando cargue el sprite (async)
+  bigTitle.textContent = item.name; fillTraits(item);
+  renderBig(); setupSvgPane(item); overlay.classList.add("open");   // renderBig carga los ficheros (async) y los pinta
 }
 function closeOverlay() { overlay.classList.remove("open"); }
 document.getElementById("closeBtn").addEventListener("click", closeOverlay);
@@ -418,15 +429,7 @@ const dlPng = document.getElementById("dlPng");
 const dlSvg = document.getElementById("dlSvg");
 const infoGU = document.getElementById("infoGU");
 const infoPX = document.getElementById("infoPX");
-const cubeBtn = document.getElementById("cubeBtn");
-const regionBtn = document.getElementById("regionBtn");
-const pointBtn = document.getElementById("pointBtn");
 let paneSvgText = null, paneBaseName = "asset";
-
-// Toggles independientes: cubo exacto · región estándar · punto de anclaje iso
-cubeBtn.addEventListener("click", () => { showCube = !showCube; cubeBtn.classList.toggle("on", showCube); renderBig(); });
-regionBtn.addEventListener("click", () => { showRegion = !showRegion; regionBtn.classList.toggle("on", showRegion); renderBig(); });
-pointBtn.addEventListener("click", () => { showPoint = !showPoint; pointBtn.classList.toggle("on", showPoint); renderBig(); });
 
 // Cuadros informativos
 const numFmt = n => (n == null) ? "?" : (Math.round(n * 100) / 100);
@@ -498,10 +501,8 @@ async function setupSvgPane(item) {
 // Modo CREAR: popup con el cubo por defecto editable + preview en vivo + descargar svg/png.
 function openCreate() {
   curMode = "create"; curItem = null;
-  showCube = false; showRegion = false; showPoint = false;
-  cubeBtn.classList.remove("on"); regionBtn.classList.remove("on"); pointBtn.classList.remove("on");
-  cubeBtn.disabled = true; regionBtn.disabled = true; pointBtn.disabled = true;   // crear: sin datos de juego → sin referencias
   bigTitle.textContent = "Crear SVG (cubo 1×1×1, tamaño de juego)";
+  fillTraits(null);                                    // un SVG nuevo no tiene traits
   svgSrc.style.display = ""; dlPng.style.display = ""; dlSvg.hidden = false; svgSrc.readOnly = false;
   svgMsg.textContent = "Edita el SVG (tamaño fijo del juego, del viewBox). El preview muestra la silueta NEUTRA (lo que se exporta) y cómo queda teñida con la paleta. «Descargar» baja el .svg y el .png NEUTRO.";
   svgSrc.value = DEFAULT_SVG; paneSvgText = DEFAULT_SVG; paneBaseName = "asset";

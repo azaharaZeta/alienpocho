@@ -10,8 +10,8 @@
    mapa (nº de zócalos colocables). Este es el hogar de metas más ricas a futuro (dependencias
    entre puzzles, hitos de historia, gating de puertas).
 
-   "Qué circuito pide cada zócalo" NO vive aquí: es dato de instancia del zócalo (data/rooms.js,
-   campo `requires`), porque va ligado a su posición. Aquí vive la CONDICIÓN GLOBAL de victoria.
+   Aquí vive también QUÉ circuito pide cada zócalo (`MISSION.requires`, por el `id` del zócalo en
+   data/rooms.js) y el ARRANQUE del robot (`MISSION.start`): la misión decide cómo va el juego.
 
    Módulo HOJA y PURO: sin imports ni DOM; recibe los datos por parámetro (corre en Node/tests).
    ============================================================================= */
@@ -30,7 +30,7 @@ export const MISSION = {
 };
 
 /* Nº de objetivos del puzzle = zócalos colocables en TODO el mundo. Fuente única del total de
-   circuitos a colocar (mata el antiguo `circuitsTotal` hardcodeado). */
+   circuitos a colocar (derivado del mapa, no hardcodeado). */
 export function missionTotal(rooms) {
   let n = 0;
   for (const r of Object.values(rooms)) n += (r.sockets || []).length;

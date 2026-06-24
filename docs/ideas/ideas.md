@@ -52,13 +52,12 @@ Convenio de nombres: usar minúsculas y guiones en lugar de espacios para `<titu
 
 
 ## IDEAS USUARIA
-- En la tool de assets: Permitir filtrar por trait. En la vista de asset, listar los traits. Usar un código de colores para los traits (solo en esta tool). NO hardcodear los traits en la tool, traerlos, y meterles colores distintos de una lista de colores variados, sin más.
-- Refactor: Limitar el ancho y largo de las habitaciones a enter 3 y 8 solo. Centrar siempre la sala dentro del mismo marco 8x8.
+- cambiar en assets.js  files: { svg: "<filename>.svg", png: <filename>.png } por algo tipo  filename: <filename> . solo se necesitaría saber el nombre del fichero, y luego buscarlo por la extensión png, y si no existe, por la svg
+- Centrar siempre la sala dentro del mismo marco 8x8.
+- el robot debería poder empujar los objetos que se encuentre en mitad de un salto
 
-
-- Mejorar el mini mapa: zonas un poco más claras, bordes ok.
 - Esta es gorda: convertir el juego en un roguelike. Cada run, mapa random, ubicaciones random.
 - Todos los objetos deberían usar la misma lógica de posicionamento, tanto si son movibles como si no. Ahora mismo creo que  los objetos se posicionan en el centro del tile, pero los bloques  van en un extremo del tile, con dibujado distinto. Implementar que algunos bloques sí sean movibles, empujándolos.
 ## 🐞 BUGS CONOCIDOS
-
 - `floor` declara `files.svg: "example.svg"` pero se dibuja procedural (`draw:"floor"`) → es un SVG declarado que no se usa. Decidir: quitar la declaración, o dibujar el suelo desde fichero como el resto de sprites.
+- con un salto alto, el robot puede atravesar el marco superior de la puerta. Debería chocar y caer

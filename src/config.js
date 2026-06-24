@@ -76,6 +76,6 @@ export { PROP, ROBOT, DOOR, SOCKET, WALL_H } from "./data/assets.js";
 // En consola: window.__wall para comparar.
 export const WALL_TILE = "wall1";
 
-// Encuadre de escena: el proyector por sala centra el rombo en PROJECTOR_OY y baja
-// la escena PROJECTOR_DROP px.
+// Encuadre de escena (ver view.projectorFor): define la BASE del suelo del marco fijo 8×8 a la que se
+// ancla la esquina frontal de toda sala. PROJECTOR_DROP baja la escena unos px.
 export const SCENE = { PROJECTOR_OY: 134, PROJECTOR_DROP: 20 };

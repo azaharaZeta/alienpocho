@@ -68,14 +68,14 @@
   {
     "name": "Puerta (frente)",
     "file": "door_front.svg",
-    "w": 45,
-    "h": 74
+    "w": 40,
+    "h": 71
   },
   {
     "name": "Puerta (fondo)",
     "file": "door_back.svg",
-    "w": 44,
-    "h": 74
+    "w": 40,
+    "h": 71
   },
   {
     "name": "Ejemplo (marca de suelo)",

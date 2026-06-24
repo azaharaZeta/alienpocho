@@ -33,24 +33,31 @@ export function render(room) {
     for (let x = 0; x < room.w; x++)
       AP.floor(ctx, P, x, y, ink);
 
+  // 1b) VACÍO de las puertas de FONDO: el negro que se ve por el vano va AL FONDO (como el suelo,
+  //     antes de cualquier caja con altura) para que el robot se pinte ENCIMA al cruzar. El marco se
+  //     compone luego como caja normal (su vano es transparente). Ver AP.doorHole.
+  if (room.exits.ym) { const [s0, s1] = doorSpan(room.w); AP.doorHole(ctx, P, "x", 0, s0, s1, WH); }
+  if (room.exits.xm) { const [s0, s1] = doorSpan(room.h); AP.doorHole(ctx, P, "y", 0, s0, s1, WH); }
+
   // 2) TODO lo que tiene altura va como CAJAS al painter (cáscara + colocable + entidades) para que
   //    el orden atrás→adelante lo decida depthSort. Nada se pinta fuera de orden.
   const draws = [];
   const box3 = (x0, y0, z0, x1, y1, z1, draw) => draws.push({ x0, y0, z0, x1, y1, z1, draw });
 
-  // 2a) CÁSCARA del FONDO (paredes x=0 / y=0). Cada pared se PARTE por su vano en tramos, y la puerta
-  //     de fondo es un objeto 3D que RETROCEDE tras el plano del muro (inset y<0 / x<0): así depthSort
-  //     pinta primero la puerta y encima el tramo de muro contiguo → el muro TAPA el marco lateral
-  //     exterior de la puerta (su "grosor hacia atrás"), que en el suelo cae detrás de la pared.
+  // 2a) CÁSCARA del FONDO (paredes x=0 / y=0). MÓDULOS: la pared se parte por su vano en tramos de
+  //     celdas ENTERAS (la puerta ocupa 2 celdas exactas, dims pares ⇒ el vano cae en celda entera), y
+  //     cada tramo se TESELA tira a tira sin recorte. La puerta de fondo es un objeto 3D que RETROCEDE
+  //     tras el plano del muro (inset y<0 / x<0): depthSort pinta primero la puerta y encima el tramo
+  //     contiguo → el muro TAPA el marco lateral exterior de la puerta.
   const wallSegs = (n, span) => span ? [[0, span[0]], [span[1], n]] : [[0, n]];
   // pared y=0 (atrás-dcha) + su puerta ym
   for (const [c0, c1] of wallSegs(room.w, room.exits.ym ? doorSpan(room.w) : null))
-    if (c1 > c0) box3(c0, 0, 0, c1, 0, WH, () => AP.flatWall(ctx, P, "x", 0, 0, room.w, WH, ink, room.wallTile, [c0, c1]));
+    if (c1 > c0) box3(c0, 0, 0, c1, 0, WH, () => AP.flatWall(ctx, P, "x", 0, c0, c1, ink, room.wallTile));
   if (room.exits.ym) { const [s0, s1] = doorSpan(room.w);
     box3(s0, -D.T, 0, s1, 0, WH, () => AP.door(ctx, P, "x", 0, s0, s1, WH, ink, true)); }
   // pared x=0 (atrás-izq) + su puerta xm
   for (const [c0, c1] of wallSegs(room.h, room.exits.xm ? doorSpan(room.h) : null))
-    if (c1 > c0) box3(0, c0, 0, 0, c1, WH, () => AP.flatWall(ctx, P, "y", 0, 0, room.h, WH, ink, room.wallTile, [c0, c1]));
+    if (c1 > c0) box3(0, c0, 0, 0, c1, WH, () => AP.flatWall(ctx, P, "y", 0, c0, c1, ink, room.wallTile));
   if (room.exits.xm) { const [s0, s1] = doorSpan(room.h);
     box3(-D.T, s0, 0, 0, s1, WH, () => AP.door(ctx, P, "y", 0, s0, s1, WH, ink, true)); }
 
@@ -137,15 +144,14 @@ function drawMiniRobot(cx, cy, col) {
   ctx.restore();
 }
 /* MINIMAPA: visión cenital. Cada sala es su rectángulo w×h en coords de mundo (wx,wy),
-   a escala fija, centrado en la sala actual; se recorta al viewport. */
-// Sala ancha (w>h) → mapa a la DERECHA; alta o cuadrada → a la IZQUIERDA (zona libre del HUD).
-function minimapOnRight() { return room.w > room.h; }
-
+   a escala fija, centrado en la sala actual; se recorta al viewport.
+   POSICIÓN FIJA: el minimapa va SIEMPRE a la DERECHA y la UI/marcador a la IZQUIERDA. Como las salas
+   se encajan en un marco fijo (mismo pico central), los huecos de las esquinas ya no cambian. */
 function drawMinimap() {
   if (room.wx === undefined) return;
   const ink = room.ink, ink2 = room.ink2 || ink;
   const MM = 45, oy = 18;                   // viewport cuadrado (oy deja hueco al nombre encima)
-  const ox = minimapOnRight() ? (CFG.W - MM - 8) : 8;
+  const ox = CFG.W - MM - 8;                // SIEMPRE a la derecha
   const WS = 26, sc = MM / WS, INS = 0.6;   // INS: medio hueco entre salas (= pared)
   const ccx = room.wx + room.w / 2, ccy = room.wy + room.h / 2;   // centro de la sala actual
   const toX = wx => ox + MM / 2 + (wx - ccx) * sc, toY = wy => oy + MM / 2 + (wy - ccy) * sc;
@@ -178,11 +184,10 @@ function drawMinimap() {
   }
   ctx.restore();
 
-  // Nombre de la sala encima del minimapa, alineado a su borde, en secundario.
+  // Nombre de la sala encima del minimapa (a la derecha), alineado a su borde derecho, en secundario.
   if (room.name) {
     ctx.fillStyle = ink2; ctx.font = "10px 'Courier New', monospace"; ctx.textBaseline = "top";
-    if (minimapOnRight()) { ctx.textAlign = "right"; ctx.fillText(room.name, ox + MM + 4, oy - 16); }
-    else { ctx.textAlign = "left"; ctx.fillText(room.name, ox - 4, oy - 16); }
+    ctx.textAlign = "right"; ctx.fillText(room.name, ox + MM + 4, oy - 16);
     ctx.textAlign = "left";
   }
 }
@@ -210,10 +215,10 @@ function drawHUD() {
   ctx.moveTo(W - 6, rightTopY); ctx.lineTo(vx, vy);   // arista derecha
   ctx.stroke();
 
-  // ── MARCADOR en el triángulo mayor (el opuesto al minimapa). El triángulo se ensancha hacia
-  //    abajo: la fila inferior (más ancha) lleva el título; las de arriba, los iconos.
-  const onRight = !minimapOnRight();
-  const PAD = 20, ax = onRight ? W - PAD : PAD;        // borde de anclaje (margen dentro del marco)
+  // ── MARCADOR: SIEMPRE a la IZQUIERDA (el minimapa va fijo a la derecha). El triángulo se ensancha
+  //    hacia abajo: la fila inferior (más ancha) lleva el título; las de arriba, los iconos.
+  const onRight = false;                               // marcador anclado a la izquierda
+  const PAD = 20, ax = PAD;                            // borde de anclaje (margen dentro del marco)
   const dy = 20, yTitle = 222, yCirc = yTitle - dy, yLife = yCirc - dy;
 
   drawTitle(ax, yTitle, onRight);                                  // título "ALIEN POCHO"

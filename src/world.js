@@ -18,12 +18,13 @@ import { ASSETS, assetBox, assetRef, socketTop, propAsset, assetHas } from "./da
 /* Construye una sala a partir de su definición (datos).
    Límites de tamaño: ancho/largo ∈ [3,13] y ancho+largo ≤ 16 (para que el rombo y el HUD
    siempre quepan en pantalla). Se recortan si se exceden.
-   Clona blocks/objects/sockets/hazards (y sus elementos): se mutan en partida (empujar/coger,
+   Clona objects/sockets/hazards (y sus elementos): se mutan en partida (empujar/coger,
    activar zócalos) y `resetGame` reconstruye el mundo; sin clonar arrastraría estado. */
 export function makeRoom(o) {
-  let w = Math.min(13, Math.max(3, o.w || 8));
-  let h = Math.min(13, Math.max(3, o.h || 8));
-  if (w + h > 16) { if (w >= h) w = 16 - h; else h = 16 - w; }
+  // Dimensiones en {4,6,8}: PARES (redondeo ↑) y acotadas a [4,8]. Así la puerta (2 de ancho) cae
+  // SIEMPRE centrada en celda entera → la pared se dibuja como módulos SVG sin recorte (ver draw.flatWall).
+  let w = Math.min(8, Math.max(4, o.w || 8)); w += w & 1;
+  let h = Math.min(8, Math.max(4, o.h || 8)); h += h & 1;
   return {
     w, h,
     objects: (o.objects || []).map(e => ({ ...e })),   // ÚNICA cubeta de lo colocable no-estructural (bloques + móviles)
