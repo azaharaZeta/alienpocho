@@ -16,7 +16,7 @@
 import { ENGINE } from "./engine.js";
 import { INKS, INK2, ROBOT_INK } from "./palette.js";
 import { DOOR, PROP, ROBOT, SOCKET, ASSET_USE_PNG, WALL_TILE } from "./config.js";
-import { ASSETS, WALL_H } from "./data/assets.js";   // FUENTE ÚNICA: encuadre de sprites + altura de pared
+import { ASSETS, WALL_H, propAsset } from "./data/assets.js";   // FUENTE ÚNICA: encuadre de sprites + altura de pared
 
 export const AP = (() => {
 
@@ -27,10 +27,10 @@ export const AP = (() => {
   // Paletas (palette.js) y geometría compartida (config.js): se usan aquí y se reexportan en AP.
 
   /* ===================== SPRITES EXTERNOS (flujo PNG/SVG, ver docs/ASSETS.md) =====================
-     Los assets migrados se dibujan desde un fichero (PNG editado si ASSET_USE_PNG y existe; si no,
-     su SVG) teñido por sala. Si no está migrado o aún no cargó, drawSprite devuelve false y el
-     llamador pinta el vector (también para Node/tests). minX/minY = offset del bbox respecto al
-     punto de referencia P(coords); w/h = tamaño nativo. Se derivan del registro `src/data/assets.js`. */
+     Cada asset-sprite se dibuja desde un fichero (PNG editado si ASSET_USE_PNG y existe; si no, su
+     SVG) teñido por sala. drawSprite devuelve false (y no dibuja) si no hay DOM, el asset no tiene
+     sprite o la imagen aún no cargó. minX/minY = offset del bbox respecto al punto de referencia
+     P(coords); w/h = tamaño nativo. Se derivan del registro `src/data/assets.js`. */
   const SPRITES = Object.fromEntries(
     Object.entries(ASSETS).filter(([, a]) => a.sprite).map(([id, a]) => [id, a.sprite])
   );
@@ -53,12 +53,12 @@ export const AP = (() => {
     x.globalCompositeOperation = "source-over";
     return c;
   }
-  // Dibuja el sprite externo de `name` teñido a `col`, anclado en ref+(minX,minY). false → usa vector.
+  // Dibuja el sprite externo de `name` teñido a `col`, anclado en ref+(minX,minY). false = no dibuja.
   function drawSprite(name, ctx, ref, col) {
-    if (typeof document === "undefined") return false;        // Node (tests/generador): vector
-    const def = SPRITES[name]; if (!def) return false;        // no migrado: vector
+    if (typeof document === "undefined") return false;        // sin DOM (Node/tests)
+    const def = SPRITES[name]; if (!def) return false;        // asset sin sprite
     let s = _spr[name]; if (!s) { s = _spr[name] = { neutral: null, tints: {} }; _loadSprite(name, def, s); }
-    if (!s.neutral) return false;                             // aún cargando: vector
+    if (!s.neutral) return false;                             // imagen aún cargando
     let t = s.tints[col]; if (!t) t = s.tints[col] = _tintSprite(s.neutral, col);
     ctx.drawImage(t, Math.round(ref.x + def.minX), Math.round(ref.y + def.minY));
     return true;
@@ -133,7 +133,7 @@ export const AP = (() => {
     if (!s.neutral) return null;
     return s.tints[col] || (s.tints[col] = _tintSprite(s.neutral, col));
   }
-  // Dibuja el marco de puerta desde el sprite (front/back) anclado en P(a0,fixed,0). false → vector.
+  // Dibuja el marco de puerta desde el sprite (front/back) anclado en P(a0,fixed,0). false = aún no cargó.
   function drawDoorSprite(ctx, p, axis, fixed, a0, a1, H, hole, col) {
     const variant = hole ? "back" : "front", def = DOOR_TILES[variant];
     const tex = _doorTexture(variant, col); if (!tex) return false;
@@ -190,47 +190,6 @@ export const AP = (() => {
     box(ctx, p, cx + m, cy + m, cx + 1 - m, cy + 1 - m, 0, h, col);
   }
 
-  // ---- Circuitos (4 formas geométricas monocromas) ----
-  // Dibujo PARAMÉTRICO residual: los circuitos como OBJETO suelto ya son sprites SVG (prop_*).
-  // Esto queda solo para los usos que necesitan dibujar la figura a un proyector/posición
-  // arbitrarios: icono del HUD (render), objeto en brazos (player) y cima de zócalo activo.
-  // Huella y alto los dicta el registro (PROP.HALF / PROP.H): el dibujo LLENA su huella física.
-  function circuit(ctx, p, x, y, z, shape, col) {
-    const r = PROP.HALF, hh = PROP.H;
-    if (shape === "cube") {
-      box(ctx, p, x - r, y - r, x + r, y + r, z, z + hh, col);
-    } else if (shape === "pyramid") {
-      const ap = p(x, y, z + hh);
-      const b1 = p(x - r, y - r, z), b2 = p(x + r, y - r, z), b3 = p(x + r, y + r, z), b4 = p(x - r, y + r, z);
-      // Pintado atrás→delante: caras TRASERAS (-x,-y) primero, FRONTALES (+x,+y) encima.
-      poly(ctx, [b1, b2, ap], darken(col, 0.45), BLACK);   // trasera (-y)
-      poly(ctx, [b1, b4, ap], darken(col, 0.45), BLACK);   // trasera (-x)
-      poly(ctx, [b4, b3, ap], col, BLACK);                 // frontal izquierda (+y), iluminada
-      poly(ctx, [b2, b3, ap], darken(col, 0.62), BLACK);   // frontal derecha (+x)
-    } else if (shape === "dome") {
-      // Semiesfera de cristal: relleno muy tenue, aro de base, contorno del casquete y brillo.
-      const rr = 0.34, c = p(x, y, z), rx = rr * p.TW / 2, ry = rr * p.TH / 2, dh = hh * p.BH;   // radio propio rr; alto = PROP.H
-      const cap = () => {
-        ctx.beginPath(); ctx.moveTo(c.x - rx, c.y);
-        ctx.bezierCurveTo(c.x - rx, c.y - dh, c.x + rx, c.y - dh, c.x + rx, c.y);
-        ctx.ellipse(c.x, c.y, rx, ry, 0, 0, Math.PI, true); ctx.closePath();
-      };
-      ctx.save(); cap(); ctx.globalAlpha = 0.2; ctx.fillStyle = col; ctx.fill(); ctx.restore();   // cristal
-      ctx.beginPath(); ctx.ellipse(c.x, c.y, rx, ry, 0, 0, Math.PI * 2);                          // aro de base
-      ctx.strokeStyle = darken(col, 0.55); ctx.lineWidth = 1; ctx.stroke();
-      cap(); ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.stroke();                              // contorno
-      ctx.beginPath(); ctx.ellipse(c.x - rx * 0.34, c.y - dh * 0.5, rx * 0.2, dh * 0.26, -0.5, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(255,255,255,0.5)"; ctx.fill();                                        // brillo
-    } else if (shape === "cylinder") {
-      const ch = hh, topC = p(x, y, z + ch), botC = p(x, y, z), rx = r * p.TW / 2, ry = r * p.TH / 2;
-      ctx.beginPath(); ctx.moveTo(topC.x - rx, topC.y); ctx.lineTo(botC.x - rx, botC.y);
-      ctx.ellipse(botC.x, botC.y, rx, ry, 0, Math.PI, 0, true); ctx.lineTo(topC.x + rx, topC.y); ctx.closePath();
-      ctx.fillStyle = darken(col, 0.7); ctx.fill();
-      ctx.strokeStyle = BLACK; ctx.lineWidth = 1; ctx.stroke();
-      ctx.beginPath(); ctx.ellipse(topC.x, topC.y, rx, ry, 0, 0, Math.PI * 2); ctx.fillStyle = col; ctx.fill(); ctx.strokeStyle = BLACK; ctx.stroke();
-    }
-  }
-
   // Zócalo / pedestal
   function socket(ctx, p, x, y, z, shape, active, col) {
     const c = active ? col : darken(col, 0.4);
@@ -241,7 +200,8 @@ export const AP = (() => {
     else if (shape === "pyramid") poly(ctx, [{ x: top.x, y: top.y - s }, { x: top.x + s, y: top.y + s / 2 }, { x: top.x - s, y: top.y + s / 2 }], null, ctx.strokeStyle);
     else if (shape === "dome") { ctx.beginPath(); ctx.arc(top.x, top.y, s, Math.PI, 0); ctx.stroke(); }
     else { ctx.beginPath(); ctx.ellipse(top.x, top.y, s, s / 2, 0, 0, Math.PI * 2); ctx.stroke(); }
-    if (active) circuit(ctx, p, x, y, z + SOCKET.BASE_H, shape, col);
+    // Circuito encajado encima: MISMO sprite que el transportable suelto (ruta única drawSprite).
+    if (active) drawSprite(propAsset(shape), ctx, p(x, y, z + SOCKET.BASE_H), col);
   }
 
   // Pinchos (peligro): desde fichero (PNG→SVG).
@@ -343,13 +303,14 @@ export const AP = (() => {
   // Punto de entrada genérico: resuelve la clave base (antes de ":") y delega en su drawer.
   function drawAsset(ctx, P, t, col) { return DRAWERS[ASSETS[t.asset].draw.split(":")[0]](ctx, P, t, col); }
 
-  /* SUPERFICIE PÚBLICA. Lo COLOCABLE se dibuja por `drawAsset`/`DRAWERS`, no por una función por
-     asset. Aquí van: constantes/helpers, la API genérica, y las primitivas referenciadas POR NOMBRE
-     desde fuera (cáscara estructural en render, robot/sombra en player/screens, circuito icono-HUD/en-brazos). */
+  /* SUPERFICIE PÚBLICA. Lo COLOCABLE se dibuja por `drawAsset`/`DRAWERS`; todo sprite (en sala,
+     zócalo, brazos o HUD) pasa por la MISMA `drawSprite(name, ctx, ref, col)` (ref = punto de pantalla).
+     Aquí van: constantes/helpers, la API genérica, y las primitivas referenciadas POR NOMBRE desde
+     fuera (cáscara estructural en render, robot/sombra en player/screens). */
   return {
     INKS, INK2, ROBOT_INK, DIRS, ROBOT, BLACK, DOOR, PROP, darken, lighten,   // constantes + helpers
     projector, poly, box, facePt, edgeLine,                                   // primitivas de motor
-    DRAWERS, drawAsset, SPRITES,                                              // API de dibujo genérica
-    floor, flatWall, door, cube, circuit, spikes, plant, robot, shadow, // primitivas usadas por nombre
+    DRAWERS, drawAsset, drawSprite, SPRITES,                                  // API de dibujo genérica
+    floor, flatWall, door, cube, spikes, plant, robot, shadow, // primitivas usadas por nombre
   };
 })();

@@ -127,7 +127,7 @@ test("tools/tool-assets.html no contiene mapas de geometría hardcodeada (GU/BOX
 
 test("GUARDARRAÍL: render.js NO dibuja assets colocables por nombre (motor de dibujo genérico)", () => {
   const src = readFileSync(new URL("../src/render.js", import.meta.url), "utf8");
-  // Permitido: AP.floor/flatWall/door (cáscara estructural), AP.drawAsset (genérico), AP.circuit (icono HUD).
+  // Permitido: AP.floor/flatWall/door (cáscara estructural), AP.drawAsset (genérico), AP.drawSprite (icono HUD).
   for (const bad of ["AP.cube", "AP.spikes", "AP.socket", "AP.prop(", "AP.pillar", "AP.drone"])
     assert.ok(!src.includes(bad), `render.js menciona ${bad} → debe dibujar lo colocable vía AP.drawAsset`);
   for (const bucket of ["room.blocks", "room.sockets", "room.hazards"])

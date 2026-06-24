@@ -12,7 +12,7 @@
 
 import { INKS, INK2 } from "./palette.js";
 import { ROOMS, START } from "./data/rooms.js";
-import { ASSETS, assetBox, assetRef, socketTop } from "./data/assets.js";   // registro + huellas/anclaje
+import { ASSETS, assetBox, assetRef, socketTop, propAsset } from "./data/assets.js";   // registro + huellas/anclaje
 
 /* Construye una sala a partir de su definición (datos).
    Límites de tamaño: ancho/largo ∈ [3,13] y ancho+largo ≤ 16 (para que el rombo y el HUD
@@ -40,7 +40,7 @@ export function makeRoom(o) {
 
 /* Asset id de una entrada de `room.objects`. Un circuito que solo trae `shape` se resuelve a
    "prop_<shape>"; cualquier otro móvil trae `asset` explícito (p.ej. computer). */
-export function objAsset(o) { return o.asset || "prop_" + o.shape; }
+export function objAsset(o) { return o.asset || propAsset(o.shape); }
 
 /* AABB de mundo {x0,y0,z0,x1,y1,z1} de un asset colocado con su anclaje en (ax,ay,az).
    Deriva de assetBox/assetRef (frame local) + offset del anclaje. `top` opcional sobreescribe

@@ -1,20 +1,36 @@
 {
   "permissions": {
     "allow": [
+      "Bash",
       "WebSearch",
       "WebFetch(domain:en.wikipedia.org)",
       "WebFetch(domain:handwiki.org)",
       "WebFetch(domain:zxart.ee)",
+      "WebFetch(domain:retrospec.sgn.net)",
+      "WebFetch(domain:www.funspot.it)",
       "Skill(update-config)",
       "Skill(update-config:*)",
       "mcp__Claude_Preview__preview_start",
-      "WebFetch(domain:retrospec.sgn.net)",
-      "WebFetch(domain:www.funspot.it)",
-      "Bash(rm -f /tmp/depthtest.js /tmp/fixtest.js)",
-      "mcp__Claude_Preview__preview_start",
-      "Bash"
+      "mcp__Claude_Preview__preview_stop",
+      "mcp__Claude_Preview__preview_eval",
+      "mcp__Claude_Preview__preview_screenshot",
+      "mcp__Claude_Preview__preview_snapshot",
+      "mcp__Claude_Preview__preview_console_logs",
+      "mcp__Claude_Preview__preview_logs",
+      "mcp__Claude_Preview__preview_network",
+      "mcp__Claude_Preview__preview_inspect",
+      "mcp__Claude_Preview__preview_resize"
     ],
     "deny": ["Bash(rm -rf:*)"]
+  },
+  "sandbox": {
+    "autoAllowBashIfSandboxed": true,
+    "filesystem": {
+      "allowWrite": [
+        "/Users/azahara.lopez.parada/Agents/Alien Pocho/**",
+        "/tmp/**"
+      ]
+    }
   },
   "disableAllHooks": false,
   "allowManagedHooksOnly": false

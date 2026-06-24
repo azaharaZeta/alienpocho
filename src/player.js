@@ -15,7 +15,7 @@ import { AP } from "./draw.js";
 import { pressed, held } from "./input.js";
 import { ctx, P } from "./view.js";
 import { blocksHoriz, supportHeight, objBox, overlapsBox, objBlocked, objAsset } from "./physics.js";
-import { assetHas } from "./data/assets.js";   // trait `movable` para decidir qué se empuja
+import { assetHas, propAsset } from "./data/assets.js";   // trait `movable`; mapeo forma→asset del objeto en brazos
 import { game, interact, resetGame } from "./game.js";
 
 export const player = {
@@ -171,7 +171,7 @@ player.addDraws = function (draws, room) {
       AP.shadow(ctx, P, player.x, player.y, gz);
       AP.robot(ctx, P, player.x, player.y, player.z, player.facing, ink,
                { moving: player.moving, walkPhase: player.walkPhase });
-      if (game.carried) AP.circuit(ctx, P, player.x, player.y, player.z + 1.6, game.carried, room.ink2 || ink);
+      if (game.carried) AP.drawSprite(propAsset(game.carried), ctx, P(player.x, player.y, player.z + 1.6), room.ink2 || ink);
     }
   });
 };

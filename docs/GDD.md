@@ -148,7 +148,7 @@ Modelo tipo tanque (ver §4):
 ## 10. Contrato técnico
 
 - **HTML5 + JavaScript vanilla**, render en `<canvas>` 2D. Sin frameworks, **sin build** (ES modules nativos).
-- **Gráficos por código / sprites neutros teñidos por sala** (PNG→SVG→vector residual; ver [ASSETS.md](ASSETS.md)),
+- **Sprites neutros teñidos por sala** (PNG→SVG; robot y cáscara estructural siguen siendo procedurales; ver [ASSETS.md](ASSETS.md)),
   paleta monocroma estilo Spectrum. **Sin assets con copyright.**
 - Resolución lógica fija (320×240, escalada con `image-rendering: pixelated`) para look retro.
 - Bucle con `requestAnimationFrame` y delta-time.

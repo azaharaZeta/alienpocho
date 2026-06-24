@@ -1,8 +1,8 @@
 /* =============================================================================
    ALIEN POCHO — SMOKE TESTS (test/smoke.mjs)
    -----------------------------------------------------------------------------
-   Oráculo de NO-REGRESIÓN para el refactor: ejercita la lógica pura (sin DOM) de
-   mundo, painter y física a través de los módulos ES. No dibuja nada.
+   Oráculo de NO-REGRESIÓN: ejercita la lógica pura (sin DOM) de mundo, painter y
+   física a través de los módulos ES. No dibuja nada.
    Ejecutar:  node test/smoke.mjs   (o  npm test)
 
    Posible porque view.js/input.js DIFIEREN el acceso al DOM a sus init(): importar

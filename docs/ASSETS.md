@@ -16,12 +16,13 @@ migran a **PNG editado a mano** caso por caso, cuando merece la pena.
   (catálogo + visor/editor SVG; ver/crear SVG y descargar PNG neutro) la usa **la usuaria** para autoría de
   assets. **No se publica** (ver [`.vercelignore`](../.vercelignore)) ni cuenta en el análisis del juego.
 - **El juego solo dibuja de DOS formas: PNG si existe; si no, SVG.** Nada más debería usarse en runtime.
-- **El vector procedural (`AP.*` en `src/draw.js`) es RESIDUAL.** Hoy cumple tres papeles que NO son
-  "el juego en producción": (a) es la **entrada de la tool** para generar SVG/PNG, (b) **fallback**
-  mientras carga la imagen / en Node-tests, (c) **única vía** de los assets aún no migrados. El objetivo
-  es que **desaparezca del runtime**. Los assets que todavía se dibujan procedural (robot, zócalo,
-  pared/puerta paramétricas, domo, cilindro, suelo, columna) son **EXCEPCIONES pendientes de analizar y
-  arreglar** → anotadas en [`docs/ideas/ideas.md`](ideas/ideas.md).
+- **Los assets-sprite ya NO tienen fallback procedural.** Cada uno se dibuja SOLO desde su fichero
+  (PNG→SVG) por la vía única `AP.drawSprite`; mientras la imagen carga, no se pinta (de ahí la idea de
+  **precargar**, ver [`docs/ideas/ideas.md`](ideas/ideas.md)).
+- **El dibujo procedural (`AP.*` en `src/draw.js`) queda solo para lo que NO es un sprite fijo**: robot
+  (animado), peana del zócalo (con estado), columna y la cáscara estructural (suelo/pared/puerta,
+  paramétricas por tamaño de sala). Es además la entrada con la que la tool genera el SVG inicial. El
+  objetivo a futuro es reducir el procedural al mínimo imprescindible (lo animado/paramétrico).
 
 ---
 
@@ -32,8 +33,8 @@ migran a **PNG editado a mano** caso por caso, cuando merece la pena.
 
 En ambos casos el juego **tiñe** la silueta a la tinta de la sala (multiply) y la ancla en
 `ref + (minX, minY)` a tamaño `w×h` (el encuadre `sprite{w,h,minX,minY}` está en el registro
-[`src/data/assets.js`](../src/data/assets.js); PNG y SVG lo comparten). El vector procedural es solo el
-fallback residual. Migrar un asset a PNG/SVG es **gradual y opcional**, asset por asset.
+[`src/data/assets.js`](../src/data/assets.js); PNG y SVG lo comparten). Migrar un asset a PNG/SVG es
+**gradual y opcional**, asset por asset.
 
 ---
 
@@ -125,8 +126,12 @@ desde cualquier sitio que llame a su `AP.*`.
 ## Estado actual
 
 - ✅ Tool unificada `tools/tool-assets.html` (catálogo + visor/editor SVG). Es lo único en `tools/`.
-- ✅ **Migrados** (sprite SVG fiel + PNG si existe): `cube`, `prop_cube`, `prop_pyramid`, `spikes`,
-  `plant`. El bloque usa además `assets/png/cube.png` (editado a mano).
-- ⬜ **No migrables aún** (no son sprites fijos): robot (animado), props domo/cilindro (cristal/curvos),
-  zócalo (con estado), y los paramétricos (pared, suelo, puerta, columna). Ideas en
-  [ideas/ideas.md](ideas/ideas.md) sobre cómo "fijarlos".
+- ✅ **Migrados** (sprite SVG; `draw:"sprite"`): `cube` (+`cube.png` editado a mano), `prop_cube`,
+  `prop_pyramid`, `prop_dome`, `prop_cylinder`, `spikes`, `plant`, `computer`, `drone`. Al migrarlos
+  se borró su dibujo procedural (`drone()`, el router `prop()` y `circuit()`).
+- ✅ **Ruta ÚNICA de sprites**: todo objeto-sprite (en sala, encima de un zócalo, en brazos del robot
+  o en el icono del HUD) se pinta SIEMPRE por `AP.drawSprite(name, ctx, ref, col)` (`ref` = punto de
+  pantalla). Se alcanza vía `drawAsset` (salas) o por llamada directa (zócalo/brazos/HUD); el mapeo
+  forma→asset es `propAsset()` en [`src/data/assets.js`](../src/data/assets.js). Ya no hay `circuit()`.
+- ⬜ **No migrables aún** (no son sprites fijos): robot (animado), zócalos (peana con estado), y los
+  paramétricos (pared, suelo, puerta, columna). Ideas en [ideas/ideas.md](ideas/ideas.md) sobre cómo "fijarlos".

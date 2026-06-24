@@ -46,7 +46,7 @@ Convenio de nombres: usar minúsculas y guiones en lugar de espacios para `<titu
   estilo del menú de inicio (estado `title`).
 - **Audio** WebAudio (saltar, coger, soltar, colocar) + toggle de silencio persistente.
 - **Más salas / retos** que exploten las mecánicas nuevas (apilar/empujar objetos para
-  alcanzar zócalos altos); plataformas móviles; dron (`AP.drone` ya existe).
+  alcanzar zócalos altos); plataformas móviles; dron (el asset `drone` ya existe).
 
 
 
@@ -60,4 +60,4 @@ Convenio de nombres: usar minúsculas y guiones en lugar de espacios para `<titu
 - Todos los objetos deberían usar la misma lógica de posicionamento, tanto si son movibles como si no. Ahora mismo creo que  los objetos se posicionan en el centro del tile, pero los bloques  van en un extremo del tile, con dibujado distinto. Implementar que algunos bloques sí sean movibles, empujándolos.
 ## 🐞 BUGS CONOCIDOS
 
-- Solo debería haber 2 formas de dibujar un asset (SVG o PNG), pero hay una 3ª: el vector procedural de `draw.js` (`AP.*`), fallback en runtime y única vía de los assets aún no migrados → puede divergir de SVG/PNG. Decidir modelo único SVG-o-PNG (o guardarraíl que impida la deriva).
+- `floor` declara `files.svg: "example.svg"` pero se dibuja procedural (`draw:"floor"`) → es un SVG declarado que no se usa. Decidir: quitar la declaración, o dibujar el suelo desde fichero como el resto de sprites.

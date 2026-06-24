@@ -12,7 +12,7 @@ import { CFG, WALL_H } from "./config.js";
 import { ENGINE } from "./engine.js";
 import { AP } from "./draw.js";
 import { roomThings } from "./world.js";          // lista uniforme de placements
-import { assetTint } from "./data/assets.js";     // tinte primario/secundario por asset
+import { assetTint, propAsset } from "./data/assets.js";   // tinte por asset; mapeo forma→asset del icono HUD
 import { ctx, P, setProjector, applyRoomTheme } from "./view.js";
 import { entities } from "./player.js";
 import { game, world, room } from "./game.js";
@@ -101,7 +101,7 @@ function drawCarrySlot(cx, cy, shape, frameCol, circuitCol) {
   if (!shape) return;
   ctx.save();
   ctx.beginPath(); ctx.rect(cx - s + 1, cy - s + 1, s * 2 - 2, s * 2 - 2); ctx.clip();
-  AP.circuit(ctx, AP.projector(cx, cy + 4), 0, 0, 0, shape, circuitCol);   // circuito en SECUNDARIO
+  AP.drawSprite(propAsset(shape), ctx, { x: cx, y: cy + 4 }, circuitCol);   // mismo sprite, anclado a un punto de pantalla
   ctx.restore();
 }
 // Mini robot (icono de vidas) en estilo línea, centrado en (cx,cy).
