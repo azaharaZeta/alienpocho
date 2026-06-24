@@ -69,9 +69,12 @@ test("assetBox/assetRef/assetRegion devuelven algo coherente para todos", () => 
 });
 
 test("anclaje 'center' centra la huella; 'corner' la deja en (0,0)", () => {
-  // cube: corner ⇒ caja en (0,0)
+  // corner (estructura): floor ⇒ ref en (0,0,0) y caja en (0,0)
+  assert.deepEqual(assetRef("floor"), { x: 0, y: 0, z: 0 });
+  assert.deepEqual(assetBox("floor"), { x: 0, y: 0, z: 0, w: 1, l: 1, h: 0 });
+  // center (objetos): cube ⇒ ref en (0.5,0.5,0) (1×1 centrado = misma caja [0,1]); spikes ⇒ huella centrada
+  assert.deepEqual(assetRef("cube"), { x: 0.5, y: 0.5, z: 0 });
   assert.deepEqual(assetBox("cube"), { x: 0, y: 0, z: 0, w: 1, l: 1, h: 1 });
-  // spikes: center ⇒ caja centrada
   const s = assetBox("spikes"); assert.ok(Math.abs(s.x - (0.5 - s.w / 2)) < 1e-9);
 });
 

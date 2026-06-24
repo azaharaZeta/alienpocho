@@ -46,15 +46,19 @@ Cada asset se describe a sí mismo:
 **Render y física son GENÉRICOS (no enumeran tipos):**
 - `draw.js` tiene `DRAWERS` (uno por clave `draw`, con un `sprite` genérico que vale para cualquier asset de imagen)
   y `AP.drawAsset(ctx,P,placement,col)`. Dibujar un asset = `drawAsset`, sin saber cuál es.
-- `world.roomThings(room)` mapea las cubetas del mapa (`blocks`/`objects`/`sockets`/`hazards`/`things`) a una lista
-  uniforme de placements `{asset, x, y, z, aabb, src?}` (en vivo: los móviles se mueven, los zócalos se llenan).
+- `world.roomThings(room)` mapea las cubetas del mapa (`objects`/`sockets`/`hazards`) a una lista uniforme de
+  placements `{asset, x, y, z, aabb, src?}` (en vivo: los móviles se mueven, los zócalos se llenan). **`objects`
+  es la cubeta ÚNICA de lo colocable no-estructural** (bloques + circuitos + ordenadores…): el COMPORTAMIENTO lo
+  deciden los TRAITS (del asset, o de instancia vía `o.traits`), NO la cubeta — un `cube` es fijo por defecto y
+  empujable si la instancia añade `movable`/`falls`. Posición por celda (`cx,cy`) o continua (`x,y`); `h` = pila.
   El **zócalo es UN asset genérico** (`socket`); qué circuito pide (`requires`) y cuál tiene puesto (`filled`)
   son datos de instancia. El circuito incrustado lo dibuja el drawer del socket con el sprite del propio circuito
   (lleno = a color; vacío = fantasma del que pide) → un circuito nuevo no toca el socket.
 - `render.js`: lo COLOCABLE se pinta en **un solo bucle** (`roomThings` + `aabb` para el painter + `drawAsset`);
   la cáscara suelo/pared/puerta (paramétrica por tamaño de sala) va en una capa estructural aparte.
-- `physics.roomSolids`: incluye los placements con trait `solid`; empuje/gravedad operan por `movable`/`falls` con la
-  huella propia de cada asset. `game.interact` reconoce destinos/items por `receptacle`/`carriable`.
+- `physics.roomSolids`: incluye los placements con trait `solid`; empuje (player) y gravedad (physics) operan por
+  `movable`/`falls` vía **`thingHas`** (trait de asset O de instancia), con la huella propia. `game.interact`
+  reconoce destinos/items por `receptacle`/`carriable`.
 
 **Añadir un asset** = una entrada en `data/assets.js` (+ su `.svg` si es de sprite). Un asset de sprite no añade
 ni una línea a `draw.js`; uno procedural añade solo su `drawer`. No se toca render, física ni la tool.

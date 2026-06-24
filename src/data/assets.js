@@ -89,8 +89,8 @@ export const ASSETS = {
 
   // --- Bloques (piezas sólidas fijas con las que se "construye") ---
   cube:   { label: "Bloque", kind: "object", group: "Bloques", traits: { solid: true },
-            draw: "cube", anchor: "corner", foot: { w: 1, l: 1, h: 1 },
-            files: { svg: "cube.svg", png: "cube.png" }, sprite: { w: 34, h: 34, minX: -17, minY: -17 } },
+            draw: "cube", anchor: "center", foot: { w: 1, l: 1, h: 1 },
+            files: { svg: "cube.svg", png: "cube.png" }, sprite: { w: 34, h: 34, minX: -17, minY: -25.5 } },
 
   // --- Transportables (circuitos): sólidos, empujables, recogibles y caen ---
   prop_cube:     { label: "Cubo", kind: "object", group: "Transportables", traits: { solid: true, movable: true, carriable: true, falls: true },

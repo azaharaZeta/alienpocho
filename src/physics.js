@@ -10,8 +10,8 @@
 
 import { CFG, PROP, ROBOT, SOCKET, DOOR } from "./config.js";
 import { assetHas, assetFoot, socketTop } from "./data/assets.js";   // traits + huella + cima del zócalo
-import { roomThings, objAsset } from "./world.js";      // placements uniformes + asset de un móvil
-export { socketTop, objAsset };
+import { roomThings, objAsset, thingHas } from "./world.js";   // placements uniformes + asset/traits de un objeto
+export { socketTop, objAsset, thingHas };
 
 // Semilado / alto de un MÓVIL según la huella de su asset.
 const objHalf = o => (assetFoot(objAsset(o)) || { w: PROP.HALF * 2 }).w / 2;
@@ -123,7 +123,7 @@ export function objSupport(room, o) {
    Se llama una vez por frame. */
 export function updateObjects(room, dt) {
   for (const o of room.objects) {
-    if (!assetHas(objAsset(o), "falls")) continue;   // solo caen los móviles con gravedad
+    if (!thingHas(o, "falls")) continue;   // solo caen los que tienen el trait `falls` (asset o instancia)
     const s = objSupport(room, o);
     if (o.z > s + 1e-3 || o.vz) {
       o.vz = (o.vz || 0) - CFG.GRAVITY * dt;

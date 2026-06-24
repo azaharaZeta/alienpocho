@@ -145,11 +145,11 @@ test("checkExits: cruzar el borde con salida cambia de sala (flip-screen)", () =
 test("coger un circuito lo retira de la sala y lo pone en la mano", () => {
   resetGame();
   const entrada = room;
-  assert.equal(entrada.objects.length, 1, "ENTRADA arranca con 1 objeto");
+  assert.equal(entrada.objects.length, 2, "ENTRADA arranca con 2 (bloque + circuito, cubeta única)");
   player.x = 3.5; player.y = 5.5; player.z = 0; game.carried = null;
   interact(entrada);
   assert.equal(game.carried, "cube", "lleva el cubo");
-  assert.equal(entrada.objects.length, 0, "el objeto ya no está suelto en la sala");
+  assert.equal(entrada.objects.length, 1, "el circuito ya no está suelto (queda el bloque)");
 });
 
 test("colocar la forma correcta en su zócalo lo activa y suma circuito", () => {
@@ -174,7 +174,7 @@ test("colocar el último circuito gana la partida", () => {
 /* ---------------------------------------------- GRAVEDAD DE OBJETOS -------- */
 test("un objeto en el aire cae hasta su apoyo", () => {
   resetGame();
-  const o = room.objects[0];                   // cubo de ENTRADA, sin bloque debajo
+  const o = room.objects.find(e => e.shape);   // el circuito de ENTRADA (cae); el bloque no tiene `falls`
   o.z = 2; o.vz = 0;
   for (let i = 0; i < 240; i++) updateObjects(room, 1 / 60);
   assert.ok(o.z <= 1e-3, "termina en el suelo (z≈0)");
@@ -193,7 +193,7 @@ test("resetGame reconstruye el mundo sin arrastrar estado mutado", () => {
   assert.equal(game.won, false, "no ganado");
   assert.equal(room.name, "ENTRADA", "vuelve a la entrada");
   assert.equal(player.x, 1.5); assert.equal(player.y, 6.5);
-  assert.equal(room.objects.length, 1, "el objeto de ENTRADA vuelve a estar (clones frescos)");
+  assert.equal(room.objects.length, 2, "los objetos de ENTRADA vuelven (bloque + circuito, clones frescos)");
   assert.equal(room.sockets[0].filled, null, "el zócalo vuelve a estar vacío");
 });
 

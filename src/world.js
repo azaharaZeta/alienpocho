@@ -2,8 +2,8 @@
    ALIEN POCHO — MOTOR DE MUNDO (world.js)
    -----------------------------------------------------------------------------
    Interpreta los datos del mapa (data/rooms.js):
-     - makeRoom: aplica límites de tamaño, deriva el set `solid` y clona los arrays
-       mutables (objetos/zócalos…) para que cada partida arranque limpia.
+     - makeRoom: aplica límites de tamaño y clona los arrays mutables (objetos/zócalos…)
+       para que cada partida arranque limpia.
      - buildWorld: resuelve la paleta por índice, construye todas las salas y calcula
        el PLANO CENITAL (wx,wy) para el minimapa.
    No sabe de render ni de física.
@@ -12,7 +12,7 @@
 
 import { INKS, INK2 } from "./palette.js";
 import { ROOMS, START } from "./data/rooms.js";
-import { ASSETS, assetBox, assetRef, socketTop, propAsset } from "./data/assets.js";   // registro + huellas/anclaje
+import { ASSETS, assetBox, assetRef, socketTop, propAsset, assetHas } from "./data/assets.js";   // registro + huellas/anclaje/traits
 
 /* Construye una sala a partir de su definición (datos).
    Límites de tamaño: ancho/largo ∈ [3,13] y ancho+largo ≤ 16 (para que el rombo y el HUD
@@ -23,16 +23,11 @@ export function makeRoom(o) {
   let w = Math.min(13, Math.max(3, o.w || 8));
   let h = Math.min(13, Math.max(3, o.h || 8));
   if (w + h > 16) { if (w >= h) w = 16 - h; else h = 16 - w; }
-  const blocks = (o.blocks || []).map(b => ({ ...b }));
-  const solid = new Set();
-  for (const b of blocks)
-    if (b.x >= 0 && b.x < w && b.y >= 0 && b.y < h) solid.add(b.x + "," + b.y);
   return {
-    w, h, blocks, solid,
-    objects: (o.objects || []).map(e => ({ ...e })),
+    w, h,
+    objects: (o.objects || []).map(e => ({ ...e })),   // ÚNICA cubeta de lo colocable no-estructural (bloques + móviles)
     sockets: (o.sockets || []).map(e => ({ ...e })),
     hazards: (o.hazards || []).map(e => ({ ...e })),
-    things:  (o.things  || []).map(e => ({ ...e })),   // assets sueltos por id (decoración, etc.)
     ink: o.ink, ink2: o.ink2, exits: o.exits || {}, name: o.name || "",
     wallTile: o.wallTile   // variante de panal por sala (opcional; si undefined → global WALL_TILE)
   };
@@ -41,6 +36,11 @@ export function makeRoom(o) {
 /* Asset id de una entrada de `room.objects`. Un circuito que solo trae `shape` se resuelve a
    "prop_<shape>"; cualquier otro móvil trae `asset` explícito (p.ej. computer). */
 export function objAsset(o) { return o.asset || propAsset(o.shape); }
+
+/* ¿El dato `o` tiene el trait? Combina los traits del ASSET con los de INSTANCIA (o.traits): así un mismo
+   asset (p. ej. `cube`) es fijo por defecto pero, si la instancia añade `movable`/`falls`, se vuelve empujable
+   y cae. El COMPORTAMIENTO lo decide el trait, no la cubeta. Lo usan empuje (player) y gravedad (physics). */
+export function thingHas(o, trait) { return assetHas(objAsset(o), trait) || !!(o.traits && o.traits[trait]); }
 
 /* AABB de mundo {x0,y0,z0,x1,y1,z1} de un asset colocado con su anclaje en (ax,ay,az).
    Deriva de assetBox/assetRef (frame local) + offset del anclaje. `top` opcional sobreescribe
@@ -57,14 +57,16 @@ function placeAabb(id, ax, ay, az, top) {
      { asset, x, y, z, ...estado, src?, aabb }  (x,y,z = anclaje en mundo; aabb = caja painter/sólido). */
 export function roomThings(room) {
   const t = [];
-  for (const b of room.blocks)                                   // bloque = un cubo por capa
-    for (let k = 0; k < (b.h || 1); k++) {
-      const z = (b.z || 0) + k;
-      t.push({ asset: "cube", x: b.x, y: b.y, z, aabb: placeAabb("cube", b.x, b.y, z) });
+  for (const o of room.objects) {                                // ÚNICA cubeta: bloques (cube), circuitos, ordenadores…
+    const id = objAsset(o), a = ASSETS[id]; if (!a) continue;    // el comportamiento lo deciden los TRAITS, no la cubeta
+    const center = a.anchor === "center";
+    const ax = o.x != null ? o.x : (center ? o.cx + 0.5 : o.cx); // posición por celda (cx,cy) o por punto continuo (x,y)
+    const ay = o.y != null ? o.y : (center ? o.cy + 0.5 : o.cy);
+    const az = o.z || 0;
+    for (let k = 0; k < (o.h || 1); k++) {                       // h = pila de copias (terreno fijo); móviles = 1
+      const pz = az + k;
+      t.push({ asset: id, x: ax, y: ay, z: pz, shape: o.shape, src: o, aabb: placeAabb(id, ax, ay, pz) });
     }
-  for (const o of room.objects) {                                // MÓVILES (circuitos, ordenadores… · vivos)
-    const id = objAsset(o);
-    t.push({ asset: id, x: o.x, y: o.y, z: o.z, shape: o.shape, src: o, aabb: placeAabb(id, o.x, o.y, o.z) });
   }
   for (const s of room.sockets) {                                // zócalos (vivos: al llenarse suben)
     const cx = s.cx + 0.5, cy = s.cy + 0.5, z = s.z || 0;        // requires = circuito que pide, filled = el puesto
@@ -74,17 +76,6 @@ export function roomThings(room) {
   for (const h of room.hazards)                                  // pinchos (decorativos, estáticos)
     t.push({ asset: "spikes", x: h.cx + 0.5, y: h.cy + 0.5, z: 0, src: h,
              aabb: placeAabb("spikes", h.cx + 0.5, h.cy + 0.5, 0) });
-  // cubeta GENÉRICA: cualquier asset por id. Se coloca por celda (cx,cy) o por punto continuo
-  // (x,y); el anclaje (centro/esquina) lo dicta el asset.
-  for (const g of room.things) {
-    const a = ASSETS[g.asset]; if (!a) continue;
-    const center = a.anchor === "center";
-    const ax = g.x != null ? g.x : (center ? g.cx + 0.5 : g.cx);
-    const ay = g.y != null ? g.y : (center ? g.cy + 0.5 : g.cy);
-    const az = g.z || 0;
-    const { asset, cx, cy, x, y, z, ...state } = g;
-    t.push({ asset, x: ax, y: ay, z: az, ...state, src: g, aabb: placeAabb(asset, ax, ay, az) });
-  }
   return t;
 }
 

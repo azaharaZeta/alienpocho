@@ -14,8 +14,8 @@ import { CFG, ROBOT } from "./config.js";
 import { AP } from "./draw.js";
 import { pressed, held } from "./input.js";
 import { ctx, P } from "./view.js";
-import { blocksHoriz, supportHeight, objBox, overlapsBox, objBlocked, objAsset } from "./physics.js";
-import { assetHas, propAsset } from "./data/assets.js";   // trait `movable`; mapeo forma→asset del objeto en brazos
+import { blocksHoriz, supportHeight, objBox, overlapsBox, objBlocked, objAsset, thingHas } from "./physics.js";
+import { propAsset } from "./data/assets.js";   // mapeo forma→asset del objeto en brazos
 import { game, interact, resetGame } from "./game.js";
 
 export const player = {
@@ -47,7 +47,7 @@ function tryPush(room, dir, step, feetZ) {
   const probeY = player.y + dir.dy * (CFG.PRAD + 0.04);
   let target = null;
   for (const o of room.objects) {
-    if (!assetHas(objAsset(o), "movable")) continue;   // solo se empuja lo `movable`
+    if (!thingHas(o, "movable")) continue;   // solo se empuja lo `movable` (trait de asset o de instancia)
     const b = objBox(o);
     // Empujable solo si está a tu nivel: base en/bajo tus pies (b.z0 ≤ feetZ+STEP) y cima
     // por encima (es obstáculo). Así no empujas un objeto en alto al pasar por debajo.
