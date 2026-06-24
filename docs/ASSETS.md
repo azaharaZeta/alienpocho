@@ -20,7 +20,7 @@ migran a **PNG editado a mano** caso por caso, cuando merece la pena.
   (PNG→SVG) por la vía única `AP.drawSprite`; mientras la imagen carga, no se pinta (de ahí la idea de
   **precargar**, ver [`docs/ideas/ideas.md`](ideas/ideas.md)).
 - **El dibujo procedural (`AP.*` en `src/draw.js`) queda solo para lo que NO es un sprite fijo**: robot
-  (animado), columna y la cáscara estructural (suelo/pared/puerta, paramétricas por tamaño de sala). Es
+  (animado) y la cáscara estructural (suelo/pared/puerta, paramétricas por tamaño de sala). Es
   además la entrada con la que la tool genera el SVG inicial. El objetivo a futuro es reducir el procedural
   al mínimo imprescindible (lo animado/paramétrico). El **zócalo** ya NO es procedural: su peana es
   `socket.svg` y el drawer solo COMPONE sprites (peana teñida por estado + circuito/fantasma), sin `box`/`poly`.
@@ -137,5 +137,5 @@ desde cualquier sitio que llame a su `AP.*`.
   o en el icono del HUD) se pinta SIEMPRE por `AP.drawSprite(name, ctx, ref, col)` (`ref` = punto de
   pantalla). Se alcanza vía `drawAsset` (salas) o por llamada directa (zócalo/brazos/HUD); el mapeo
   forma→asset es `propAsset()` en [`src/data/assets.js`](../src/data/assets.js). Ya no hay `circuit()`.
-- ⬜ **No migrables aún** (no son sprites fijos): robot (animado) y los paramétricos (pared, suelo, puerta,
-  columna). Ideas en [ideas/ideas.md](ideas/ideas.md) sobre cómo "fijarlos".
+- ⬜ **No migrables aún** (no son sprites fijos): robot (animado) y los paramétricos (pared, suelo, puerta).
+  Ideas en [ideas/ideas.md](ideas/ideas.md) sobre cómo "fijarlos".

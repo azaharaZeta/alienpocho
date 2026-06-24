@@ -184,12 +184,6 @@ export const AP = (() => {
     drawDoorSprite(ctx, p, axis, fixed, a0, a1, H, hole, col);
   }
 
-  // Columna delgada. La huella (centrada en la celda) la dicta el registro: margen = (1 − ancho)/2.
-  function pillar(ctx, p, cx, cy, h, col) {
-    const m = (1 - ASSETS.pillar.foot.w) / 2;
-    box(ctx, p, cx + m, cy + m, cx + 1 - m, cy + 1 - m, 0, h, col);
-  }
-
   // Zócalo: peana con indentación cuadrada desde SVG (socket.svg), teñida por ESTADO (vacío =
   // atenuada, lleno = ILUMINADA). El circuito incrustado / fantasma se componen encima con su propio
   // sprite. SIN dibujo programático: solo composición de sprites (drawSprite) + tinte/alpha por estado.
@@ -290,7 +284,6 @@ export const AP = (() => {
     // Procedurales / paramétricos (bespoke):
     floor:    (c, P, t, col) => floor(c, P, t.x, t.y, col),
     cube:     (c, P, t, col) => cube(c, P, t.x, t.y, t.z, col),
-    pillar:   (c, P, t, col) => pillar(c, P, t.x, t.y, ASSETS[t.asset].foot.h, col),
     robot:    (c, P, t, col) => robot(c, P, t.x, t.y, t.z, t.facing || 0, col),
     socket:   (c, P, t, col) => socket(c, P, t.x, t.y, t.z, t.requires, t.filled, col),
     // Estructura (paramétrica): la sala la dibuja en su capa propia; estos drawers son para

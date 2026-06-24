@@ -91,10 +91,6 @@ export const ASSETS = {
   cube:   { label: "Bloque", kind: "object", group: "Bloques", traits: { solid: true },
             draw: "cube", anchor: "corner", foot: { w: 1, l: 1, h: 1 },
             files: { svg: "cube.svg", png: "cube.png" }, sprite: { w: 34, h: 34, minX: -17, minY: -17 } },
-  // Columna: huella CENTRADA en la celda (footAnchor) pero anclaje en la ESQUINA (anchor);
-  // por eso anchor y footAnchor difieren.
-  pillar: { label: "Columna", kind: "object", group: "Bloques", traits: { solid: true },
-            draw: "pillar", anchor: "corner", footAnchor: "center", foot: { w: 0.6, l: 0.6, h: 2.2 } },
 
   // --- Transportables (circuitos): sólidos, empujables, recogibles y caen ---
   prop_cube:     { label: "Cubo", kind: "object", group: "Transportables", traits: { solid: true, movable: true, carriable: true, falls: true },

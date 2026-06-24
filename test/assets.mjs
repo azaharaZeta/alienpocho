@@ -68,14 +68,11 @@ test("assetBox/assetRef/assetRegion devuelven algo coherente para todos", () => 
   }
 });
 
-test("anclaje 'center' centra la huella; 'corner' la deja en (0,0); footAnchor manda en la huella", () => {
+test("anclaje 'center' centra la huella; 'corner' la deja en (0,0)", () => {
   // cube: corner ⇒ caja en (0,0)
   assert.deepEqual(assetBox("cube"), { x: 0, y: 0, z: 0, w: 1, l: 1, h: 1 });
   // spikes: center ⇒ caja centrada
   const s = assetBox("spikes"); assert.ok(Math.abs(s.x - (0.5 - s.w / 2)) < 1e-9);
-  // pillar: anchor corner (ref 0,0,0) PERO footAnchor center (caja centrada)
-  assert.deepEqual(assetRef("pillar"), { x: 0, y: 0, z: 0 });
-  const p = assetBox("pillar"); assert.ok(Math.abs(p.x - (0.5 - p.w / 2)) < 1e-9, "pillar: huella no centrada");
 });
 
 test("variantes de orientación intercambian ancho/largo (robot) y caja por eje (puerta)", () => {
