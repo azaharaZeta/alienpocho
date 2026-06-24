@@ -17,8 +17,17 @@
    ============================================================================= */
 "use strict";
 
-/* Descriptor de la misión (ampliable: más adelante, lista de objetivos, dependencias, etc.). */
-export const MISSION = { goal: "fill-all-sockets" };
+/* Descriptor de la misión (ampliable: más adelante, lista de objetivos, dependencias, etc.).
+   `start` = ARRANQUE del robot: sala + posición + orientación. La MISIÓN decide dónde empieza el juego.
+   `room` debe ser una clave de data/rooms.js y `x,y` caer dentro de esa sala. Lo consumen world.js
+   (raíz del minimapa = `start.room`) y player.js / game.resetGame (posición). */
+export const MISSION = {
+  goal: "fill-all-sockets",
+  start: { room: "0,0", x: 3.5, y: 2.5, facing: 0 },   // room = sala inicial · x,y = centro de celda · facing 0:+x 1:+y 2:-x 3:-y
+  // QUÉ circuito pide cada zócalo (por su `id` en data/rooms.js). El total se deriva del nº de zócalos.
+  // Equilibrio: tantos circuitos de cada forma como zócalos de esa forma (aquí: 2 cube, 2 pyramid, 1 dome, 1 cylinder).
+  requires: { e1: "cube", a4: "cube", gal: "cylinder", nudo: "dome", cond: "pyramid", d3: "pyramid" },
+};
 
 /* Nº de objetivos del puzzle = zócalos colocables en TODO el mundo. Fuente única del total de
    circuitos a colocar (mata el antiguo `circuitsTotal` hardcodeado). */

@@ -2,8 +2,8 @@
 
 > Homenaje jugable a *Alien 8* (Ultimate, 1985). Investigación: [RESEARCH.md](RESEARCH.md) · arquitectura
 > de código: [ARQUITECTURA.md](ARQUITECTURA.md).
-> Decisiones de diseño: **4-6 salas · paleta monocromo Spectrum · controles tipo tanque · sistema de vidas ·
-> drones/enemigos aparcados** (ver [ideas/ideas.md](ideas/ideas.md)).
+> Decisiones de diseño: **mapa laberíntico de varias salas (~17 hoy, ampliable) · paleta monocromo Spectrum ·
+> controles tipo tanque · sistema de vidas · drones/enemigos aparcados** (ver [ideas/ideas.md](ideas/ideas.md)).
 
 ---
 
@@ -29,14 +29,14 @@ colocar todos → victoria antes de que el reloj de años luz llegue a 0.
 | Movimiento 4 diagonales | ✅ Replicar | |
 | Salto (eje Z) | ✅ Replicar | |
 | Recoger/colocar circuitos por forma | ✅ Replicar | Formas: cubo, pirámide, domo, cilindro |
-| Flip-screen entre salas | ✅ Replicar | 4-6 salas |
+| Flip-screen entre salas | ✅ Replicar | mapa laberíntico (~17 salas hoy) |
 | Peligros estáticos (pinchos) | ✅ Replicar | |
 | Enemigos móviles | ✅ Adaptar | Patrullas simples |
 | Reloj "años luz" | ✅ Adaptar | Límite global de partida |
 | Sistema de vidas | ✅ Adaptar | En vez de energía: nº de vidas |
 | Drones teledirigidos | ⏸️ Pospuesto | Posible ampliación futura |
-| Empujar bloques | 🔸 Opcional | Solo si un puzzle lo requiere |
-| 129 salas | ❌ Reducido a 4-6 | |
+| Empujar bloques | ✅ Implementado | Por trait `movable` de instancia; usado en puzzles (p. ej. REACTOR) |
+| 129 salas | ❌ Reducido a un subconjunto laberíntico (~17) | |
 
 ---
 
@@ -45,7 +45,9 @@ colocar todos → victoria antes de que el reloj de años luz llegue a 0.
 - Cada **sala** = rejilla 3D de celdas `(x, y, z)`:
   - Suelo: plano base `z = 0`.
   - Bloques/plataformas: celdas con altura.
-  - Tamaño de sala objetivo: **8×8** celdas de suelo (ajustable).
+  - Tamaño de sala variable: `w,h ∈ [3,13]` con `w+h ≤ 16` (lo aplica `makeRoom`), para que el rombo y el
+    HUD quepan. La sala de arranque la decide `data/mission.js` (`MISSION.start`). *(Idea pendiente de la
+    usuaria: limitar a 3–8 y centrar siempre en un marco 8×8 — ver [ideas/ideas.md](ideas/ideas.md).)*
 - **Proyección a pantalla** (de RESEARCH §4):
   ```
   sx = origenX + (wx - wy) * (TILE_W / 2)

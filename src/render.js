@@ -33,17 +33,29 @@ export function render(room) {
     for (let x = 0; x < room.w; x++)
       AP.floor(ctx, P, x, y, ink);
 
-  // 1b) Paredes/puertas del FONDO (siempre detrás de todo)
-  AP.flatWall(ctx, P, "x", 0, 0, room.w, WH, ink, room.wallTile);        // borde y=0 (atrás-dcha)
-  if (room.exits.ym) { const [s0, s1] = doorSpan(room.w); AP.door(ctx, P, "x", 0, s0, s1, WH, ink, true); }
-  AP.flatWall(ctx, P, "y", 0, 0, room.h, WH, ink, room.wallTile);        // borde x=0 (atrás-izq)
-  if (room.exits.xm) { const [s0, s1] = doorSpan(room.h); AP.door(ctx, P, "y", 0, s0, s1, WH, ink, true); }
-
-  // 2) Lo COLOCABLE como cajas para el painter — genérico: itera la lista uniforme de la sala
-  //    y por cada placement usa su caja (aabb) + su drawer (AP.drawAsset).
+  // 2) TODO lo que tiene altura va como CAJAS al painter (cáscara + colocable + entidades) para que
+  //    el orden atrás→adelante lo decida depthSort. Nada se pinta fuera de orden.
   const draws = [];
   const box3 = (x0, y0, z0, x1, y1, z1, draw) => draws.push({ x0, y0, z0, x1, y1, z1, draw });
 
+  // 2a) CÁSCARA del FONDO (paredes x=0 / y=0). Cada pared se PARTE por su vano en tramos, y la puerta
+  //     de fondo es un objeto 3D que RETROCEDE tras el plano del muro (inset y<0 / x<0): así depthSort
+  //     pinta primero la puerta y encima el tramo de muro contiguo → el muro TAPA el marco lateral
+  //     exterior de la puerta (su "grosor hacia atrás"), que en el suelo cae detrás de la pared.
+  const wallSegs = (n, span) => span ? [[0, span[0]], [span[1], n]] : [[0, n]];
+  // pared y=0 (atrás-dcha) + su puerta ym
+  for (const [c0, c1] of wallSegs(room.w, room.exits.ym ? doorSpan(room.w) : null))
+    if (c1 > c0) box3(c0, 0, 0, c1, 0, WH, () => AP.flatWall(ctx, P, "x", 0, 0, room.w, WH, ink, room.wallTile, [c0, c1]));
+  if (room.exits.ym) { const [s0, s1] = doorSpan(room.w);
+    box3(s0, -D.T, 0, s1, 0, WH, () => AP.door(ctx, P, "x", 0, s0, s1, WH, ink, true)); }
+  // pared x=0 (atrás-izq) + su puerta xm
+  for (const [c0, c1] of wallSegs(room.h, room.exits.xm ? doorSpan(room.h) : null))
+    if (c1 > c0) box3(0, c0, 0, 0, c1, WH, () => AP.flatWall(ctx, P, "y", 0, 0, room.h, WH, ink, room.wallTile, [c0, c1]));
+  if (room.exits.xm) { const [s0, s1] = doorSpan(room.h);
+    box3(-D.T, s0, 0, 0, s1, WH, () => AP.door(ctx, P, "y", 0, s0, s1, WH, ink, true)); }
+
+  // 2b) Lo COLOCABLE — genérico: itera la lista uniforme de la sala y por cada placement usa su
+  //     caja (aabb) + su drawer (AP.drawAsset).
   for (const t of roomThings(room)) {
     const col = assetTint(t.asset) === "secondary" ? ink2 : ink;
     const a = t.aabb;
@@ -53,8 +65,9 @@ export function render(room) {
   // entidades (jugador, etc.): cada una añade su caja al orden.
   for (const e of entities) e.addDraws(draws, room);
 
-  // puertas del FRENTE: el MARCO entra en el painter como UNA caja a lo largo del borde; el robot,
-  // al cruzar, se intercala solo (los postes lo tapan, el vano lo deja ver). hole=false → marco frontal.
+  // 2c) puertas del FRENTE: el borde x=w / y=h está ABIERTO (sin muro que las tape); el marco
+  //     protruye hacia fuera y entra como UNA caja. El robot, al cruzar, se intercala solo (los postes
+  //     lo tapan, el vano lo deja ver). hole=false → marco frontal.
   if (room.exits.yp) {
     const [s0, s1] = doorSpan(room.w), h = room.h;
     box3(s0, h, 0, s1, h + D.T, WH, () => AP.door(ctx, P, "x", h, s0, s1, WH, ink, false));

@@ -12,7 +12,7 @@ import assert from "node:assert/strict";
 
 import { ENGINE } from "../src/engine.js";
 import { buildWorld, roomThings } from "../src/world.js";
-import { START } from "../src/data/rooms.js";
+import { MISSION } from "../src/data/mission.js";
 import { game, room, interact, checkExits, resetGame } from "../src/game.js";
 import { player } from "../src/player.js";
 import { updateObjects, blocksHoriz, supportHeight, roomSolids, socketTop } from "../src/physics.js";
@@ -31,11 +31,11 @@ const OPP = { xp: "xm", xm: "xp", yp: "ym", ym: "yp" };
 console.log("ALIEN POCHO — smoke tests\n");
 
 /* ----------------------------------------------------------------- MUNDO --- */
-test("buildWorld arma 8 salas con la inicial presente", () => {
+test("buildWorld arma 17 salas con la inicial presente", () => {
   const w = buildWorld();
-  assert.equal(Object.keys(w.rooms).length, 8);
-  assert.ok(w.rooms[START], "existe la sala inicial");
-  assert.equal(w.start, START);
+  assert.equal(Object.keys(w.rooms).length, 17);
+  assert.ok(w.rooms[MISSION.start.room], "existe la sala inicial");
+  assert.equal(w.start, MISSION.start.room);
 });
 
 test("roomThings: lista uniforme coherente y SÓLIDOS equivalentes a roomSolids (por columna)", () => {
@@ -103,15 +103,15 @@ test("depthSort: la caja de detrás se pinta primero y no pierde cajas", () => {
 
 /* ---------------------------------------------------------------- FÍSICA --- */
 test("colisión: se choca con un bloque y se anda por celda libre", () => {
-  const r = buildWorld().rooms["0,0"];        // ENTRADA, bloque en (2,2)
-  assert.equal(blocksHoriz(r, 2.5, 2.5, 0), true, "la celda del bloque bloquea");
+  const r = buildWorld().rooms["0,0"];        // ENTRADA, bloque de la plataforma en (2,4)
+  assert.equal(blocksHoriz(r, 2.5, 4.5, 0), true, "la celda del bloque bloquea");
   assert.equal(blocksHoriz(r, 0.5, 0.5, 0), false, "una celda libre no bloquea");
 });
 
 test("apoyo: el suelo es 0 y la cima de un bloque es su altura", () => {
   const r = buildWorld().rooms["0,0"];
   assert.equal(supportHeight(r, 0.5, 0.5, 0), 0, "suelo a z=0");
-  assert.equal(supportHeight(r, 2.5, 2.5, 1), 1, "cima del bloque de 1 capa = 1");
+  assert.equal(supportHeight(r, 2.5, 4.5, 1), 1, "cima del bloque de 1 capa = 1");
 });
 
 test("STEP permite subir a superficies bajas (peana del zócalo ≤ STEP)", () => {
@@ -119,16 +119,16 @@ test("STEP permite subir a superficies bajas (peana del zócalo ≤ STEP)", () =
 });
 
 test("el zócalo es SÓLIDO (no atravesable) y el robot SE SUBE a su peana andando", () => {
-  const r = buildWorld().rooms["0,0"];        // ENTRADA, zócalo inactivo en celda (6,5)
+  const r = buildWorld().rooms["0,0"];        // ENTRADA, zócalo inactivo en celda (5,5)
   const sock = r.sockets[0];
   // 1) es sólido: aparece en roomSolids con la altura de su peana
-  const solid = roomSolids(r).find(b => b.x0 > 6 && b.x0 < 7 && b.y0 > 5 && b.y0 < 6);
+  const solid = roomSolids(r).find(b => b.x0 > 5 && b.x0 < 6 && b.y0 > 5 && b.y0 < 6);
   assert.ok(solid, "el zócalo inactivo está entre los sólidos (no es atravesable)");
   assert.equal(solid.top, socketTop(sock), "su cima sólida = peana (socketTop)");
   // 2) NO bloquea el avance (es bajo): el robot entra en su celda andando…
-  assert.equal(blocksHoriz(r, 6.5, 5.5, 0), false, "la peana baja no bloquea (se sube andando)");
+  assert.equal(blocksHoriz(r, 5.5, 5.5, 0), false, "la peana baja no bloquea (se sube andando)");
   // 3) …y queda apoyado ENCIMA de la peana, no a z=0
-  assert.equal(supportHeight(r, 6.5, 5.5, 0), SOCKET.BASE_H, "el robot se apoya sobre la peana");
+  assert.equal(supportHeight(r, 5.5, 5.5, 0), SOCKET.BASE_H, "el robot se apoya sobre la peana");
 });
 
 /* ------------------------------------------------- TRANSICIÓN ENTRE SALAS --- */
@@ -145,17 +145,17 @@ test("checkExits: cruzar el borde con salida cambia de sala (flip-screen)", () =
 test("coger un circuito lo retira de la sala y lo pone en la mano", () => {
   resetGame();
   const entrada = room;
-  assert.equal(entrada.objects.length, 2, "ENTRADA arranca con 2 (bloque + circuito, cubeta única)");
-  player.x = 3.5; player.y = 5.5; player.z = 0; game.carried = null;
+  assert.equal(entrada.objects.length, 3, "ENTRADA arranca con 3 (2 bloques de la plataforma + circuito)");
+  player.x = 3.5; player.y = 4.5; player.z = 1.66; game.carried = null;   // subido sobre el circuito de la plataforma
   interact(entrada);
   assert.equal(game.carried, "cube", "lleva el cubo");
-  assert.equal(entrada.objects.length, 1, "el circuito ya no está suelto (queda el bloque)");
+  assert.equal(entrada.objects.length, 2, "el circuito ya no está suelto (quedan los 2 bloques)");
 });
 
 test("colocar la forma correcta en su zócalo lo activa y suma circuito", () => {
   resetGame();
   const entrada = room;
-  player.x = 6.5; player.y = 5.5; player.z = 0; game.carried = "cube";   // casilla del zócalo cube
+  player.x = 5.5; player.y = 5.5; player.z = 0; game.carried = "cube";   // casilla del zócalo cube (5,5)
   const before = game.circuits;
   interact(entrada);
   assert.equal(game.carried, null, "el circuito se coloca");
@@ -166,7 +166,7 @@ test("colocar la forma correcta en su zócalo lo activa y suma circuito", () => 
 test("colocar el último circuito gana la partida", () => {
   resetGame();
   game.circuits = game.circuitsTotal - 1;      // a falta de uno
-  player.x = 6.5; player.y = 5.5; player.z = 0; game.carried = "cube";
+  player.x = 5.5; player.y = 5.5; player.z = 0; game.carried = "cube";
   interact(room);
   assert.equal(game.won, true, "game.won al completar todos");
 });
@@ -175,7 +175,7 @@ test("colocar el último circuito gana la partida", () => {
 test("un objeto en el aire cae hasta su apoyo", () => {
   resetGame();
   const o = room.objects.find(e => e.shape);   // el circuito de ENTRADA (cae); el bloque no tiene `falls`
-  o.z = 2; o.vz = 0;
+  o.x = 0.5; o.y = 0.5; o.z = 2; o.vz = 0;     // a una celda VACÍA y en el aire → debe caer al suelo
   for (let i = 0; i < 240; i++) updateObjects(room, 1 / 60);
   assert.ok(o.z <= 1e-3, "termina en el suelo (z≈0)");
 });
@@ -184,16 +184,16 @@ test("un objeto en el aire cae hasta su apoyo", () => {
 test("resetGame reconstruye el mundo sin arrastrar estado mutado", () => {
   // ensucia el estado
   resetGame();
-  player.x = 6.5; player.y = 5.5; player.z = 0; game.carried = "cube";
-  interact(room);                              // activa zócalo, retira objeto, circuits++
+  player.x = 5.5; player.y = 5.5; player.z = 0; game.carried = "cube";
+  interact(room);                              // coloca el cubo en el zócalo (ensucia estado)
   // reinicia
   resetGame();
   assert.equal(game.circuits, 0, "circuitos a 0");
   assert.equal(game.carried, null, "manos vacías");
   assert.equal(game.won, false, "no ganado");
   assert.equal(room.name, "ENTRADA", "vuelve a la entrada");
-  assert.equal(player.x, 1.5); assert.equal(player.y, 6.5);
-  assert.equal(room.objects.length, 2, "los objetos de ENTRADA vuelven (bloque + circuito, clones frescos)");
+  assert.equal(player.x, MISSION.start.x); assert.equal(player.y, MISSION.start.y);
+  assert.equal(room.objects.length, 3, "los objetos de ENTRADA vuelven (2 bloques + circuito, clones frescos)");
   assert.equal(room.sockets[0].filled, null, "el zócalo vuelve a estar vacío");
 });
 

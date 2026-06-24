@@ -160,16 +160,29 @@ export const AP = (() => {
 
   // Pared PLANA y teselada (panal). axis "x": plano en y=fixed recorriendo x. `tile` = variante de
   // panal (por sala); si no se pasa, override de consola o el global WALL_TILE.
-  function flatWall(ctx, p, axis, fixed, a0, a1, H, col, tile) {
-    let At, Bt, B, A;
-    if (axis === "x") { A = p(a0, fixed, 0); B = p(a1, fixed, 0); Bt = p(a1, fixed, H); At = p(a0, fixed, H); }
-    else { A = p(fixed, a0, 0); B = p(fixed, a1, 0); Bt = p(fixed, a1, H); At = p(fixed, a0, H); }
-    const L = [At, Bt, B, A];
-    poly(ctx, L, BLACK, BLACK);          // fondo NEGRO mientras carga la imagen
-    // PANAL: tira PNG/SVG (ya en perspectiva) teselada a lo largo del muro.
+  // `paint` = [c0,c1] OPCIONAL: sub-rango del muro a pintar (el resto es el VANO de la puerta). El
+  // TESELADO del panal sigue anclado a [a0,a1] (origen del muro completo) para que NO se desfase a
+  // ambos lados del vano; solo se recorta al sub-rango. Sin `paint` ⇒ muro entero (comportamiento previo).
+  function flatWall(ctx, p, axis, fixed, a0, a1, H, col, tile, paint) {
+    const [c0, c1] = paint || [a0, a1];
+    let At, Bt, B, A, cAt, cBt, cB, cA;
+    if (axis === "x") {
+      A = p(a0, fixed, 0); B = p(a1, fixed, 0); Bt = p(a1, fixed, H); At = p(a0, fixed, H);
+      cA = p(c0, fixed, 0); cB = p(c1, fixed, 0); cBt = p(c1, fixed, H); cAt = p(c0, fixed, H);
+    } else {
+      A = p(fixed, a0, 0); B = p(fixed, a1, 0); Bt = p(fixed, a1, H); At = p(fixed, a0, H);
+      cA = p(fixed, c0, 0); cB = p(fixed, c1, 0); cBt = p(fixed, c1, H); cAt = p(fixed, c0, H);
+    }
+    const CL = [cAt, cBt, cB, cA];       // cara del SUB-RANGO = lo que de verdad se pinta
+    ctx.save();
+    ctx.beginPath(); ctx.moveTo(cAt.x, cAt.y); ctx.lineTo(cBt.x, cBt.y); ctx.lineTo(cB.x, cB.y); ctx.lineTo(cA.x, cA.y);
+    ctx.closePath(); ctx.clip();         // recorta TODO al sub-rango (deja el vano libre)
+    poly(ctx, CL, BLACK, BLACK);         // fondo NEGRO mientras carga la imagen
+    // PANAL: tira PNG/SVG (ya en perspectiva) teselada a lo largo del muro, anclada a [a0,a1].
     const variant = tile || (typeof window !== "undefined" && window.__wall) || WALL_TILE;
     fillWall(ctx, axis, A, B, Bt, At, a1 - a0, variant, col);
-    poly(ctx, L, null, BLACK);           // recontorno limpio
+    ctx.restore();
+    poly(ctx, CL, null, BLACK);          // recontorno limpio del sub-rango
   }
 
   // Hueco negro de la puerta de FONDO. Lo usa drawDoorSprite: lo pinta detrás del marco "back".

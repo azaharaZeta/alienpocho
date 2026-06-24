@@ -11,7 +11,7 @@ Dependencias en UNA dirección (hojas abajo → `main` arriba):
 
 - **`data/assets.js`** — FUENTE ÚNICA de los assets (registro `ASSETS` + geometría + helpers). Datos puros, hoja.
 - **`data/rooms.js`** — EL MAPA (salas como datos puros). Hoja.
-- **`data/mission.js`** — LA MISIÓN/PUZZLE: `MISSION` + total de circuitos DERIVADO del mapa (`missionTotal`) + `missionComplete`. Tercera capa de datos (≠ assets/rooms). Hoja pura.
+- **`data/mission.js`** — LA MISIÓN/PUZZLE: `MISSION` (meta + `start` = arranque `{room,x,y,facing}`: `world.js` usa `start.room` como raíz del minimapa, `player.js`/`game.resetGame` la posición · `requires` = qué circuito pide cada zócalo, por `id`) + total de circuitos DERIVADO del mapa (`missionTotal`) + `missionComplete`. Tercera capa de datos (≠ assets/rooms). Hoja pura.
 - **`palette.js`** — colores por sala (`INKS`/`INK2`/`ROBOT_INK`). Hoja.
 - **`config.js`** — parámetros (`CFG`, `CONTROLS`, `SCENE`); re-exporta la geometría desde `data/assets.js`.
 - **`engine.js`** — motor iso genérico: proyección, `box`/`poly`, painter `depthSort`.
@@ -51,11 +51,15 @@ Cada asset se describe a sí mismo:
   es la cubeta ÚNICA de lo colocable no-estructural** (bloques + circuitos + ordenadores…): el COMPORTAMIENTO lo
   deciden los TRAITS (del asset, o de instancia vía `o.traits`), NO la cubeta — un `cube` es fijo por defecto y
   empujable si la instancia añade `movable`/`falls`. Posición por celda (`cx,cy`) o continua (`x,y`); `h` = pila.
-  El **zócalo es UN asset genérico** (`socket`); qué circuito pide (`requires`) y cuál tiene puesto (`filled`)
-  son datos de instancia. El circuito incrustado lo dibuja el drawer del socket con el sprite del propio circuito
+  El **zócalo es UN asset genérico** (`socket`); qué circuito pide lo decide la MISIÓN (`MISSION.requires[id]`)
+  y `filled` (lo puesto) es estado de partida. El circuito incrustado lo dibuja el drawer del socket con el sprite del propio circuito
   (lleno = a color; vacío = fantasma del que pide) → un circuito nuevo no toca el socket.
-- `render.js`: lo COLOCABLE se pinta en **un solo bucle** (`roomThings` + `aabb` para el painter + `drawAsset`);
-  la cáscara suelo/pared/puerta (paramétrica por tamaño de sala) va en una capa estructural aparte.
+- `render.js`: **TODO lo que tiene altura entra al painter como cajas** — cáscara (paredes/puertas) + lo COLOCABLE
+  (`roomThings` + `aabb` + `drawAsset`) + entidades — y `depthSort` decide el orden atrás→adelante (solo el suelo,
+  z=0, se pinta antes). Las **paredes de fondo se PARTEN por su vano** (`flatWall(...,paint=[c0,c1])`, con el panal
+  anclado al muro completo para no desfasarse) y la **puerta de fondo RETROCEDE** tras el plano del muro (inset
+  `y<0`/`x<0`, simétrico a la frontal que protruye hacia fuera) → el muro contiguo, delante, le tapa el marco
+  lateral exterior. Modelo 3D correcto de un vano: hueco en el muro + marco que recede, ordenado por profundidad.
 - `physics.roomSolids`: incluye los placements con trait `solid`; empuje (player) y gravedad (physics) operan por
   `movable`/`falls` vía **`thingHas`** (trait de asset O de instancia), con la huella propia. `game.interact`
   reconoce destinos/items por `receptacle`/`carriable`.

@@ -16,13 +16,14 @@ import { pressed, held } from "./input.js";
 import { ctx, P } from "./view.js";
 import { blocksHoriz, supportHeight, objBox, overlapsBox, objBlocked, objAsset, thingHas } from "./physics.js";
 import { propAsset } from "./data/assets.js";   // mapeo forma→asset del objeto en brazos
+import { MISSION } from "./data/mission.js";    // posición inicial del robot (MISSION.start)
 import { game, interact, resetGame } from "./game.js";
 
 export const player = {
-  x: 1.5, y: 6.5, z: 0,        // posición
+  x: MISSION.start.x, y: MISSION.start.y, z: 0,   // posición inicial: la define data/mission.js (MISSION.start)
   vz: 0, vx: 0, vy: 0,         // velocidades (vx,vy solo durante el salto)
   onGround: true,
-  facing: 3,                   // 0:+x  1:+y  2:-x  3:-y  (mira a -y = NE)
+  facing: MISSION.start.facing,   // 0:+x  1:+y  2:-x  3:-y  (mira a -y = NE)
   turnTimer: 0,                // tiempo restante de la animación de giro
   walkPhase: 0,                // fase de la animación de caminar
   moving: false,

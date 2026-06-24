@@ -15,7 +15,7 @@ import { canStandOn, socketTop, overlapsBox, objBox } from "./physics.js";
 import { player } from "./player.js";
 import { buildWorld, roomThings } from "./world.js";
 import { assetHas } from "./data/assets.js";   // traits del asset (receptacle/carriable)
-import { missionTotal, missionComplete } from "./data/mission.js";   // meta del puzzle (total + victoria)
+import { MISSION, missionTotal, missionComplete } from "./data/mission.js";   // meta + arranque (posición inicial) del puzzle
 
 /* Estado de partida. circuitsTotal se DERIVA del mapa (ver buildWorld abajo), no se hardcodea. */
 export const game = { state: "title", lives: 3, circuits: 0, circuitsTotal: 0, carried: null, lightYears: 9999, won: false };
@@ -101,8 +101,8 @@ export function resetGame() {
   world.rooms = fresh.rooms;                 // salas nuevas (estado de objetos limpio)
   room = world.rooms[world.start];
   Object.assign(player, {
-    x: 1.5, y: 6.5, z: 0, vz: 0, vx: 0, vy: 0, onGround: true,
-    facing: 3, turnTimer: 0, walkPhase: 0, moving: false,
+    x: MISSION.start.x, y: MISSION.start.y, z: 0, vz: 0, vx: 0, vy: 0, onGround: true,
+    facing: MISSION.start.facing, turnTimer: 0, walkPhase: 0, moving: false,
     jumpPending: false, jumpPendTime: 0, jdx: 0, jdy: 0
   });
   game.lives = 3; game.circuits = 0; game.carried = null;

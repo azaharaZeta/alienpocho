@@ -11,7 +11,8 @@
 "use strict";
 
 import { INKS, INK2 } from "./palette.js";
-import { ROOMS, START } from "./data/rooms.js";
+import { ROOMS } from "./data/rooms.js";
+import { MISSION } from "./data/mission.js";   // sala inicial = MISSION.start.room (la decide la misión)
 import { ASSETS, assetBox, assetRef, socketTop, propAsset, assetHas } from "./data/assets.js";   // registro + huellas/anclaje/traits
 
 /* Construye una sala a partir de su definición (datos).
@@ -69,8 +70,8 @@ export function roomThings(room) {
     }
   }
   for (const s of room.sockets) {                                // zócalos (vivos: al llenarse suben)
-    const cx = s.cx + 0.5, cy = s.cy + 0.5, z = s.z || 0;        // requires = circuito que pide, filled = el puesto
-    t.push({ asset: "socket", x: cx, y: cy, z, requires: s.requires, filled: s.filled, src: s,
+    const cx = s.cx + 0.5, cy = s.cy + 0.5, z = s.z || 0;        // qué circuito PIDE lo decide la MISIÓN (por id); filled = el puesto
+    t.push({ asset: "socket", x: cx, y: cy, z, requires: MISSION.requires[s.id], filled: s.filled, src: s,
              aabb: placeAabb("socket", cx, cy, z, socketTop(s)) });
   }
   for (const h of room.hazards)                                  // pinchos (decorativos, estáticos)
@@ -92,9 +93,10 @@ export function buildWorld() {
     });
   }
 
+  const start = MISSION.start.room;   // sala inicial: la decide la misión (data/mission.js)
   (function layout() {
-    rooms[START].wx = 0; rooms[START].wy = 0;
-    const seen = new Set([START]), q = [START];
+    rooms[start].wx = 0; rooms[start].wy = 0;
+    const seen = new Set([start]), q = [start];
     while (q.length) {
       const r = rooms[q.shift()];
       for (const [dir, t] of Object.entries(r.exits)) {
@@ -107,5 +109,5 @@ export function buildWorld() {
     }
   })();
 
-  return { rooms, start: START };
+  return { rooms, start };
 }
