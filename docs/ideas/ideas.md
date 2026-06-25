@@ -53,7 +53,6 @@ Convenio de nombres: usar minúsculas y guiones en lugar de espacios para `<titu
 
 ## IDEAS USUARIA
 - cambiar en assets.js  files: { svg: "<filename>.svg", png: <filename>.png } por algo tipo  filename: <filename> . solo se necesitaría saber el nombre del fichero, y luego buscarlo por la extensión png, y si no existe, por la svg
-- Centrar siempre la sala dentro del mismo marco 8x8.
 - el robot debería poder empujar los objetos que se encuentre en mitad de un salto
 
 - Esta es gorda: convertir el juego en un roguelike. Cada run, mapa random, ubicaciones random.

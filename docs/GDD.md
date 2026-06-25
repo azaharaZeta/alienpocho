@@ -45,9 +45,10 @@ colocar todos → victoria antes de que el reloj de años luz llegue a 0.
 - Cada **sala** = rejilla 3D de celdas `(x, y, z)`:
   - Suelo: plano base `z = 0`.
   - Bloques/plataformas: celdas con altura.
-  - Tamaño de sala variable: `w,h ∈ [3,13]` con `w+h ≤ 16` (lo aplica `makeRoom`), para que el rombo y el
-    HUD quepan. La sala de arranque la decide `data/mission.js` (`MISSION.start`). *(Idea pendiente de la
-    usuaria: limitar a 3–8 y centrar siempre en un marco 8×8 — ver [ideas/ideas.md](ideas/ideas.md).)*
+  - Tamaño de sala: **PAR ∈ {4, 6, 8}** (lo fuerza `makeRoom`), para que la puerta (2 celdas) caiga centrada
+    en celda entera y la pared se dibuje como módulos SVG sin recorte. Cada sala se **centra en un marco fijo
+    8×8** (el pico frontal del suelo se ancla al centro-base; ver `view.projectorFor`). La sala de arranque la
+    decide `data/mission.js` (`MISSION.start`).
 - **Proyección a pantalla** (de RESEARCH §4):
   ```
   sx = origenX + (wx - wy) * (TILE_W / 2)

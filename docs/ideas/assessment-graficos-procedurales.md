@@ -1,7 +1,11 @@
 # Assessment — gráficos procedurales pendientes de migrar a SVG/PNG
 
 **Objetivo declarado:** que todos los gráficos sean, eventualmente, SVG o PNG.
-**Fecha:** 2026-06-24 · **Estado:** análisis (no se ha tocado código).
+**Fecha:** 2026-06-24 · **Estado:** análisis + paredes/puertas YA migradas (ver §2).
+
+> **Actualización 2026-06-25:** las **paredes** ya se dibujan como módulos SVG tira a tira (sin recorte;
+> `draw.flatWall`) y las **puertas** como SVG generados por `tools/gen-doors.mjs`. Queda pendiente lo de
+> siempre: **robot** (animado) y **suelo** (paramétrico), más el chrome 2D (fuera de alcance).
 
 ## 1. Situación actual
 
@@ -22,8 +26,9 @@ Cualquier asset con `draw:"sprite"` + su `.svg` se dibuja por ahí **sin tocar
 - **`cube`**: PNG + SVG. ✅
 - **`socket`**: peana desde `socket.svg`, teñida por estado; el circuito incrustado /
   fantasma son sprites compuestos encima. ✅ (composición, pero todo desde fichero)
-- **`wall1`/`wall2`**: tira SVG **teselada** en perspectiva ([draw.js:166](../../src/draw.js)). ✅
-- **`door`** (front/back): SVG + hueco negro detrás ([draw.js:196](../../src/draw.js)). ✅
+- **`wall1`/`wall2`**: módulos SVG teselados celda a celda, **sin recorte** (`draw.flatWall`). ✅
+- **`door`** (front/back): SVG generados por `tools/gen-doors.mjs` (3 cajas iso: postes + dintel). El
+  vacío negro del vano lo pinta el render como **pre-pase de fondo** (`doorHole`), no es parte del SVG. ✅
 
 ### Todavía procedural (primitivas canvas)
 | Qué | Dónde | Naturaleza | Por qué sigue procedural |
@@ -31,7 +36,7 @@ Cualquier asset con `draw:"sprite"` + su `.svg` se dibuja por ahí **sin tocar
 | **`robot` (Pocho)** | [draw.js:227-280](../../src/draw.js) | `box()`/`poly()` por pieza: pies, brazos, torso, cabeza, visor, ojos, pecho, antena | **Animado** (bob al andar, balanceo de brazos opuesto a piernas) + **4 vistas** + orden de pintado de brazos según cara. Es el caso difícil. |
 | **`floor`** | [draw.js:151-154](../../src/draw.js) | quad negro + rejilla alterna por celda | Paramétrico por celda; se repite `w×h` veces/sala. Declara `files.svg:"example.svg"` pero **nunca se usa** (inconsistencia). |
 | **`shadow`** | [draw.js:282-286](../../src/draw.js) | elipse | Trivial, bajo cada entidad. |
-| **`doorHole`** | [draw.js:189-193](../../src/draw.js) | polígono negro | Hueco detrás del marco de puerta de fondo (ya parte de la composición de `door`). |
+| **`doorHole`** | `draw.js` | polígono negro | Vacío del vano de la puerta de fondo; el render lo pinta como **pre-pase de fondo** (antes de las cajas con altura) para que el robot no quede tapado al cruzar. |
 | **HUD** | [render.js:192-224](../../src/render.js)+ | barras segmentadas, "V" del marco, título "ALIEN POCHO" (strokeText+glow), casilla de carga, mini-robot de vidas | Overlay 2D en píxeles de pantalla. |
 | **Minimapa** | [render.js:144-188](../../src/render.js) | rects (salas/puertas) + marco + nombre | Derivado del `world` en runtime; geometría dinámica. |
 | **Banner victoria** | [render.js:89-100](../../src/render.js) | overlay + fillText | Texto. |

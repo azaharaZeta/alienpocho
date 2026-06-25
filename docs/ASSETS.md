@@ -19,11 +19,13 @@ migran a **PNG editado a mano** caso por caso, cuando merece la pena.
 - **Los assets-sprite ya NO tienen fallback procedural.** Cada uno se dibuja SOLO desde su fichero
   (PNG→SVG) por la vía única `AP.drawSprite`; mientras la imagen carga, no se pinta (de ahí la idea de
   **precargar**, ver [`docs/ideas/ideas.md`](ideas/ideas.md)).
-- **El dibujo procedural (`AP.*` en `src/draw.js`) queda solo para lo que NO es un sprite fijo**: robot
-  (animado) y la cáscara estructural (suelo/pared/puerta, paramétricas por tamaño de sala). Es
-  además la entrada con la que la tool genera el SVG inicial. El objetivo a futuro es reducir el procedural
-  al mínimo imprescindible (lo animado/paramétrico). El **zócalo** ya NO es procedural: su peana es
-  `socket.svg` y el drawer solo COMPONE sprites (peana teñida por estado + circuito/fantasma), sin `box`/`poly`.
+- **El dibujo procedural (`AP.*` en `src/draw.js`) queda solo para**: el **robot** (animado), el **suelo**
+  (rejilla por celda) y el chrome 2D (HUD/minimapa/banner). Las **paredes** (tiras de panal `wall1/2.svg`)
+  y las **puertas** (`door_front/back.svg`) ya son SVG en fichero; el código solo las **tesela/coloca**
+  paramétricamente por tamaño de sala (`flatWall`/`door`). Objetivo a futuro: reducir el procedural al
+  mínimo (lo animado: robot; ver [assessment](ideas/assessment-graficos-procedurales.md)). El **zócalo** ya
+  NO es procedural: su peana es `socket.svg` y el drawer solo COMPONE sprites (peana teñida por estado +
+  circuito/fantasma), sin `box`/`poly`.
 
 ---
 
@@ -77,7 +79,7 @@ dibuja PNG → globalCompositeOperation "multiply" + fillRect(tinta) → "destin
 ```
 
 Esto equivale exactamente a `darken(tinta, f)` (lo mismo que hace el vector), así que conserva el
-sombreado. Se cachea por tinta. Ver `tintedCubePng()` en [`src/render.js`](../src/render.js).
+sombreado. Se cachea por tinta. Ver `_tintSprite()` en [`src/draw.js`](../src/draw.js).
 
 ### Anclaje (automático)
 Cada sprite se ancla en `P(coords) + (minX, minY)`, donde `(coords)` son los argumentos de la
@@ -103,24 +105,29 @@ desde cualquier sitio que llame a su `AP.*`.
 - **Encuadre del sprite** (`{ minX, minY, w, h }`) por asset: en el registro `src/data/assets.js`
   (`AP.SPRITES` en draw.js lo deriva de ahí).
 - **`drawSprite(name, ctx, ref, col)`**: carga (PNG→SVG) y rasteriza a `w×h` (cacheado), tiñe por
-  `col` (multiply, cacheado) y dibuja en `ref+(minX,minY)`. Devuelve `false` si **no está migrado**,
-  **aún carga** o **no hay DOM** (Node/tests) → el llamador pinta el **vector** (degradado elegante).
-- **Guarda** en cada `AP.*` migrado, p. ej.:
-  `function cube(ctx,p,cx,cy,cz,col){ if (drawSprite("cube", ctx, p(cx,cy,cz), col)) return; /* vector */ }`
+  `col` (multiply, cacheado) y dibuja en `ref+(minX,minY)`. Devuelve `false` (y **no dibuja nada**) si
+  **no hay sprite**, **aún carga** o **no hay DOM** (Node/tests). **No hay fallback procedural**: el asset
+  migrado se pinta SOLO desde fichero (mientras carga, no se ve → de ahí la idea de **precargar**).
 
-### Sin generadores (todo es fichero fuente)
-> 🗑️ **Los generadores `gen-svg.mjs`/`gen-doors.mjs`/`gen-walls.mjs` se ELIMINARON (2026-06-23).** Los dos
-> primeros generaban el SVG ejecutando `AP.*`, pero los assets ya están migrados a sprite (`AP.*` solo hace
-> `drawSprite`) → en Node dibujaban VACÍO y **machacaban** los SVG buenos. `gen-walls` aún funcionaba (panal
-> procedural), pero las tiras de pared `wall1/2.svg` ya están versionadas y se editan a mano como cualquier
-> otro asset. **La fuente de cada SVG es ahora el propio fichero** (editado a mano o creado con la tool); no
-> se regeneran ejecutando funciones. En `tools/` solo queda `tool-assets.html`.
+### Generadores en `tools/`
+- **`tools/gen-doors.mjs`** (recreado 2026-06-25): genera `door_front/back.svg` a partir de la GEOMETRÍA
+  del registro (`DOOR`/`WALL_H` en `data/assets.js`), proyectando 3 cajas iso (postes + dintel) con el
+  sombreado de `box()`. **Reejecútalo** (`node tools/gen-doors.mjs`) si cambias `DOOR.*`/`WALL_H`, y
+  actualiza `DOOR_TILES` (en `draw.js`) + `manifest.json` con los `{w,h,minX,minY}` que imprime.
+- El resto de SVG (sprites, `wall1/2.svg`) **NO se generan**: su fuente es el propio fichero (editado a
+  mano o creado con la tool). No quedan `gen-svg.mjs`/`gen-walls.mjs` (eliminados 2026-06-23: ejecutaban
+  `AP.*` en Node y machacaban los SVG buenos con dibujos vacíos).
 
 ### La tool lee del registro (sin listas a mano)
 - [`tools/tool-assets.html`](../tools/tool-assets.html) toma **todos** los assets de `src/data/assets.js`
-  tal cual, los agrupa por su `group` y muestra sus `traits`. Cada asset se dibuja con el motor genérico
-  `AP.drawAsset` (la tool no sabe de nombres ni tipos). El **SVG-fuente** y el **export-PNG** existen solo
-  para los assets con `files`; de los procedurales la tool avisa "sin SVG".
+  tal cual, los agrupa por su `group`, permite **filtrar por trait** (chips con color por trait, leídos del
+  registro) y los lista. Las **miniaturas** se dibujan con el motor genérico `AP.drawAsset`.
+- En el popup de un asset **con ficheros**: muestra el **SVG y el PNG uno al lado del otro** (si el PNG
+  existe), con los overlays toggleables **cubo de referencia / región estándar / punto de anclaje** sobre
+  cada uno. Un asset **procedural** (sin ficheros): muestra su render iso del motor (con esos overlays).
+- El **export PNG** (`rasterizeSVG`) rasteriza el SVG **EXACTAMENTE como el juego lo carga** (sin fijar
+  width/height; intrínseco → `drawImage` al tamaño destino) → el PNG exportado encaja pixel a pixel con el
+  render del SVG en el juego en cualquier navegador.
 
 ---
 
@@ -137,5 +144,7 @@ desde cualquier sitio que llame a su `AP.*`.
   o en el icono del HUD) se pinta SIEMPRE por `AP.drawSprite(name, ctx, ref, col)` (`ref` = punto de
   pantalla). Se alcanza vía `drawAsset` (salas) o por llamada directa (zócalo/brazos/HUD); el mapeo
   forma→asset es `propAsset()` en [`src/data/assets.js`](../src/data/assets.js). Ya no hay `circuit()`.
-- ⬜ **No migrables aún** (no son sprites fijos): robot (animado) y los paramétricos (pared, suelo, puerta).
-  Ideas en [ideas/ideas.md](ideas/ideas.md) sobre cómo "fijarlos".
+- ✅ **Paredes y puertas en SVG**: `wall1/2.svg` (tiras de panal, teseladas por `flatWall` como módulos
+  sin recorte) y `door_front/back.svg` (generados por `gen-doors.mjs`). El código solo las coloca/tesela.
+- ⬜ **Sigue procedural**: **robot** (animado) y **suelo** (rejilla por celda). Ver
+  [assessment](ideas/assessment-graficos-procedurales.md) sobre viabilidad.

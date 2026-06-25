@@ -19,8 +19,8 @@ Dependencias en UNA dirección (hojas abajo → `main` arriba):
 - **`world.js`** — arma las salas (`makeRoom`/`buildWorld`) y expone `roomThings(room)` (lista uniforme de placements).
 - **`physics.js`** — colisión / apoyo / empuje (puro, sobre `room`).
 - **`player.js`** — entidad jugador · **`game.js`** — estado de partida + reglas + transiciones de sala.
-- **`view.js`** / **`input.js`** — canvas+proyector+tema / teclado+táctil. **No tocan el DOM al importar** (solo en `init*()`) → los módulos corren en Node (tests).
-- **`render.js`** — escena + HUD + minimapa · **`screens.js`** — título · **`main.js`** — bucle + arranque.
+- **`view.js`** / **`input.js`** — canvas+proyector+tema / teclado+táctil. **No tocan el DOM al importar** (solo en `init*()`) → los módulos corren en Node (tests). `projectorFor` ancla el **pico frontal del suelo al centro-base de un marco FIJO 8×8** (la esquina `(w,h)` cae siempre en el mismo punto) → el marco del HUD queda centrado y estable en cualquier sala.
+- **`render.js`** — escena + HUD + minimapa · **`screens.js`** — título · **`main.js`** — bucle + arranque. Minimapa **fijo a la derecha**, marcador/UI **fijo a la izquierda** (posición fija, ya no según el hueco).
 
 ## Motor isométrico
 - **Proyección 2:1** (`engine.js`): `P(x,y,z) = (ox + (x−y)·TW/2, oy + (x+y)·TH/2 − z·BH)`, con `TW=34, TH=17, BH=17`.
@@ -55,11 +55,14 @@ Cada asset se describe a sí mismo:
   y `filled` (lo puesto) es estado de partida. El circuito incrustado lo dibuja el drawer del socket con el sprite del propio circuito
   (lleno = a color; vacío = fantasma del que pide) → un circuito nuevo no toca el socket.
 - `render.js`: **TODO lo que tiene altura entra al painter como cajas** — cáscara (paredes/puertas) + lo COLOCABLE
-  (`roomThings` + `aabb` + `drawAsset`) + entidades — y `depthSort` decide el orden atrás→adelante (solo el suelo,
-  z=0, se pinta antes). Las **paredes de fondo se PARTEN por su vano** (`flatWall(...,paint=[c0,c1])`, con el panal
-  anclado al muro completo para no desfasarse) y la **puerta de fondo RETROCEDE** tras el plano del muro (inset
-  `y<0`/`x<0`, simétrico a la frontal que protruye hacia fuera) → el muro contiguo, delante, le tapa el marco
-  lateral exterior. Modelo 3D correcto de un vano: hueco en el muro + marco que recede, ordenado por profundidad.
+  (`roomThings` + `aabb` + `drawAsset`) + entidades — y `depthSort` decide el orden atrás→adelante (el suelo,
+  z=0, y el **vacío negro del vano** de las puertas de fondo —`doorHole`— se pintan antes, al fondo). Las
+  **paredes de fondo son MÓDULOS SVG**: `flatWall` tesela las tiras de panal celda a celda **sin recorte**; el
+  muro se parte por su vano en tramos de celdas enteras (`wallSegs`), posible porque la **puerta ocupa 2 celdas
+  exactas** (`DOOR.SPAN_HALF=1`) y las salas son de dimensión PAR ∈ {4,6,8} (`world.makeRoom` las acota/fuerza).
+  La **puerta de fondo RETROCEDE** tras el plano del muro
+  (inset `y<0`/`x<0`, simétrico a la frontal que protruye) → el muro contiguo, delante, le tapa el marco lateral
+  exterior. El vacío del vano (`doorHole`) va al fondo (pre-pase) para que el robot no quede tapado al cruzar.
 - `physics.roomSolids`: incluye los placements con trait `solid`; empuje (player) y gravedad (physics) operan por
   `movable`/`falls` vía **`thingHas`** (trait de asset O de instancia), con la huella propia. `game.interact`
   reconoce destinos/items por `receptacle`/`carriable`.
