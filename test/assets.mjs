@@ -69,7 +69,7 @@ test("assetBox/assetRef/assetRegion devuelven algo coherente para todos", () => 
 });
 
 test("anclaje = esquina (0,0) + offset; footMode sitúa la huella (center/corner)", () => {
-  // El modelo es offset+footMode (no el viejo enum `anchor`, que ya no existe).
+  // Modelo: ancla = esquina + offset (+footMode); el campo `anchor`/`footAnchor` NO debe existir.
   assert.ok(!("anchor" in ASSETS.cube) && !("footAnchor" in ASSETS.cube), "queda un campo `anchor`/`footAnchor` viejo");
   assert.deepEqual(ASSETS.cube.offset, { x: 0.5, y: 0.5 }); assert.equal(ASSETS.cube.footMode, "center");
   assert.deepEqual(ASSETS.floor.offset, { x: 0, y: 0 });    assert.equal(ASSETS.floor.footMode, "corner");

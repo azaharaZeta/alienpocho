@@ -4,7 +4,7 @@
    contornos negros, + ranuras horizontales (línea blanca + negra) que recorren las dos caras
    frontales. Proyección idéntica a la del juego (TW=34,TH=17,BH=17). Se autogenera desde la
    GEOMETRÍA del registro (data/assets.js DOOR) → cambiar SPAN_HALF/POST_W aquí no hace falta.
-   Uso: node tools/gen-doors.mjs   (escribe los SVG y reporta los tiles para ASSETS.door.tiles en data/assets.js). */
+   Uso: node tools/gen-doors.mjs   (escribe door.svg y reporta los tiles front/back para ASSETS.door.tiles). */
 import { writeFileSync } from "node:fs";
 import { DOOR, WALL_H } from "../src/data/assets.js";
 

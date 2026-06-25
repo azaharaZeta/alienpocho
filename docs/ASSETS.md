@@ -21,7 +21,7 @@ migran a **PNG editado a mano** caso por caso, cuando merece la pena.
   **precargar**, ver [`docs/ideas/ideas.md`](ideas/ideas.md)).
 - **El dibujo procedural (`AP.*` en `src/draw.js`) queda solo para**: el **robot** (animado), el **suelo**
   (rejilla por celda) y el chrome 2D (HUD/minimapa/banner). Las **paredes** (tiras de panal `wall1/2.svg`)
-  y las **puertas** (`door_front/back.svg`) ya son SVG en fichero; el código solo las **tesela/coloca**
+  y la **puerta** (`door.svg`, un solo dibujo) ya son SVG en fichero; el código solo las **tesela/coloca**
   paramétricamente por tamaño de sala (`flatWall`/`door`). Objetivo a futuro: reducir el procedural al
   mínimo (lo animado: robot; ver [assessment](ideas/assessment-graficos-procedurales.md)). El **zócalo** ya
   NO es procedural: su peana es `socket.svg` y el drawer solo COMPONE sprites (peana teñida por estado +
@@ -115,10 +115,11 @@ desde cualquier sitio que llame a su `AP.*`.
   migrado se pinta SOLO desde fichero (mientras carga, no se ve → de ahí la idea de **precargar**).
 
 ### Generadores en `tools/`
-- **`tools/gen-doors.mjs`** (recreado 2026-06-25): genera `door_front/back.svg` a partir de la GEOMETRÍA
-  del registro (`DOOR`/`WALL_H` en `data/assets.js`), proyectando 3 cajas iso (postes + dintel) con el
-  sombreado de `box()`. **Reejecútalo** (`node tools/gen-doors.mjs`) si cambias `DOOR.*`/`WALL_H`, y
-  actualiza `DOOR_TILES` (en `draw.js`) + `manifest.json` con los `{w,h,minX,minY}` que imprime.
+- **`tools/gen-doors.mjs`**: genera **`door.svg`** (UN solo dibujo; front y back son el mismo arte, solo
+  cambia el ancla) a partir de la GEOMETRÍA del registro (`DOOR`/`WALL_H` en `data/assets.js`), proyectando
+  3 cajas iso (postes + dintel) con el sombreado de `box()`. **Reejecútalo** (`node tools/gen-doors.mjs`) si
+  cambias `DOOR.*`/`WALL_H`, y actualiza `door.tiles` (en el REGISTRO `data/assets.js`) + `manifest.json` con
+  los `{w,h,minX,minY}` que imprime (reporta los offsets front y back).
 - El resto de SVG (sprites, `wall1/2.svg`) **NO se generan**: su fuente es el propio fichero (editado a
   mano o creado con la tool). No quedan `gen-svg.mjs`/`gen-walls.mjs` (eliminados 2026-06-23: ejecutaban
   `AP.*` en Node y machacaban los SVG buenos con dibujos vacíos).
@@ -149,7 +150,9 @@ desde cualquier sitio que llame a su `AP.*`.
   o en el icono del HUD) se pinta SIEMPRE por `AP.drawSprite(name, ctx, ref, col)` (`ref` = punto de
   pantalla). Se alcanza vía `drawAsset` (salas) o por llamada directa (zócalo/brazos/HUD); el mapeo
   forma→asset es `propAsset()` en [`src/data/assets.js`](../src/data/assets.js). Ya no hay `circuit()`.
-- ✅ **Paredes y puertas en SVG**: `wall1/2.svg` (tiras de panal, teseladas por `flatWall` como módulos
-  sin recorte) y `door_front/back.svg` (generados por `gen-doors.mjs`). El código solo las coloca/tesela.
+- ✅ **Paredes y puerta en SVG**: `wall1/2.svg` (tiras de panal, teseladas por `flatWall` como módulos
+  sin recorte) y `door.svg` (UN solo dibujo, generado por `gen-doors.mjs`; front/back = mismo arte, distinto
+  ancla). El render parte la puerta en **2 piezas** (recorte por el centro del vano, transparente) para que el
+  robot se intercale entre los postes al cruzar. El código solo las coloca/tesela.
 - ⬜ **Sigue procedural**: **robot** (animado) y **suelo** (rejilla por celda). Ver
   [assessment](ideas/assessment-graficos-procedurales.md) sobre viabilidad.

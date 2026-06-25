@@ -4,8 +4,9 @@
 **Fecha:** 2026-06-24 · **Estado:** análisis + paredes/puertas YA migradas (ver §2).
 
 > **Actualización 2026-06-25:** las **paredes** ya se dibujan como módulos SVG tira a tira (sin recorte;
-> `draw.flatWall`) y las **puertas** como SVG generados por `tools/gen-doors.mjs`. Queda pendiente lo de
-> siempre: **robot** (animado) y **suelo** (paramétrico), más el chrome 2D (fuera de alcance).
+> `draw.flatWall`) y la **puerta** como UN solo SVG (`door.svg`) generado por `tools/gen-doors.mjs` (el
+> render la parte en 2 piezas-poste para la oclusión). Queda pendiente lo de siempre: **robot** (animado) y
+> **suelo** (paramétrico, con el `files.svg:"example.svg"` fantasma a resolver), más el chrome 2D (fuera de alcance).
 
 ## 1. Situación actual
 
@@ -27,8 +28,9 @@ Cualquier asset con `draw:"sprite"` + su `.svg` se dibuja por ahí **sin tocar
 - **`socket`**: peana desde `socket.svg`, teñida por estado; el circuito incrustado /
   fantasma son sprites compuestos encima. ✅ (composición, pero todo desde fichero)
 - **`wall1`/`wall2`**: módulos SVG teselados celda a celda, **sin recorte** (`draw.flatWall`). ✅
-- **`door`** (front/back): SVG generados por `tools/gen-doors.mjs` (3 cajas iso: postes + dintel). El
-  vacío negro del vano lo pinta el render como **pre-pase de fondo** (`doorHole`), no es parte del SVG. ✅
+- **`door`**: UN solo SVG (`door.svg`) generado por `tools/gen-doors.mjs` (3 cajas iso: postes + dintel;
+  front y back = mismo dibujo, distinto ancla). El render lo parte en 2 piezas (postes) por el centro del
+  vano. El vacío negro del vano lo pinta el render como **pre-pase de fondo** (`doorHole`), no es del SVG. ✅
 
 ### Todavía procedural (primitivas canvas)
 | Qué | Dónde | Naturaleza | Por qué sigue procedural |

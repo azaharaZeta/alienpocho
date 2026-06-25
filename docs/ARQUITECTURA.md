@@ -65,7 +65,10 @@ Cada asset se describe a sí mismo:
   tesela las tiras de panal celda a celda **sin recorte**; el muro se parte por su vano en tramos de celdas enteras
   (`wallSegs`), posible porque la **puerta ocupa 2 celdas exactas** (`DOOR.SPAN_HALF=1`) y las salas son de
   dimensión PAR ∈ {4,6,8} (`world.makeRoom`). La **puerta de fondo RETROCEDE** tras el plano del muro (inset,
-  simétrico a la frontal que protruye) → el muro contiguo le tapa el marco lateral exterior.
+  simétrico a la frontal que protruye) → el muro contiguo le tapa el marco lateral exterior. La **puerta es UN
+  solo sprite** (`door.svg`; front/back = mismo dibujo, distinto ancla) pero el render la PARTE en 2 piezas
+  (`roomShell` emite 2 placements-poste; el drawer recorta el sprite por el centro del vano, transparente) → cada
+  poste se ordena por separado y el robot se intercala al cruzar (delante del poste cercano, detrás del lejano).
 - `physics.roomSolids`: **FUENTE ÚNICA de sólidos** = objetos con trait `solid` (`roomThings`) **∪ la cáscara**
   (`roomShell`: paredes como su caja, puertas como sus **dos postes** dejando libre el vano = el antiguo `inDoor`
   exacto). Así paredes, puertas y bloques se colisionan EXACTAMENTE igual (AABB). `outOfBounds` queda solo como el

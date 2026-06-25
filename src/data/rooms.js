@@ -110,7 +110,8 @@ export const ROOMS = {
   // CONDUCTO — pasillo alto 4×8. Zócalo de la PIRÁMIDE.
   "0,1": { name: "CONDUCTO", paletteIndex: 1, w: 4, h: 8,
     exits: { ym: "0,0", yp: "0,2" },
-    objects: [{ asset: "cube", cx: 1, cy: 2 }, { asset: "cube", cx: 2, cy: 5 }],
+    objects: [{ asset: "cube", cx: 1, cy: 2 }, 
+              { asset: "cube", cx: 3, cy: 5 }],
     sockets: [{ cx: 1, cy: 4, z: 0, id: "cond", filled: null }] },
 
   // CISTERNA — 8×6 (laberinto + pinchos deco).

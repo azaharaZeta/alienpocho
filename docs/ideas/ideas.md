@@ -40,6 +40,7 @@ Convenio de nombres: usar minúsculas y guiones en lugar de espacios para `<titu
 
 ### Técnica
 - **Precargar los assets (PNG/SVG) al arrancar**: ahora que los migrados solo se dibujan desde fichero (sin fallback procedural), mientras cargan no se dibujan → parpadeo en cada recarga. Cargar todas las imágenes antes de iniciar el bucle (o pantalla de carga breve) para que no falte nada en el primer frame.
+- **Quitar (o gating) el debug visual `j`/`k`/`l` antes de publicar**: overlays de desarrollo (cubo de referencia / región estándar / punto de anclaje) dentro del juego (`render.js`→`drawDebug`, teclas en `config.js`). Es utillaje temporal, no para el jugador.
 
 ### Presentación y pulido
 - **Pantallas** de victoria y game over con entidad propia (hoy solo banner); reutilizar el

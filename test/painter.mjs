@@ -13,7 +13,7 @@
 
      (2) DETERMINISMO: el orden devuelto es función del CONJUNTO de cajas, no del
          orden en que llegan. Permutar la entrada NO cambia el resultado visual.
-         (El bug histórico: el orden dependía de la inserción → parpadeo/pop.)
+         (Si el orden dependiera de la inserción → parpadeo/pop al permutar la entrada.)
 
    Ejecutar:  node test/painter.mjs   (lo encadena `npm test`).
    ============================================================================= */

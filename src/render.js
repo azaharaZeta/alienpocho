@@ -45,7 +45,7 @@ function dbgOne(box, ref) {
   if (DBG.anchor) { const p = P(ref.x, ref.y, ref.z); ctx.fillStyle = DBG_COL.anchor;
     ctx.beginPath(); ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2); ctx.fill(); }
 }
-// Pasada de depuración: recorre TODO lo dibujable (suelo + cáscara + colocable + entidades) con su caja/ancla.
+// Pasada de depuración: recorre lo dibujable (cáscara + colocable + entidades) con su caja/ancla.
 function drawDebug(room) {
   if (!(DBG.box || DBG.region || DBG.anchor)) return;
   // El SUELO se excepciona a propósito (es la rejilla de referencia; ensucia y tapa lo demás).
@@ -80,17 +80,14 @@ export function render(room) {
   if (room.exits.ym) { const [s0, s1] = doorSpan(room.w); AP.doorHole(ctx, P, "x", 0, s0, s1, WH); }
   if (room.exits.xm) { const [s0, s1] = doorSpan(room.h); AP.doorHole(ctx, P, "y", 0, s0, s1, WH); }
 
-  // 2) TODO lo que tiene altura va como CAJAS al painter (cáscara + colocable + entidades) para que
-  //    el orden atrás→adelante lo decida depthSort. Nada se pinta fuera de orden.
+  // 2) Lo que tiene altura va como CAJAS al painter; depthSort decide el orden atrás→adelante.
   const draws = [];
   const box3 = (x0, y0, z0, x1, y1, z1, draw) => draws.push({ x0, y0, z0, x1, y1, z1, draw });
 
-  // 2a) TODO lo que tiene altura entra al painter por la MISMA vía: CÁSCARA (paredes/puertas, roomShell)
-  //     + COLOCABLE (objetos, roomThings), cada placement con su caja (aabb) y su drawer genérico
-  //     (AP.drawAsset). La cáscara YA NO se construye a mano: sus cajas/anclaje salen del registro igual
-  //     que las de los objetos. Las puertas de fondo retroceden tras el muro y las frontales protruyen del
-  //     borde abierto (lo codifica roomShell en la aabb). El orden atrás→adelante lo decide depthSort, que
-  //     es determinista (da igual el orden de inserción) → el robot se intercala solo al cruzar una puerta.
+  // 2a) UNA sola vía para CÁSCARA (paredes/puertas, roomShell) y COLOCABLE (objetos, roomThings): cada
+  //     placement con su caja (aabb) + drawer genérico (AP.drawAsset); la cáscara sale del registro igual que
+  //     los objetos. El inset (puerta de fondo) / protrusión (frontal) va en su aabb. depthSort es determinista
+  //     (independiente del orden de inserción) → el robot se intercala solo al cruzar una puerta.
   for (const t of [...roomShell(room), ...roomThings(room)]) {
     const col = assetTint(t.asset) === "secondary" ? ink2 : ink;
     const a = t.aabb;   // el painter ordena por la MISMA huella que la colisión (una caja por asset) → "tocar" = orden limpio
@@ -163,7 +160,7 @@ function drawMiniRobot(cx, cy, col) {
 /* MINIMAPA: visión cenital. Cada sala es su rectángulo w×h en coords de mundo (wx,wy),
    a escala fija, centrado en la sala actual; se recorta al viewport.
    POSICIÓN FIJA: el minimapa va SIEMPRE a la DERECHA y la UI/marcador a la IZQUIERDA. Como las salas
-   se encajan en un marco fijo (mismo pico central), los huecos de las esquinas ya no cambian. */
+   se encajan en un marco fijo (mismo pico central), los huecos de las esquinas quedan estables. */
 function drawMinimap() {
   if (room.wx === undefined) return;
   const ink = room.ink, ink2 = room.ink2 || ink;

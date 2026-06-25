@@ -101,7 +101,7 @@ function placeShellAabb(axis, fixed, a0, a1, depth = 0, side = -1) {
 
 /* Los dos POSTES sólidos de un marco de puerta (extremos del vano; dejan libre el hueco central).
    Se derivan de la caja del marco + DOOR.POST_W → el hueco coincide EXACTO con el dibujo (gen-doors) y
-   con el antiguo `inDoor` (semiancho passable = SPAN_HALF − POST_W). Es la huella sólida de la puerta. */
+   con `inDoor` (semiancho passable = SPAN_HALF − POST_W). Es la huella sólida de la puerta. */
 function doorPosts(axis, b) {
   const W = DOOR.POST_W;
   return axis === "x"
