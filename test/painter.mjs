@@ -32,17 +32,20 @@ function test(name, fn) {
 }
 
 /* ---- geometría de referencia (INDEPENDIENTE del motor) ---- */
-// AABB de la caja proyectada a pantalla (mismas fórmulas que el painter).
-function scrAABB(b) {
-  const { TILE_W: TW, TILE_H: TH, BLOCK_H: BH } = POPT;
+// Silueta iso (hexágono) de la caja: extensiones en los TRES ejes del hexágono (la vertical de pantalla
+// + las dos diagonales). Dos siluetas se solapan EN PANTALLA sii se solapan en los tres ejes (exacto;
+// mismo criterio que engine.depthSort, re-implementado aquí para que el oráculo sea autónomo).
+function silhouette(b) {
+  const { TILE_H: TH, BLOCK_H: BH } = POPT;
   return {
-    x0: (b.x0 - b.y1) * TW / 2, x1: (b.x1 - b.y0) * TW / 2,
-    y0: (b.x0 + b.y0) * TH / 2 - b.z1 * BH, y1: (b.x1 + b.y1) * TH / 2 - b.z0 * BH
+    a0: b.x0 - b.y1,           a1: b.x1 - b.y0,
+    b0: BH * b.z0 - TH * b.y1, b1: BH * b.z1 - TH * b.y0,
+    c0: TH * b.x0 - BH * b.z1, c1: TH * b.x1 - BH * b.z0,
   };
 }
 function overlapScr(a, b) {
-  const A = scrAABB(a), B = scrAABB(b);
-  return A.x0 < B.x1 && A.x1 > B.x0 && A.y0 < B.y1 && A.y1 > B.y0;
+  const A = silhouette(a), B = silhouette(b);
+  return A.a0 < B.a1 && A.a1 > B.a0 && A.b0 < B.b1 && A.b1 > B.b0 && A.c0 < B.c1 && A.c1 > B.c0;
 }
 // ¿`a` está en el lado CERCANO a cámara de `b` por algún eje? (a ocluiría a b)
 function nearVia(a, b) {
@@ -66,6 +69,24 @@ function buildGraph(boxes) {
     const r = relation(boxes[i], boxes[j]);
     if (r === "a-front") adj[j].add(i);        // i detrás → i antes que j
     else if (r === "b-front") adj[i].add(j);   // j detrás → j antes que i  ... (i antes que j)
+  }
+  return adj;
+}
+// Gate LAXO histórico (AABB de pantalla) — SOLO para el test que demuestra que el hexagonal es estricto.
+// Mismo grafo que buildGraph pero con solape por rectángulo proyectado (el que añade el eje espurio).
+function overlapAABB(a, b) {
+  const { TILE_W: TW, TILE_H: TH, BLOCK_H: BH } = POPT;
+  const A = { x0: (a.x0 - a.y1) * TW / 2, x1: (a.x1 - a.y0) * TW / 2, y0: (a.x0 + a.y0) * TH / 2 - a.z1 * BH, y1: (a.x1 + a.y1) * TH / 2 - a.z0 * BH };
+  const B = { x0: (b.x0 - b.y1) * TW / 2, x1: (b.x1 - b.y0) * TW / 2, y0: (b.x0 + b.y0) * TH / 2 - b.z1 * BH, y1: (b.x1 + b.y1) * TH / 2 - b.z0 * BH };
+  return A.x0 < B.x1 && A.x1 > B.x0 && A.y0 < B.y1 && A.y1 > B.y0;
+}
+function buildGraphAABB(boxes) {
+  const n = boxes.length, adj = Array.from({ length: n }, () => new Set());
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+    if (!overlapAABB(boxes[i], boxes[j])) continue;
+    const r = relation(boxes[i], boxes[j]);
+    if (r === "a-front") adj[j].add(i);
+    else if (r === "b-front") adj[i].add(j);
   }
   return adj;
 }
@@ -145,6 +166,20 @@ test("determinismo: permutar la entrada NO cambia el orden visual (casos de cicl
       assert.equal(got, ref, "el orden debe ser independiente de la permutación de entrada");
     }
   }
+});
+
+/* ----------------------------------------- GATE EXACTO: hexágono ≠ AABB de pantalla --- */
+// A flota sobre B sin TOCARLA en pantalla, pero sus rectángulos proyectados (AABB) SÍ se solapan →
+// arista espuria A→B que, junto a las reales A·C y B·C, cierra un ciclo FALSO. El gate AABB cae en el
+// rompe-ciclos y pinta "B antes que C" (B está DELANTE de C → la tapa mal). Por silueta hexagonal el
+// par A·B no se toca → es ACÍCLICA y el painter da el orden correcto atrás→adelante: A, C, B.
+// Red→green del paso 1: con el gate viejo este test cae (violación); con el hexagonal pasa.
+test("gate hexagonal: lo que el AABB ve cíclico es acíclico y se pinta sin violar oclusión", () => {
+  const esc = [box(2, 0, 3, 5, 2, 4, "A"), box(3, 1, 1, 5, 4, 2, "B"), box(1, 2, 1, 3, 5, 4, "C")];
+  assert.ok(hasCycle(buildGraphAABB(esc)), "el gate AABB (laxo) ve un ciclo falso");
+  assert.ok(!hasCycle(buildGraph(esc)), "por silueta hexagonal NO hay ciclo");
+  assert.deepEqual(ENGINE.depthSort(esc, p).map(b => b.tag), ["A", "C", "B"], "orden correcto atrás→adelante");
+  assert.equal(violations(ENGINE.depthSort(esc, p)).length, 0, "el painter no viola la oclusión");
 });
 
 /* -------------------------------------------------------------------- FUZZ --- */

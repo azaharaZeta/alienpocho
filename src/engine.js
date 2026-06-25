@@ -76,8 +76,9 @@ export const ENGINE = (() => {
      PARCIAL: solo opina cuando la oclusión es inequívoca. Un orden topológico determinista
      (Kahn + clave canónica) lo extiende a la secuencia completa. Devuelve las cajas ordenadas.
         -1: A va antes (detrás)   +1: B va antes   0: ambiguo (lo zanja la clave canónica).
-     Solo se ordenan pares que SE SOLAPAN EN PANTALLA: aristas entre cajas que no se tapan
-     serían espurias y podrían crear ciclos. El gateo necesita el proyector `p` (TW/TH/BH).
+     Solo se ordenan pares que SE SOLAPAN EN PANTALLA (por SILUETA hexagonal exacta, no por AABB):
+     aristas entre cajas que no se tapan serían espurias y podrían crear ciclos. El gateo necesita
+     el proyector `p` (usa TH/BH).
      Detalle del algoritmo: docs/ARQUITECTURA.md. */
   function depthSort(boxes, p) {
     const n = boxes.length, E = 1e-6;
@@ -92,17 +93,25 @@ export const ENGINE = (() => {
       if (bBehind && !aBehind) return  1;    // B detrás (inequívoco) → B se pinta antes
       return 0;                              // ambiguo (contradictorio o interpenetrado)
     };
-    // AABB de cada caja proyectada a pantalla (los extremos caen en esquinas opuestas).
-    let scr = null;
+    // SILUETA iso (hexágono) de cada caja: sus extensiones en los TRES ejes del hexágono (normales a
+    // sus aristas: la vertical de pantalla + las dos diagonales). Dos cajas se solapan EN PANTALLA sii
+    // sus siluetas se solapan en los TRES ejes (SAT: con la misma proyección, 3 ejes bastan → exacto).
+    // El AABB de pantalla, en cambio, mete un 4º eje espurio (la extensión vertical, que NO es arista del
+    // hexágono) y deja pasar pares que no se tocan → aristas de precedencia falsas → ciclos falsos. Solo
+    // dependen de TH/BH (el TW se cancela como factor común de los tres ejes).
+    let sil = null;
     if (p) {
-      const TW = p.TW, TH = p.TH, BH = p.BH;
-      scr = boxes.map(b => ({
-        x0: (b.x0 - b.y1) * TW / 2, x1: (b.x1 - b.y0) * TW / 2,
-        y0: (b.x0 + b.y0) * TH / 2 - b.z1 * BH, y1: (b.x1 + b.y1) * TH / 2 - b.z0 * BH
+      const TH = p.TH, BH = p.BH;
+      sil = boxes.map(b => ({
+        a0: b.x0 - b.y1,            a1: b.x1 - b.y0,            // eje vertical de pantalla:  x − y
+        b0: BH * b.z0 - TH * b.y1,  b1: BH * b.z1 - TH * b.y0,  // diagonal:                  z·BH − y·TH
+        c0: TH * b.x0 - BH * b.z1,  c1: TH * b.x1 - BH * b.z0,  // diagonal:                  x·TH − z·BH
       }));
     }
-    const overlapScr = (i, j) => !scr ||
-      (scr[i].x0 < scr[j].x1 && scr[i].x1 > scr[j].x0 && scr[i].y0 < scr[j].y1 && scr[i].y1 > scr[j].y0);
+    const overlapScr = (i, j) => !sil || (
+      sil[i].a0 < sil[j].a1 && sil[i].a1 > sil[j].a0 &&
+      sil[i].b0 < sil[j].b1 && sil[i].b1 > sil[j].b0 &&
+      sil[i].c0 < sil[j].c1 && sil[i].c1 > sil[j].c0);
     // Grafo de precedencia: adj[i] = cajas que van DESPUÉS de i (i se pinta antes = detrás).
     const adj = Array.from({ length: n }, () => []);
     const indeg = new Array(n).fill(0);
