@@ -15,7 +15,7 @@ import { AP } from "./draw.js";
 import { pressed, held } from "./input.js";
 import { ctx, P } from "./view.js";
 import { blocksHoriz, supportHeight, objBox, overlapsBox, objBlocked, objAsset, thingHas } from "./physics.js";
-import { propAsset } from "./data/assets.js";   // mapeo forma→asset del objeto en brazos
+import { propAsset, assetFoot } from "./data/assets.js";   // forma→asset del objeto en brazos + huella del robot por orientación
 import { MISSION } from "./data/mission.js";    // posición inicial del robot (MISSION.start)
 import { game, interact, resetGame } from "./game.js";
 
@@ -175,6 +175,16 @@ player.addDraws = function (draws, room) {
       if (game.carried) AP.drawSprite(propAsset(game.carried), ctx, P(player.x, player.y, player.z + 1.6), room.ink2 || ink);
     }
   });
+};
+
+/* player.debugInfo() — caja (huella visual del cuerpo) + punto de anclaje del robot, para los
+   overlays de depuración (j/k/l) de render.js. Cada entidad expone el suyo (los overlays son genéricos). */
+player.debugInfo = function () {
+  // Huella del REGISTRO según la orientación (variantes axisX/axisY: intercambian ancho/largo, robot más ANCHO
+  // que profundo). facing 0/2 = mira en x → axisX; 1/3 = mira en y → axisY. Centrada en el jugador (footMode center).
+  const f = assetFoot("robot", (player.facing & 1) ? "axisY" : "axisX");
+  return { box: { x: player.x - f.w / 2, y: player.y - f.l / 2, z: player.z, w: f.w, l: f.l, h: f.h },
+           ref: { x: player.x, y: player.y, z: player.z } };
 };
 
 /* Lista de ENTIDADES vivas (se actualizan y se dibujan en bloque). De momento solo

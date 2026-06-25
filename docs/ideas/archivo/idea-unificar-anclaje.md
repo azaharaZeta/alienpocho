@@ -10,6 +10,12 @@
 
 ## 0. Veredicto
 
+> **SUPERSEDED (2026-06-25):** este doc unificó los OBJETOS a `center` (minimizando recalibración de sprites). Más
+> tarde se adoptó un modelo MÁS uniforme a petición de la usuaria: **TODOS los assets = esquina (0,0) + `offset`**
+> (el enum `anchor` → `offset`{x,y} + `footMode`), con el ancla 2D de sprite y el encuadre de pared/puerta en el
+> registro, y la tool usando el mismo colocador/datos que el juego. Reparametrización sin pérdida (esquina+offset
+> 0.5,0.5 ≡ centro). Ver el plan `~/.claude/plans/tidy-zooming-sunrise.md`. Lo de abajo queda como contexto histórico.
+
 **Viable y de bajo riesgo.** Recomendación: **unificar todos los OBJETOS al anclaje `center`** (base
 centrada). Hoy **el único objeto en esquina es `cube`**; el resto (`prop_*`, `socket`, `spikes`, `plant`,
 `drone`, `computer`, `robot`) ya está centrado. Es decir: unificar = **tocar un solo asset (`cube`)**.

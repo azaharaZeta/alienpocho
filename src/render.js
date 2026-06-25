@@ -11,22 +11,63 @@
 import { CFG, WALL_H } from "./config.js";
 import { ENGINE } from "./engine.js";
 import { AP } from "./draw.js";
-import { roomThings } from "./world.js";          // lista uniforme de placements
+import { roomThings, roomShell, doorSpan } from "./world.js";   // listas uniformes (objetos + cáscara) + vano de puerta
 import { assetTint, propAsset } from "./data/assets.js";   // tinte por asset; mapeo forma→asset del icono HUD
 import { ctx, P, setProjector, applyRoomTheme } from "./view.js";
 import { entities } from "./player.js";
 import { game, world, room } from "./game.js";
+import { pressed } from "./input.js";   // conmutadores (flanco) de los overlays de depuración j/k/l
 
 let _themeRoom = null;
+
+/* ── OVERLAYS DE DEPURACIÓN (teclas j/k/l): cubo de referencia / región estándar / punto de anclaje,
+   para TODO asset dibujado (suelo, cáscara, objetos, entidades). Misma idea que tools/tool-assets.html,
+   ahora dentro del juego. Conmutables e independientes; se pintan SOBRE la escena. ── */
+const DBG = { box: false, region: false, anchor: false };
+const DBG_COL = { box: "#ff5a5a", region: "#ffd23d", anchor: "#5affd2" };   // colores fijos de debug (visibles sobre la sala)
+const aabbBox = (a) => ({ x: a.x0, y: a.y0, z: a.z0, w: a.x1 - a.x0, l: a.y1 - a.y0, h: a.z1 - a.z0 });
+// Región estándar: AABB redondeada a celdas (ceil, mín. 1 en cada eje) — igual que assetRegion / la tool.
+const regionOf = (b) => { const x0 = Math.floor(b.x), y0 = Math.floor(b.y), z0 = Math.floor(b.z);
+  return { x: x0, y: y0, z: z0, w: Math.max(1, Math.ceil(b.x + b.w) - x0), l: Math.max(1, Math.ceil(b.y + b.l) - y0), h: Math.max(1, Math.ceil(b.z + b.h) - z0) }; };
+// 12 aristas de una caja-mundo {x,y,z,w,l,h} en alambre, proyectadas por P (igual que drawRefCube de la tool).
+function wireBox(b, col) {
+  const X1 = b.x + b.w, Y1 = b.y + b.l, Z1 = b.z + b.h;
+  const v = [[b.x,b.y,b.z],[X1,b.y,b.z],[X1,Y1,b.z],[b.x,Y1,b.z],[b.x,b.y,Z1],[X1,b.y,Z1],[X1,Y1,Z1],[b.x,Y1,Z1]].map(c => P(c[0], c[1], c[2]));
+  ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.globalAlpha = 0.9;
+  for (const [a, z] of [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]]) {
+    ctx.beginPath(); ctx.moveTo(v[a].x, v[a].y); ctx.lineTo(v[z].x, v[z].y); ctx.stroke(); }
+  ctx.globalAlpha = 1;
+}
+// Los overlays ACTIVOS para un asset: su caja (box), su región y su punto de anclaje (ref).
+function dbgOne(box, ref) {
+  if (DBG.region) wireBox(regionOf(box), DBG_COL.region);
+  if (DBG.box) wireBox(box, DBG_COL.box);
+  if (DBG.anchor) { const p = P(ref.x, ref.y, ref.z); ctx.fillStyle = DBG_COL.anchor;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2); ctx.fill(); }
+}
+// Pasada de depuración: recorre TODO lo dibujable (suelo + cáscara + colocable + entidades) con su caja/ancla.
+function drawDebug(room) {
+  if (!(DBG.box || DBG.region || DBG.anchor)) return;
+  // El SUELO se excepciona a propósito (es la rejilla de referencia; ensucia y tapa lo demás).
+  for (const t of [...roomShell(room), ...roomThings(room)])               // cáscara (paredes/puertas) + colocable
+    dbgOne(aabbBox(t.aabb), { x: t.x, y: t.y, z: t.z });
+  for (const e of entities) { const d = e.debugInfo && e.debugInfo(); if (d) dbgOne(d.box, d.ref); }   // entidades
+  // indicador de qué overlays están activos (esquina sup-izq)
+  const on = [DBG.box && "J:cubo", DBG.region && "K:región", DBG.anchor && "L:ancla"].filter(Boolean).join("  ");
+  ctx.fillStyle = "#ffffff"; ctx.font = "8px 'Courier New', monospace"; ctx.textBaseline = "top"; ctx.textAlign = "left";
+  ctx.fillText("DEBUG  " + on, 6, 6);
+}
 
 export function render(room) {
   if (room !== _themeRoom) { applyRoomTheme(room); _themeRoom = room; }
   setProjector(room);                     // proyector centrado para esta sala
+  if (pressed("dbgBox")) DBG.box = !DBG.box;            // overlays de depuración: conmutar por flanco (j/k/l)
+  if (pressed("dbgRegion")) DBG.region = !DBG.region;
+  if (pressed("dbgAnchor")) DBG.anchor = !DBG.anchor;
   ctx.fillStyle = CFG.COL.bg;
   ctx.fillRect(0, 0, CFG.W, CFG.H);
 
-  const ink = room.ink, ink2 = room.ink2 || ink, WH = WALL_H, D = AP.DOOR;   // WH: altura de pared (config.js)
-  const doorSpan = (n) => [n / 2 - AP.DOOR.SPAN_HALF, n / 2 + AP.DOOR.SPAN_HALF]; // vano centrado en el borde
+  const ink = room.ink, ink2 = room.ink2 || ink, WH = WALL_H;   // WH: altura de pared (registro)
 
   // 1) Suelo (plano en z=0; nunca ocluye, se pinta al fondo)
   for (let y = 0; y < room.h; y++)
@@ -44,49 +85,25 @@ export function render(room) {
   const draws = [];
   const box3 = (x0, y0, z0, x1, y1, z1, draw) => draws.push({ x0, y0, z0, x1, y1, z1, draw });
 
-  // 2a) CÁSCARA del FONDO (paredes x=0 / y=0). MÓDULOS: la pared se parte por su vano en tramos de
-  //     celdas ENTERAS (la puerta ocupa 2 celdas exactas, dims pares ⇒ el vano cae en celda entera), y
-  //     cada tramo se TESELA tira a tira sin recorte. La puerta de fondo es un objeto 3D que RETROCEDE
-  //     tras el plano del muro (inset y<0 / x<0): depthSort pinta primero la puerta y encima el tramo
-  //     contiguo → el muro TAPA el marco lateral exterior de la puerta.
-  const wallSegs = (n, span) => span ? [[0, span[0]], [span[1], n]] : [[0, n]];
-  // pared y=0 (atrás-dcha) + su puerta ym
-  for (const [c0, c1] of wallSegs(room.w, room.exits.ym ? doorSpan(room.w) : null))
-    if (c1 > c0) box3(c0, 0, 0, c1, 0, WH, () => AP.flatWall(ctx, P, "x", 0, c0, c1, ink, room.wallTile));
-  if (room.exits.ym) { const [s0, s1] = doorSpan(room.w);
-    box3(s0, -D.T, 0, s1, 0, WH, () => AP.door(ctx, P, "x", 0, s0, s1, WH, ink, true)); }
-  // pared x=0 (atrás-izq) + su puerta xm
-  for (const [c0, c1] of wallSegs(room.h, room.exits.xm ? doorSpan(room.h) : null))
-    if (c1 > c0) box3(0, c0, 0, 0, c1, WH, () => AP.flatWall(ctx, P, "y", 0, c0, c1, ink, room.wallTile));
-  if (room.exits.xm) { const [s0, s1] = doorSpan(room.h);
-    box3(-D.T, s0, 0, 0, s1, WH, () => AP.door(ctx, P, "y", 0, s0, s1, WH, ink, true)); }
-
-  // 2b) Lo COLOCABLE — genérico: itera la lista uniforme de la sala y por cada placement usa su
-  //     caja (aabb) + su drawer (AP.drawAsset).
-  for (const t of roomThings(room)) {
+  // 2a) TODO lo que tiene altura entra al painter por la MISMA vía: CÁSCARA (paredes/puertas, roomShell)
+  //     + COLOCABLE (objetos, roomThings), cada placement con su caja (aabb) y su drawer genérico
+  //     (AP.drawAsset). La cáscara YA NO se construye a mano: sus cajas/anclaje salen del registro igual
+  //     que las de los objetos. Las puertas de fondo retroceden tras el muro y las frontales protruyen del
+  //     borde abierto (lo codifica roomShell en la aabb). El orden atrás→adelante lo decide depthSort, que
+  //     es determinista (da igual el orden de inserción) → el robot se intercala solo al cruzar una puerta.
+  for (const t of [...roomShell(room), ...roomThings(room)]) {
     const col = assetTint(t.asset) === "secondary" ? ink2 : ink;
-    const a = t.aabb;
+    const a = t.aabb;   // el painter ordena por la MISMA huella que la colisión (una caja por asset) → "tocar" = orden limpio
     box3(a.x0, a.y0, a.z0, a.x1, a.y1, a.z1, () => AP.drawAsset(ctx, P, t, col));
   }
 
-  // entidades (jugador, etc.): cada una añade su caja al orden.
+  // 2b) entidades (jugador, etc.): cada una añade su caja al orden.
   for (const e of entities) e.addDraws(draws, room);
-
-  // 2c) puertas del FRENTE: el borde x=w / y=h está ABIERTO (sin muro que las tape); el marco
-  //     protruye hacia fuera y entra como UNA caja. El robot, al cruzar, se intercala solo (los postes
-  //     lo tapan, el vano lo deja ver). hole=false → marco frontal.
-  if (room.exits.yp) {
-    const [s0, s1] = doorSpan(room.w), h = room.h;
-    box3(s0, h, 0, s1, h + D.T, WH, () => AP.door(ctx, P, "x", h, s0, s1, WH, ink, false));
-  }
-  if (room.exits.xp) {
-    const [s0, s1] = doorSpan(room.h), w = room.w;
-    box3(w, s0, 0, w + D.T, s1, WH, () => AP.door(ctx, P, "y", w, s0, s1, WH, ink, false));
-  }
 
   // 3) Ordenar topológicamente y pintar
   for (const it of ENGINE.depthSort(draws, P)) it.draw();
 
+  drawDebug(room);   // overlays de depuración (j/k/l) SOBRE la escena (bajo el HUD)
   drawHUD();
   drawMinimap();
   if (game.won) drawWinBanner();

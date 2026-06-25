@@ -1,10 +1,10 @@
-/* Generador del arte de las PUERTAS (door_front.svg / door_back.svg).
+/* Generador del arte de la PUERTA (door.svg, un solo dibujo; front/back comparten imagen).
    La puerta = 3 cajas iso del engine (poste izq + poste dcho + dintel) con el MISMO
    sombreado que box(): techo #fff, cara +x = darken(0.62)=158, cara +y = darken(0.82)=209,
    contornos negros, + ranuras horizontales (línea blanca + negra) que recorren las dos caras
    frontales. Proyección idéntica a la del juego (TW=34,TH=17,BH=17). Se autogenera desde la
    GEOMETRÍA del registro (data/assets.js DOOR) → cambiar SPAN_HALF/POST_W aquí no hace falta.
-   Uso: node tools/gen-doors.mjs   (escribe los SVG y reporta los DOOR_TILES para draw.js). */
+   Uso: node tools/gen-doors.mjs   (escribe los SVG y reporta los tiles para ASSETS.door.tiles en data/assets.js). */
 import { writeFileSync } from "node:fs";
 import { DOOR, WALL_H } from "../src/data/assets.js";
 
@@ -49,8 +49,10 @@ function door(variant) {
   return { svg, tile: { w, h, minX, minY } };
 }
 
-for (const v of ["front", "back"]) {
-  const { svg, tile } = door(v);
-  writeFileSync(new URL(`../assets/svg/door_${v}.svg`, import.meta.url), svg);
-  console.log(`door_${v}.svg  ->  { w: ${tile.w}, h: ${tile.h}, minX: ${tile.minX}, minY: ${tile.minY} }`);
-}
+// UN solo sprite (door.svg): front y back son el MISMO dibujo, solo cambia el ancla. Escribimos el front
+// (canónico) y reportamos los DOS offsets para ASSETS.door.tiles (front protruye, back retrocede por T).
+const front = door("front"), back = door("back");
+writeFileSync(new URL("../assets/svg/door.svg", import.meta.url), front.svg);
+const fmt = t => `{ w: ${t.w}, h: ${t.h}, minX: ${t.minX}, minY: ${t.minY} }`;
+console.log(`door.svg  ->  ASSETS.door.tiles.front = ${fmt(front.tile)}`);
+console.log(`          +   ASSETS.door.tiles.back  = ${fmt(back.tile)}`);

@@ -53,7 +53,11 @@ export const CONTROLS = {
   turnRight: ["ArrowRight", "KeyD"],
   forward:   ["ArrowUp", "KeyW"],
   jump:      ["Space"],           // corto = salto bajo, largo = salto alto
-  use:       ["KeyE", "Enter"]    // recoger / soltar circuito
+  use:       ["KeyE", "Enter"],   // recoger / soltar circuito
+  // DEBUG — overlays de desarrollo (los pinta render.js sobre la escena): conmutan por flanco
+  dbgBox:    ["KeyJ"],            // cubo de referencia (AABB de cada asset)
+  dbgRegion: ["KeyK"],            // región estándar (AABB redondeada a celdas)
+  dbgAnchor: ["KeyL"]             // punto de anclaje (ancla = esquina + offset)
 };
 
 // Origen iso en pantalla: deja una banda arriba para el título y abajo el marco.

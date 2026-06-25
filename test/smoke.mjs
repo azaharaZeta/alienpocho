@@ -11,13 +11,13 @@
 import assert from "node:assert/strict";
 
 import { ENGINE } from "../src/engine.js";
-import { buildWorld, roomThings } from "../src/world.js";
+import { buildWorld, roomThings, roomShell } from "../src/world.js";
 import { MISSION } from "../src/data/mission.js";
 import { game, room, interact, checkExits, resetGame } from "../src/game.js";
 import { player } from "../src/player.js";
 import { updateObjects, blocksHoriz, supportHeight, roomSolids, socketTop } from "../src/physics.js";
-import { CFG, SOCKET } from "../src/config.js";
-import { ASSETS, assetHas } from "../src/data/assets.js";
+import { CFG, SOCKET, DOOR } from "../src/config.js";
+import { ASSETS, assetHas, WALL_H } from "../src/data/assets.js";
 
 /* ---- mini-runner sin dependencias ---- */
 let passed = 0, failed = 0;
@@ -38,30 +38,47 @@ test("buildWorld arma 17 salas con la inicial presente", () => {
   assert.equal(w.start, MISSION.start.room);
 });
 
-test("roomThings: lista uniforme coherente y SÓLIDOS equivalentes a roomSolids (por columna)", () => {
-  const w = buildWorld();
-  for (const [key, room] of Object.entries(w.rooms)) {
-    const things = roomThings(room);
-    // 1) cada placement referencia un asset válido y trae aabb bien formada
-    for (const t of things) {
-      assert.ok(ASSETS[t.asset], `${key}: asset desconocido ${t.asset}`);
-      assert.ok(t.aabb && t.aabb.z1 >= t.aabb.z0, `${key}: aabb inválida en ${t.asset}`);
+test("roomThings/roomShell coherentes y roomSolids = sólidos de objetos ∪ cáscara", () => {
+  const key = b => [b.x0, b.y0, b.z0, b.x1, b.y1, b.top ?? b.z1].map(n => +n.toFixed(6)).join(",");
+  for (const [k, room] of Object.entries(buildWorld().rooms)) {
+    // 1) cada placement (objetos + cáscara) referencia un asset válido y trae aabb bien formada
+    for (const t of [...roomThings(room), ...roomShell(room)]) {
+      assert.ok(ASSETS[t.asset], `${k}: asset desconocido ${t.asset}`);
+      assert.ok(t.aabb && t.aabb.z1 >= t.aabb.z0, `${k}: aabb inválida en ${t.asset}`);
     }
-    // 2) la UNIÓN de las cajas sólidas cubre lo mismo que roomSolids: misma cima por celda-base
-    const topByCell = (boxes) => {
-      const m = new Map();
-      for (const b of boxes) {
-        const x0 = b.x0 ?? b.aabb.x0, y0 = b.y0 ?? b.aabb.y0, top = b.top ?? b.aabb.z1;
-        const k = Math.round(x0 * 100) + "," + Math.round(y0 * 100);
-        m.set(k, Math.max(m.get(k) ?? -1e9, top));
-      }
-      return m;
-    };
-    const a = topByCell(roomSolids(room));
-    const b = topByCell(things.filter(t => assetHas(t.asset, "solid")));
-    assert.deepEqual([...b.entries()].sort(), [...a.entries()].sort(),
-      `${key}: la cima sólida por celda difiere entre roomThings y roomSolids`);
+    // 2) roomSolids es EXACTAMENTE la unión de: objetos sólidos (su aabb) + cáscara (paredes su caja,
+    //    puertas sus dos postes `solids`). Estructura y objetos = el MISMO cálculo de colisión (AABB).
+    const expected = [
+      ...roomThings(room).filter(t => assetHas(t.asset, "solid")).map(t => t.aabb),
+      ...roomShell(room).flatMap(t => t.solids || [t.aabb]),
+    ];
+    const got = roomSolids(room);
+    assert.equal(got.length, expected.length, `${k}: nº de sólidos`);
+    assert.deepEqual(got.map(key).sort(), expected.map(key).sort(), `${k}: cajas sólidas ≠ objetos∪cáscara`);
   }
+});
+
+test("roomShell = paredes (tramos) + postes de cada puerta (cajas del painter, todas las salas)", () => {
+  const T = DOOR.T, W = DOOR.POST_W, span = (n) => [n / 2 - DOOR.SPAN_HALF, n / 2 + DOOR.SPAN_HALF];
+  const segs = (n, s) => s ? [[0, s[0]], [s[1], n]] : [[0, n]];
+  // Una puerta aporta sus DOS postes (extremos del vano), no una caja entera (cada poste se ordena solo en el painter).
+  const posts = (axis, f) => axis === "x" ? [{ ...f, x1: f.x0 + W }, { ...f, x0: f.x1 - W }]
+                                          : [{ ...f, y1: f.y0 + W }, { ...f, y0: f.y1 - W }];
+  // Cáscara esperada: paredes (tramos enteros, sin recorte) + los 2 postes de cada puerta (fondo inset / frente protruido).
+  const oldShell = (r) => {
+    const b = [];
+    for (const [c0, c1] of segs(r.w, r.exits.ym ? span(r.w) : null)) if (c1 > c0) b.push({ x0: c0, y0: 0, z0: 0, x1: c1, y1: 0, z1: WALL_H });
+    if (r.exits.ym) { const [s0, s1] = span(r.w); b.push(...posts("x", { x0: s0, y0: -T, z0: 0, x1: s1, y1: 0, z1: WALL_H })); }
+    for (const [c0, c1] of segs(r.h, r.exits.xm ? span(r.h) : null)) if (c1 > c0) b.push({ x0: 0, y0: c0, z0: 0, x1: 0, y1: c1, z1: WALL_H });
+    if (r.exits.xm) { const [s0, s1] = span(r.h); b.push(...posts("y", { x0: -T, y0: s0, z0: 0, x1: 0, y1: s1, z1: WALL_H })); }
+    if (r.exits.yp) { const [s0, s1] = span(r.w); b.push(...posts("x", { x0: s0, y0: r.h, z0: 0, x1: s1, y1: r.h + T, z1: WALL_H })); }
+    if (r.exits.xp) { const [s0, s1] = span(r.h); b.push(...posts("y", { x0: r.w, y0: s0, z0: 0, x1: r.w + T, y1: s1, z1: WALL_H })); }
+    return b;
+  };
+  const key = (a) => [a.x0, a.y0, a.z0, a.x1, a.y1, a.z1].map(n => +n.toFixed(6)).join(",");
+  const sortKeys = (arr) => arr.map(key).sort();
+  for (const [k, r] of Object.entries(buildWorld().rooms))
+    assert.deepEqual(sortKeys(roomShell(r).map(t => t.aabb)), sortKeys(oldShell(r)), `${k}: cajas de cáscara ≠ literales de render`);
 });
 
 test("cada salida tiene su recíproca en la sala destino", () => {
@@ -101,6 +118,18 @@ test("depthSort: la caja de detrás se pinta primero y no pierde cajas", () => {
   assert.equal(out[1].tag, "B", "B (delante) se pinta después");
 });
 
+test("painter por HUELLA: el robot pegado por detrás de un objeto sub-celda queda DETRÁS", () => {
+  // REGRESIÓN: el painter ordena por la MISMA huella (aabb) que la colisión. Como el robot choca con la huella
+  // del objeto (no con una caja visual más ancha), al pegarse por detrás sus cajas se tocan en el MISMO borde →
+  // separación por ejes limpia → el robot (detrás) se pinta antes. (Con una vbox más ancha que la huella esto
+  // era ambiguo y el robot, más alto, se dibujaba ENCIMA de circuitos/zócalos.)
+  const p = ENGINE.projector(0, 0, { TILE_W: 34, TILE_H: 17, BLOCK_H: 17 });
+  const circ  = { x0: 3.17, y0: 4.17, z0: 1, x1: 3.83, y1: 4.83, z1: 1.66, tag: "circ" };   // circuito (huella sub-celda)
+  const robot = { x0: 2.53, y0: 4.18, z0: 1, x1: 3.17, y1: 4.82, z1: 2.50, tag: "robot" };  // pegado por −x (x1 = circ.x0), más alto
+  assert.deepEqual(ENGINE.depthSort([circ, robot], p).map(b => b.tag), ["robot", "circ"],
+    "el robot (detrás) debe pintarse ANTES que el circuito (delante)");
+});
+
 /* ---------------------------------------------------------------- FÍSICA --- */
 test("colisión: se choca con un bloque y se anda por celda libre", () => {
   const r = buildWorld().rooms["0,0"];        // ENTRADA, bloque de la plataforma en (2,4)
@@ -129,6 +158,35 @@ test("el zócalo es SÓLIDO (no atravesable) y el robot SE SUBE a su peana andan
   assert.equal(blocksHoriz(r, 5.5, 5.5, 0), false, "la peana baja no bloquea (se sube andando)");
   // 3) …y queda apoyado ENCIMA de la peana, no a z=0
   assert.equal(supportHeight(r, 5.5, 5.5, 0), SOCKET.BASE_H, "el robot se apoya sobre la peana");
+});
+
+/* ---------------------------------- ORÁCULO DE COLISIÓN DE LA CÁSCARA (paredes/puertas) ---
+   Caracteriza el comportamiento ACTUAL de la colisión con paredes y puertas a través de la
+   API PÚBLICA (blocksHoriz), NO de outOfBounds (interno, que la unificación reescribirá). Es
+   el oráculo de no-regresión para mover la cáscara a roomSolids: la frontera del vano se DERIVA
+   de las constantes DOOR (no hardcodeada), así que sigue válida si cambian. */
+test("cáscara: paredes de fondo/esquina/borde frontal bloquean; el hueco de la puerta pasa (eje x)", () => {
+  const r = buildWorld().rooms["0,0"];   // ENTRADA 8×8: paredes en x=0 e y=0; puertas xp (x=8) e yp (y=8)
+  const GAP = DOOR.SPAN_HALF - DOOR.POST_W;          // semiancho passable del vano (= DOOR_HALF interno de physics)
+  const half = GAP - CFG.PRAD;                       // semiancho passable del CENTRO del robot (radio PRAD)
+  // paredes de fondo (x=0, y=0) y esquina: bloquean
+  assert.equal(blocksHoriz(r, 0.05, 2.5, 0), true, "pared de fondo x=0 bloquea");
+  assert.equal(blocksHoriz(r, 2.5, 0.05, 0), true, "pared de fondo y=0 bloquea");
+  assert.equal(blocksHoriz(r, 0.05, 0.05, 0), true, "esquina de fondo (dos paredes) bloquea");
+  // borde FRONTAL abierto, fuera del vano (no hay pared dibujada, pero el envelope bloquea)
+  assert.equal(blocksHoriz(r, r.w - 0.05, 1.0, 0), true, "borde frontal x=w fuera del vano bloquea");
+  // hueco de la puerta xp (vano centrado en y=h/2): PASA, y la frontera es exacta a ±(GAP−PRAD)
+  assert.equal(blocksHoriz(r, r.w - 0.05, r.h / 2, 0), false, "el centro del vano (puerta xp) pasa");
+  assert.equal(blocksHoriz(r, r.w - 0.05, r.h / 2 + half - 0.02, 0), false, "justo dentro del vano pasa");
+  assert.equal(blocksHoriz(r, r.w - 0.05, r.h / 2 + half + 0.02, 0), true,  "justo fuera del vano bloquea");
+  // las paredes NO crean superficie pisable (cima muy alta) ni el suelo cambia
+  assert.equal(supportHeight(r, 0.5, 0.5, 0), 0, "junto a las paredes el apoyo sigue siendo el suelo");
+});
+
+test("cáscara: el hueco de una puerta de FONDO también pasa (eje y)", () => {
+  const r = buildWorld().rooms["2,0"];   // NUDO 6×6: puerta de fondo ym (y=0), vano centrado en x=w/2=3
+  assert.equal(blocksHoriz(r, r.w / 2, 0.05, 0), false, "el centro del vano (puerta ym) pasa");
+  assert.equal(blocksHoriz(r, 1.0, 0.05, 0), true, "la pared de fondo y=0 fuera del vano bloquea");
 });
 
 /* ------------------------------------------------- TRANSICIÓN ENTRE SALAS --- */

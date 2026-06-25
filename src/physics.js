@@ -10,7 +10,7 @@
 
 import { CFG, PROP, ROBOT, SOCKET, DOOR } from "./config.js";
 import { assetHas, assetFoot, socketTop } from "./data/assets.js";   // traits + huella + cima del zócalo
-import { roomThings, objAsset, thingHas } from "./world.js";   // placements uniformes + asset/traits de un objeto
+import { roomThings, roomShell, objAsset, thingHas } from "./world.js";   // placements uniformes (objetos + cáscara) + asset/traits
 export { socketTop, objAsset, thingHas };
 
 // Semilado / alto de un MÓVIL según la huella de su asset.
@@ -18,15 +18,15 @@ const objHalf = o => (assetFoot(objAsset(o)) || { w: PROP.HALF * 2 }).w / 2;
 const objTopH = o => (assetFoot(objAsset(o)) || { h: PROP.H }).h;
 
 /* ¿Está la coord. dentro del HUECO de la puerta? Coincide con el hueco visual entre postes. */
-const DOOR_HALF = DOOR.SPAN_HALF - DOOR.POST_W;   // hueco passable = vano − postes (≈ 0.72)
+const DOOR_HALF = DOOR.SPAN_HALF - DOOR.POST_W;   // semiancho passable del vano = vano − postes (= 0.60)
 function inDoor(coord, n) { return Math.abs(coord - n / 2) <= DOOR_HALF; }
 
-/* ¿Cae fuera del suelo? Solo se cruza un borde si tiene salida Y por el hueco de su
-   puerta; el resto del borde es pared sólida. */
+/* ¿Sale del MUNDO? Solo por los bordes EXTERIORES ABIERTOS (x≥w, y≥h), que no tienen muro dibujado: se
+   cruzan únicamente por su puerta (salida + hueco). Los bordes de FONDO (x<0, y<0) y las hombreras de los
+   vanos ya los bloquean las PAREDES/POSTES como sólidos (roomSolids), IGUAL que un bloque → la colisión con
+   la cáscara es la misma que con cualquier objeto. Esto es el "borde del mundo", no la colisión de un muro. */
 export function outOfBounds(room, fx, fy) {
-  if (fx < 0)        return !(room.exits.xm && inDoor(fy, room.h));
   if (fx >= room.w)  return !(room.exits.xp && inDoor(fy, room.h));
-  if (fy < 0)        return !(room.exits.ym && inDoor(fx, room.w));
   if (fy >= room.h)  return !(room.exits.yp && inDoor(fx, room.w));
   return false;
 }
@@ -38,16 +38,15 @@ export function objBox(o) {
   return { x0: o.x - m, y0: o.y - m, x1: o.x + m, y1: o.y + m, z0: o.z, top: o.z + objTopH(o), obj: o };
 }
 
-/* CAJAS SÓLIDAS de la sala — fuente única para colisión y apoyo. Recorre la lista uniforme de
-   placements e incluye los que declaran el trait `solid`. La caja (aabb) y la cima (zócalo activo
-   ya con el circuito sumado) las trae el placement. `obj` = objeto fuente (para no chocar consigo). */
+/* CAJAS SÓLIDAS de la sala — FUENTE ÚNICA para colisión y apoyo, compartida con render. Une dos listas
+   uniformes con el MISMO formato de placement: los `objects` con trait `solid` (roomThings) y la CÁSCARA
+   estructural (roomShell): las paredes aportan su caja, las puertas sus dos POSTES (campo `solids`, dejando
+   libre el vano). Así paredes, puertas y bloques se colisionan EXACTAMENTE igual (AABB). La cima (zócalo
+   activo, ya con el circuito) la trae el placement. `obj` = fuente (para no chocar consigo en el empuje). */
 export function roomSolids(room) {
-  const s = [];
-  for (const t of roomThings(room)) {
-    if (!assetHas(t.asset, "solid")) continue;
-    const a = t.aabb;
-    s.push({ x0: a.x0, y0: a.y0, z0: a.z0, x1: a.x1, y1: a.y1, top: a.z1, obj: t.src });
-  }
+  const s = [], add = (a, obj) => s.push({ x0: a.x0, y0: a.y0, z0: a.z0, x1: a.x1, y1: a.y1, top: a.z1, obj });
+  for (const t of roomThings(room)) if (assetHas(t.asset, "solid")) add(t.aabb, t.src);
+  for (const t of roomShell(room)) for (const b of (t.solids || [t.aabb])) add(b, t.src);   // pared: su caja; puerta: postes
   return s;
 }
 

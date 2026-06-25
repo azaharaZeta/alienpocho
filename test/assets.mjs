@@ -68,14 +68,37 @@ test("assetBox/assetRef/assetRegion devuelven algo coherente para todos", () => 
   }
 });
 
-test("anclaje 'center' centra la huella; 'corner' la deja en (0,0)", () => {
-  // corner (estructura): floor ⇒ ref en (0,0,0) y caja en (0,0)
+test("anclaje = esquina (0,0) + offset; footMode sitúa la huella (center/corner)", () => {
+  // El modelo es offset+footMode (no el viejo enum `anchor`, que ya no existe).
+  assert.ok(!("anchor" in ASSETS.cube) && !("footAnchor" in ASSETS.cube), "queda un campo `anchor`/`footAnchor` viejo");
+  assert.deepEqual(ASSETS.cube.offset, { x: 0.5, y: 0.5 }); assert.equal(ASSETS.cube.footMode, "center");
+  assert.deepEqual(ASSETS.floor.offset, { x: 0, y: 0 });    assert.equal(ASSETS.floor.footMode, "corner");
+  // corner (estructura): floor ⇒ ancla en (0,0,0) y caja desde la esquina
   assert.deepEqual(assetRef("floor"), { x: 0, y: 0, z: 0 });
   assert.deepEqual(assetBox("floor"), { x: 0, y: 0, z: 0, w: 1, l: 1, h: 0 });
-  // center (objetos): cube ⇒ ref en (0.5,0.5,0) (1×1 centrado = misma caja [0,1]); spikes ⇒ huella centrada
+  // center (objetos): cube ⇒ ancla en (0.5,0.5,0) (1×1 centrado = misma caja [0,1]); spikes ⇒ huella centrada
   assert.deepEqual(assetRef("cube"), { x: 0.5, y: 0.5, z: 0 });
   assert.deepEqual(assetBox("cube"), { x: 0, y: 0, z: 0, w: 1, l: 1, h: 1 });
   const s = assetBox("spikes"); assert.ok(Math.abs(s.x - (0.5 - s.w / 2)) < 1e-9);
+});
+
+test("ORÁCULO DE PÍXEL: el blit del sprite respecto a la esquina (0,0,0) es ESTABLE (identidad)", () => {
+  // Punto de pantalla donde se dibuja la esquina sup-izq del sprite, RELATIVO a P(esquina de celda):
+  //   proyección(assetRef) + (minX,minY).  Compone anclaje + encuadre = lo que el usuario quiere invariante.
+  // Congelado con los datos actuales: la reparametrización a offset+footMode NO debe moverlo (mismo píxel).
+  const TW = 34, TH = 17, BH = 17;
+  const blit = (id) => { const r = assetRef(id), s = ASSETS[id].sprite;
+    return [ (r.x - r.y) * TW / 2 + s.minX, (r.x + r.y) * TH / 2 - r.z * BH + s.minY ]; };
+  const FROZEN = {
+    cube: [-17, -17], prop_cube: [-11, -7.5], prop_pyramid: [-11, -2.5], prop_dome: [-9, -0.5],
+    prop_cylinder: [-8, -6.5], socket: [-16, -3.5], spikes: [-7, -1.5], plant: [-4, -2.5],
+    drone: [-6, -13.5], computer: [-9, -8.5],
+  };
+  for (const [id, a] of Object.entries(ASSETS)) {
+    if (!a.sprite) continue;
+    assert.ok(FROZEN[id], `${id}: sprite sin valor congelado en el oráculo (añádelo)`);
+    assert.deepEqual(blit(id), FROZEN[id], `${id}: el blit-vs-esquina cambió (¿se movió el anclaje o el sprite?)`);
+  }
 });
 
 test("variantes de orientación intercambian ancho/largo (robot) y caja por eje (puerta)", () => {
@@ -93,16 +116,17 @@ test("AP.SPRITES == los sprites del registro (sin segunda copia)", () => {
     for (const k of ["w", "h", "minX", "minY"]) assert.equal(AP.SPRITES[id][k], fromReg[id][k], `${id}.${k}`);
 });
 
-test("manifest.json NO diverge del registro (w/h de sprites y de tiles de pared)", () => {
+test("manifest.json NO diverge del registro (w/h de sprites, tiles de pared y puerta)", () => {
   const manifest = JSON.parse(readFileSync(new URL("../assets/svg/manifest.json", import.meta.url), "utf8"));
   const byFile = new Map(manifest.map(e => [e.file, e]));
+  const check = (file, dim, label) => { const e = file && byFile.get(file); if (!e) return;   // sin entrada en manifest: se ignora
+    assert.equal(e.w, dim.w, `manifest ${file}.w (=${e.w}) ≠ registro ${label} (=${dim.w})`);
+    assert.equal(e.h, dim.h, `manifest ${file}.h (=${e.h}) ≠ registro ${label} (=${dim.h})`); };
   for (const [id, a] of Object.entries(ASSETS)) {
-    const file = a.files && a.files.svg; if (!file) continue;
-    const e = byFile.get(file); if (!e) continue;                 // ficheros sin entrada en manifest: se ignoran
     const dim = a.sprite || a.tile;                                // sprite (anclado) o tile (pared)
-    if (!dim) continue;
-    assert.equal(e.w, dim.w, `manifest ${file}.w (=${e.w}) ≠ registro (=${dim.w})`);
-    assert.equal(e.h, dim.h, `manifest ${file}.h (=${e.h}) ≠ registro (=${dim.h})`);
+    if (dim && a.files && a.files.svg) check(a.files.svg, dim, id);
+    // tiles front/back de la puerta: comparten UN solo fichero (door.svg); ambos offsets contra esa entrada
+    if (a.tiles) for (const [k, d] of Object.entries(a.tiles)) check(a.files && a.files.svg, d, `${id}.tiles.${k}`);
   }
 });
 
@@ -115,6 +139,12 @@ test("los ficheros SVG/PNG referenciados por el registro existen en disco", () =
 });
 
 /* ---------- 3) GUARDARRAÍL: la tool no re-hardcodea geometría ---------- */
+test("GUARDARRAÍL: el encuadre de pared/puerta vive en el REGISTRO (draw.js no lo redefine)", () => {
+  const src = readFileSync(new URL("../src/draw.js", import.meta.url), "utf8");
+  for (const bad of ["WALL_TILES", "DOOR_TILES"])
+    assert.ok(!src.includes(bad), `draw.js define ${bad} → el encuadre {N,w,h,minX,minY} debe leerse de ASSETS[...].tile / ASSETS.door.tiles`);
+});
+
 test("tools/tool-assets.html no contiene mapas de geometría hardcodeada (GU/BOX/REF/box*)", () => {
   const html = readFileSync(new URL("../tools/tool-assets.html", import.meta.url), "utf8");
   for (const bad of [/\bconst\s+GU\s*=/, /\bconst\s+BOX\s*=/, /\bconst\s+REF\s*=/,
@@ -125,13 +155,14 @@ test("tools/tool-assets.html no contiene mapas de geometría hardcodeada (GU/BOX
     "la tool importa geometría desde config.js en vez de data/assets.js");
 });
 
-test("GUARDARRAÍL: render.js NO dibuja assets colocables por nombre (motor de dibujo genérico)", () => {
+test("GUARDARRAÍL: render.js dibuja TODO (objetos Y cáscara) por el motor genérico, no por nombre", () => {
   const src = readFileSync(new URL("../src/render.js", import.meta.url), "utf8");
-  // Permitido: AP.floor/flatWall/door (cáscara estructural), AP.drawAsset (genérico), AP.drawSprite (icono HUD).
-  for (const bad of ["AP.cube", "AP.spikes", "AP.socket", "AP.prop(", "AP.pillar", "AP.drone"])
-    assert.ok(!src.includes(bad), `render.js menciona ${bad} → debe dibujar lo colocable vía AP.drawAsset`);
+  // La cáscara (paredes/puertas) ahora va por roomShell + AP.drawAsset, IGUAL que los objetos. Solo se
+  // permiten por nombre los PRE-PASES de fondo z=0 (AP.floor, AP.doorHole) y AP.drawSprite (icono del HUD).
+  for (const bad of ["AP.cube", "AP.spikes", "AP.socket", "AP.prop(", "AP.pillar", "AP.drone", "AP.flatWall", "AP.door("])
+    assert.ok(!src.includes(bad), `render.js menciona ${bad} → debe dibujar TODO lo que tiene altura vía AP.drawAsset (roomShell/roomThings)`);
   for (const bucket of ["room.blocks", "room.sockets", "room.hazards"])
-    assert.ok(!src.includes(bucket), `render.js itera ${bucket} → debe usar roomThings`);
+    assert.ok(!src.includes(bucket), `render.js itera ${bucket} → debe usar roomThings/roomShell`);
 });
 
 test("GUARDARRAÍL: physics.js NO enumera cubetas estáticas (sólidos genéricos por physics.solid)", () => {

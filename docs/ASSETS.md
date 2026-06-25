@@ -82,9 +82,14 @@ Esto equivale exactamente a `darken(tinta, f)` (lo mismo que hace el vector), as
 sombreado. Se cachea por tinta. Ver `_tintSprite()` en [`src/draw.js`](../src/draw.js).
 
 ### Anclaje (automático)
+**Modelo único (esquina + offset):** la posición de TODO asset es la **esquina (0,0,0) de su celda + `offset`**
+(desplazamiento en celdas; `footMode` center/corner sitúa la huella). El encuadre 2D del sprite vive SIEMPRE en
+el registro: `sprite{w,h,minX,minY}` (objetos), `tile` (pared), `tiles.{front,back}` (puerta) — nada en `draw.js`.
 Cada sprite se ancla en `P(coords) + (minX, minY)`, donde `(coords)` son los argumentos de la
-función del asset y `(minX,minY)` (del registro) es el offset del *bounding box*. Mismo encaje que el
-vector → el painter (`depthSort`) ocupa la misma caja.
+función del asset (= esquina + offset) y `(minX,minY)` (del registro) es el offset del *bounding box*. El **painter
+ordena por la HUELLA** (`aabb`), la **misma caja** que usa la colisión — una sola caja por asset. Así, al pegarse un
+asset a otro, colisión y dibujo coinciden y el orden de pintado no es ambiguo (el sprite puede sobresalir un poco de
+su huella, igual que el robot con sus hombros; es arte, no cambia el orden).
 
 ### Carpetas y publicación
 - `assets/png/` — PNG finales (editados a mano). **SE PUBLICAN**.

@@ -16,8 +16,8 @@ Dependencias en UNA dirección (hojas abajo → `main` arriba):
 - **`config.js`** — parámetros (`CFG`, `CONTROLS`, `SCENE`); re-exporta la geometría desde `data/assets.js`.
 - **`engine.js`** — motor iso genérico: proyección, `box`/`poly`, painter `depthSort`.
 - **`draw.js`** — dibujo `AP.*` + el motor genérico `AP.drawAsset` (vía `DRAWERS`). Usa engine + palette + registro.
-- **`world.js`** — arma las salas (`makeRoom`/`buildWorld`) y expone `roomThings(room)` (lista uniforme de placements).
-- **`physics.js`** — colisión / apoyo / empuje (puro, sobre `room`).
+- **`world.js`** — arma las salas (`makeRoom`/`buildWorld`) y expone `roomThings(room)` (placements de lo colocable) y `roomShell(room)` (placements de la cáscara: paredes/puertas), ambas con `aabb` (huella: la MISMA caja para colisión Y painter).
+- **`physics.js`** — colisión / apoyo / empuje (puro, sobre `room`); `roomSolids` = objetos sólidos **∪ cáscara** (paredes/puertas), todo como AABB (mismo cálculo).
 - **`player.js`** — entidad jugador · **`game.js`** — estado de partida + reglas + transiciones de sala.
 - **`view.js`** / **`input.js`** — canvas+proyector+tema / teclado+táctil. **No tocan el DOM al importar** (solo en `init*()`) → los módulos corren en Node (tests). `projectorFor` ancla el **pico frontal del suelo al centro-base de un marco FIJO 8×8** (la esquina `(w,h)` cae siempre en el mismo punto) → el marco del HUD queda centrado y estable en cualquier sala.
 - **`render.js`** — escena + HUD + minimapa · **`screens.js`** — título · **`main.js`** — bucle + arranque. Minimapa **fijo a la derecha**, marcador/UI **fijo a la izquierda** (posición fija, ya no según el hueco).
@@ -39,7 +39,8 @@ Cada asset se describe a sí mismo:
 - **`traits`** — propiedades INDEPENDIENTES y componibles (ausente = false): `solid` (física), `movable` (empuje),
   `carriable` (item), `falls` (gravedad), `hazard`, `receptacle` (+ activa al recibir), `stateful`, `controlled`.
 - **`group`/`label`** (catálogo) · **`draw`** (clave de dibujo) · **`files`** (svg/png) · **`sprite`** (`w,h,minX,minY`)
-  · **`anchor`/`footAnchor`/`foot`** (huella en celdas) · **`variants`** (orientación: puerta eje x/y, robot ±x/±y).
+  · **`offset`+`footMode`/`foot`** (ancla = esquina (0,0) + `offset`; `footMode` center/corner sitúa la huella) ·
+  **`tile`/`tiles`** (encuadre de pared/puerta, en el registro) · **`variants`** (orientación: puerta eje x/y, robot ±x/±y).
 - Helpers: `assetBox`/`assetRef`/`assetFoot`/`assetRegion` · `assetKind`/`assetHas`/`assetTraits`/`assetTint` ·
   `assetsByGroup`/`assetViews`/`assetLabel` · `socketTop`.
 
@@ -54,18 +55,23 @@ Cada asset se describe a sí mismo:
   El **zócalo es UN asset genérico** (`socket`); qué circuito pide lo decide la MISIÓN (`MISSION.requires[id]`)
   y `filled` (lo puesto) es estado de partida. El circuito incrustado lo dibuja el drawer del socket con el sprite del propio circuito
   (lleno = a color; vacío = fantasma del que pide) → un circuito nuevo no toca el socket.
-- `render.js`: **TODO lo que tiene altura entra al painter como cajas** — cáscara (paredes/puertas) + lo COLOCABLE
-  (`roomThings` + `aabb` + `drawAsset`) + entidades — y `depthSort` decide el orden atrás→adelante (el suelo,
-  z=0, y el **vacío negro del vano** de las puertas de fondo —`doorHole`— se pintan antes, al fondo). Las
-  **paredes de fondo son MÓDULOS SVG**: `flatWall` tesela las tiras de panal celda a celda **sin recorte**; el
-  muro se parte por su vano en tramos de celdas enteras (`wallSegs`), posible porque la **puerta ocupa 2 celdas
-  exactas** (`DOOR.SPAN_HALF=1`) y las salas son de dimensión PAR ∈ {4,6,8} (`world.makeRoom` las acota/fuerza).
-  La **puerta de fondo RETROCEDE** tras el plano del muro
-  (inset `y<0`/`x<0`, simétrico a la frontal que protruye) → el muro contiguo, delante, le tapa el marco lateral
-  exterior. El vacío del vano (`doorHole`) va al fondo (pre-pase) para que el robot no quede tapado al cruzar.
-- `physics.roomSolids`: incluye los placements con trait `solid`; empuje (player) y gravedad (physics) operan por
-  `movable`/`falls` vía **`thingHas`** (trait de asset O de instancia), con la huella propia. `game.interact`
-  reconoce destinos/items por `receptacle`/`carriable`.
+- `render.js`: **TODO lo que tiene altura entra al painter por la MISMA vía** — la CÁSCARA (paredes/puertas,
+  `world.roomShell`) y lo COLOCABLE (objetos, `world.roomThings`), cada placement con su caja + `AP.drawAsset`,
+  más las entidades — y `depthSort` decide el orden atrás→adelante. **La cáscara ya NO se construye a mano**: sus
+  cajas/anclaje salen del registro igual que las de los objetos (un solo pipeline). El painter ordena por la
+  **MISMA huella** (`aabb`) que la colisión: UNA caja por asset → al "tocar", colisión y dibujo coinciden y el orden
+  nunca es ambiguo (sin caja visual aparte). El suelo (z=0) y el **vacío negro del vano** de las puertas
+  de fondo (`doorHole`) se pintan antes, al fondo (pre-pases). Las **paredes de fondo son MÓDULOS SVG**: `flatWall`
+  tesela las tiras de panal celda a celda **sin recorte**; el muro se parte por su vano en tramos de celdas enteras
+  (`wallSegs`), posible porque la **puerta ocupa 2 celdas exactas** (`DOOR.SPAN_HALF=1`) y las salas son de
+  dimensión PAR ∈ {4,6,8} (`world.makeRoom`). La **puerta de fondo RETROCEDE** tras el plano del muro (inset,
+  simétrico a la frontal que protruye) → el muro contiguo le tapa el marco lateral exterior.
+- `physics.roomSolids`: **FUENTE ÚNICA de sólidos** = objetos con trait `solid` (`roomThings`) **∪ la cáscara**
+  (`roomShell`: paredes como su caja, puertas como sus **dos postes** dejando libre el vano = el antiguo `inDoor`
+  exacto). Así paredes, puertas y bloques se colisionan EXACTAMENTE igual (AABB). `outOfBounds` queda solo como el
+  **borde del mundo** (bordes exteriores abiertos x≥w/y≥h, sin muro dibujado), no como la colisión de un muro.
+  Empuje (player) y gravedad (physics) operan por `movable`/`falls` vía **`thingHas`**; `game.interact` reconoce
+  destinos/items por `receptacle`/`carriable`.
 
 **Añadir un asset** = una entrada en `data/assets.js` (+ su `.svg` si es de sprite). Un asset de sprite no añade
 ni una línea a `draw.js`; uno procedural añade solo su `drawer`. No se toca render, física ni la tool.

@@ -66,15 +66,12 @@ export const AP = (() => {
 
   /* ── PARED por TILE (panal SVG/PNG): tira de N tiles de ancho × 3 de alto, ya dibujada EN
      PERSPECTIVA en assets/svg/<variant>.svg. El juego blitea la tira teselada a lo largo del muro
-     (sin transform); el muro del eje y se voltea en horizontal. N = ancho del hexágono = ancho de
-     celda. {N,w,h,minX,minY}: bbox y su offset respecto a la esquina inf-izq (BL=P(a,fixed,0)). ── */
-  const WALL_TILES = {
-    wall1: { N: 1, w: 17, h: 60, minX: 0, minY: -51 },
-    wall2: { N: 2, w: 34, h: 68, minX: 0, minY: -51 },
-  };
+     (sin transform); el muro del eje y se voltea en horizontal. N = ancho del hexágono = ancho de celda.
+     El encuadre {N,w,h,minX,minY} (bbox + offset respecto a la esquina inf-izq BL=P(a,fixed,0)) lo declara
+     el REGISTRO: `ASSETS[variant].tile` (fuente única, sin copia aquí). ── */
   const _wallTex = {};   // variant → { neutral: canvas|null, tints: { col: canvas } }
   function _loadWall(variant) {
-    const def = WALL_TILES[variant], s = _wallTex[variant] = { neutral: null, tints: {} };
+    const def = ASSETS[variant].tile, s = _wallTex[variant] = { neutral: null, tints: {} };
     const load = (url, onfail) => { const img = new Image();
       img.onload = () => { const c = document.createElement("canvas"); c.width = def.w; c.height = def.h;
         c.getContext("2d").drawImage(img, 0, 0, def.w, def.h); s.neutral = c; };
@@ -83,43 +80,51 @@ export const AP = (() => {
     else load("/assets/svg/" + variant + ".svg");
   }
   function _wallTexture(variant, col) {
-    if (typeof document === "undefined" || !WALL_TILES[variant]) return null;
+    if (typeof document === "undefined" || !(ASSETS[variant] && ASSETS[variant].tile)) return null;
     let s = _wallTex[variant]; if (!s) { _loadWall(variant); s = _wallTex[variant]; }
     if (!s.neutral) return null;
     return s.tints[col] || (s.tints[col] = _tintSprite(s.neutral, col));
   }
-  /* ── PUERTA por SPRITE (marco SVG/PNG ya en perspectiva, altura fija): assets/svg/door_front|back.svg.
+  /* ── PUERTA por SPRITE (marco SVG/PNG ya en perspectiva, altura fija): assets/svg/door.svg (UN solo dibujo).
      "front" = marco del frente (vano transparente → se ve al robot al cruzar); "back" = marco del muro
-     de fondo (con hueco negro detrás). El eje y se voltea en horizontal.
-     {w,h,minX,minY}: bbox del sprite y offset respecto a la esquina del vano P(a0,fixed,0). ── */
-  const DOOR_TILES = {              // encuadre del sprite (autogenerado por tools/gen-doors.mjs; SPAN_HALF=1)
-    front: { w: 40, h: 71, minX: -6, minY: -51 },
-    back:  { w: 40, h: 71, minX:  0, minY: -54 },
-  };
-  const _doorTex = {};
-  function _loadDoor(variant) {
-    const def = DOOR_TILES[variant], s = _doorTex[variant] = { neutral: null, tints: {} }, file = "door_" + variant;
+     de fondo (con hueco negro detrás). El eje y se voltea en horizontal. El encuadre {w,h,minX,minY} (bbox +
+     offset respecto a la esquina del vano P(a0,fixed,0)) lo declara el REGISTRO: `ASSETS.door.tiles[variant]`
+     (front/back; autogenerado por tools/gen-doors.mjs, SPAN_HALF=1). ── */
+  const _doorTex = {};   // UN solo sprite "door": front/back comparten imagen (solo difiere el offset del ancla)
+  function _loadDoor() {
+    const def = ASSETS.door.tiles.front, s = _doorTex.it = { neutral: null, tints: {} };
     const load = (url, onfail) => { const img = new Image();
       img.onload = () => { const c = document.createElement("canvas"); c.width = def.w; c.height = def.h;
         c.getContext("2d").drawImage(img, 0, 0, def.w, def.h); s.neutral = c; };
       img.onerror = onfail || null; img.src = url; };
-    if (ASSET_USE_PNG) load("/assets/png/" + file + ".png", () => load("/assets/svg/" + file + ".svg"));
-    else load("/assets/svg/" + file + ".svg");
+    if (ASSET_USE_PNG) load("/assets/png/door.png", () => load("/assets/svg/door.svg"));
+    else load("/assets/svg/door.svg");
   }
-  function _doorTexture(variant, col) {
+  function _doorTexture(col) {
     if (typeof document === "undefined") return null;
-    let s = _doorTex[variant]; if (!s) { _loadDoor(variant); s = _doorTex[variant]; }
+    let s = _doorTex.it; if (!s) { _loadDoor(); s = _doorTex.it; }
     if (!s.neutral) return null;
     return s.tints[col] || (s.tints[col] = _tintSprite(s.neutral, col));
   }
-  // Dibuja el marco de puerta desde el sprite (front/back) anclado en P(a0,fixed,0). false = aún no cargó.
-  function drawDoorSprite(ctx, p, axis, fixed, a0, a1, H, hole, col) {
-    const variant = hole ? "back" : "front", def = DOOR_TILES[variant];   // hole solo elige marco fondo/frente
-    const tex = _doorTexture(variant, col); if (!tex) return false;        // el VACÍO negro lo pinta render (pre-pase)
+  // Dibuja el marco de puerta (un solo sprite) anclado en P(a0,fixed,0). `hole` solo elige el OFFSET del ancla
+  // (front protruye / back retrocede; mismo dibujo). false = aún no cargó. El vacío negro lo pinta render (pre-pase).
+  function drawDoorSprite(ctx, p, axis, fixed, a0, a1, H, hole, col, half) {
+    const def = ASSETS.door.tiles[hole ? "back" : "front"];
+    const tex = _doorTexture(col); if (!tex) return false;
     const ref = (axis === "x") ? p(a0, fixed, 0) : p(fixed, a0, 0);
     const dx = Math.round(ref.x + def.minX), dy = Math.round(ref.y + def.minY);
+    ctx.save();
+    if (half) {   // PIEZA: recorta el sprite por el CENTRO DEL VANO (transparente) → cada poste se pinta por separado.
+      // Xc = centro del vano en pantalla. Igual en ambos ejes: en el eje y el espejo recoloca el −SPAN a +SPAN.
+      const Xc = ref.x + DOOR.SPAN_HALF * p.TW / 2;
+      ctx.beginPath();
+      if (half === "L") ctx.rect(0, 0, Xc, ctx.canvas.height);                    // poste a0 (≤ centro)
+      else ctx.rect(Xc, 0, ctx.canvas.width - Xc, ctx.canvas.height);            // poste a1 (≥ centro)
+      ctx.clip();
+    }
     if (axis === "x") ctx.drawImage(tex, dx, dy);
-    else { ctx.save(); ctx.translate(2 * ref.x, 0); ctx.scale(-1, 1); ctx.drawImage(tex, dx, dy); ctx.restore(); }
+    else { ctx.translate(2 * ref.x, 0); ctx.scale(-1, 1); ctx.drawImage(tex, dx, dy); }
+    ctx.restore();
     return true;
   }
 
@@ -144,7 +149,7 @@ export const AP = (() => {
   // aportan el canvas (bg) y el propio tile (cada SVG trae su fondo): aquí NO se pinta nada a mano.
   function flatWall(ctx, p, axis, fixed, c0, c1, col, tile) {
     const variant = tile || (typeof window !== "undefined" && window.__wall) || WALL_TILE;
-    const def = WALL_TILES[variant]; const tex = _wallTexture(variant, col);
+    const def = ASSETS[variant] && ASSETS[variant].tile; const tex = _wallTexture(variant, col);
     if (!def || !tex) return;                        // aún cargando → nada (el muro queda negro: canvas bg)
     ctx.imageSmoothingEnabled = false;
     const flip = (axis === "y");
@@ -167,8 +172,8 @@ export const AP = (() => {
   }
   // PUERTA: desde fichero (PNG si existe, si no SVG). "front" = marco con vano transparente;
   // "back" = marco del fondo + hueco negro detrás (lo añade drawDoorSprite).
-  function door(ctx, p, axis, fixed, a0, a1, H, col, hole) {
-    drawDoorSprite(ctx, p, axis, fixed, a0, a1, H, hole, col);
+  function door(ctx, p, axis, fixed, a0, a1, H, col, hole, half) {
+    drawDoorSprite(ctx, p, axis, fixed, a0, a1, H, hole, col, half);
   }
 
   // Zócalo: peana con indentación cuadrada desde SVG (socket.svg), teñida por ESTADO (vacío =
@@ -275,9 +280,10 @@ export const AP = (() => {
     socket:   (c, P, t, col) => socket(c, P, t.x, t.y, t.z, t.requires, t.filled, col),
     // Estructura (paramétrica): la sala la dibuja en su capa propia; estos drawers son para
     // PREVIEWS sueltos de la tool, dibujando una instancia de muestra a partir de la huella.
-    flatWall: (c, P, t, col) => { const a = ASSETS[t.asset]; flatWall(c, P, t.axis || "x", t.fixed || 0, t.a0 || 0, (t.a0 || 0) + a.foot.w, col, t.asset); },
+    flatWall: (c, P, t, col) => { const a = ASSETS[t.asset];   // sala: tramo [a0,a1]; preview de la tool (sin a1): un tile (foot.w)
+                                  flatWall(c, P, t.axis || "x", t.fixed || 0, t.a0 || 0, t.a1 != null ? t.a1 : (t.a0 || 0) + a.foot.w, col, t.tile || t.asset); },
     door:     (c, P, t, col) => { const a0 = t.a0 != null ? t.a0 : 1.5 - DOOR.SPAN_HALF, a1 = t.a1 != null ? t.a1 : 1.5 + DOOR.SPAN_HALF;
-                                  door(c, P, t.axis || "x", t.fixed || 0, a0, a1, WALL_H, col, t.hole != null ? t.hole : true); },
+                                  door(c, P, t.axis || "x", t.fixed || 0, a0, a1, WALL_H, col, t.hole != null ? t.hole : true, t.half); },
   };
   // Punto de entrada genérico: resuelve la clave base (antes de ":") y delega en su drawer.
   function drawAsset(ctx, P, t, col) { return DRAWERS[ASSETS[t.asset].draw.split(":")[0]](ctx, P, t, col); }

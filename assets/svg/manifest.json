@@ -66,14 +66,8 @@
     "h": 68
   },
   {
-    "name": "Puerta (frente)",
-    "file": "door_front.svg",
-    "w": 40,
-    "h": 71
-  },
-  {
-    "name": "Puerta (fondo)",
-    "file": "door_back.svg",
+    "name": "Puerta",
+    "file": "door.svg",
     "w": 40,
     "h": 71
   },

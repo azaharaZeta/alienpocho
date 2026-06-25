@@ -13,11 +13,12 @@
      files   : { svg, png }  ficheros (silueta neutra); null = no migrado.
      sprite  : { w, h, minX, minY }  encuadre del raster en px de juego, o null.
                El píxel-ancla del PNG/SVG es derivado = (−minX, −minY); no se almacena.
-     anchor  : "corner" (punto 0 en la esquina (0,0,0)) | "center" (centro-base (0.5,0.5,0)).
+     offset  : { x, y, z? }  desplazamiento del ANCLA respecto a la esquina (0,0,0) de la celda (en celdas).
+     footMode: "center" (huella centrada en el ancla) | "corner" (huella desde el ancla).
      foot    : { w, l, h, z? }  huella en celdas (ancho×largo×alto) + z base (def. 0).
-               AABB y anclaje se derivan de foot+anchor (assetBox / assetRef).
+               AABB y ancla se derivan de foot+offset+footMode (assetBox / assetRef).
      variants: huella/posición según la ORIENTACIÓN. Cada variante trae { foot } (override)
-               o { box, ref } explícitos.
+               o { box, offset } explícitos (puerta).
    ============================================================================= */
 "use strict";
 
@@ -67,75 +68,78 @@ export const GROUP_ORDER = [
 export const ASSETS = {
   // --- Estructura (cáscara paramétrica de sala) ---
   floor:  { label: "Suelo", kind: "structure", group: "Estructura", traits: {},
-            draw: "floor", anchor: "corner", foot: { w: 1, l: 1, h: 0 },
+            draw: "floor", offset: { x: 0, y: 0 }, footMode: "corner", foot: { w: 1, l: 1, h: 0 },
             files: { svg: "example.svg", png: null } },
   // Paredes: se dibujan por TILE (no por drawSprite), por eso no llevan `sprite`.
   // tile = tamaño del .svg del tile.
   wall1:  { label: "Pared (wall1)", kind: "structure", group: "Estructura", traits: { solid: true },
-            draw: "flatWall", anchor: "corner", foot: { w: 1, l: 0, h: WALL_H },
-            files: { svg: "wall1.svg", png: null }, tile: { w: 17, h: 60 } },
+            draw: "flatWall", offset: { x: 0, y: 0 }, footMode: "corner", foot: { w: 1, l: 0, h: WALL_H },
+            files: { svg: "wall1.svg", png: null }, tile: { N: 1, w: 17, h: 60, minX: 0, minY: -51 } },
   wall2:  { label: "Pared (wall2)", kind: "structure", group: "Estructura", traits: { solid: true },
-            draw: "flatWall", anchor: "corner", foot: { w: 2, l: 0, h: WALL_H },
-            files: { svg: "wall2.svg", png: null }, tile: { w: 34, h: 68 } },
+            draw: "flatWall", offset: { x: 0, y: 0 }, footMode: "corner", foot: { w: 2, l: 0, h: WALL_H },
+            files: { svg: "wall2.svg", png: null }, tile: { N: 2, w: 34, h: 68, minX: 0, minY: -51 } },
   // Puerta (arco): cáscara con hueco de paso. Huella por EJE (x / y), no centro/esquina.
   door: { label: "Puerta (arco)", kind: "structure", group: "Estructura", traits: {},
-          draw: "door", files: { svg: "door_front.svg", png: null }, extraFiles: ["door_back.svg"],
+          draw: "door", files: { svg: "door.svg", png: null },
+          // UN solo sprite (door): front y back son el MISMO dibujo; solo cambia el ANCLA (front protruye +y del
+          // plano, back retrocede −y) → offset desplazado por la proyección del grosor T. Por eso 2 offsets, 1 imagen.
+          tiles: { front: { w: 40, h: 71, minX: -6, minY: -51 }, back: { w: 40, h: 71, minX: 0, minY: -54 } },
           variants: {
             axisX: { label: "eje x", state: { axis: "x" },
                      box: { x: 1.5 - D.SPAN_HALF, y: -D.T, z: 0, w: 2 * D.SPAN_HALF, l: D.T, h: WALL_H },
-                     ref: { x: 1.5 - D.SPAN_HALF, y: 0, z: 0 } },
+                     offset: { x: 1.5 - D.SPAN_HALF, y: 0, z: 0 } },
             axisY: { label: "eje y", state: { axis: "y" },
                      box: { x: -D.T, y: 1.5 - D.SPAN_HALF, z: 0, w: D.T, l: 2 * D.SPAN_HALF, h: WALL_H },
-                     ref: { x: 0, y: 1.5 - D.SPAN_HALF, z: 0 } },
+                     offset: { x: 0, y: 1.5 - D.SPAN_HALF, z: 0 } },
           } },
 
   // --- Bloques (piezas sólidas fijas con las que se "construye") ---
   cube:   { label: "Bloque", kind: "object", group: "Bloques", traits: { solid: true },
-            draw: "cube", anchor: "center", foot: { w: 1, l: 1, h: 1 },
+            draw: "cube", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 1, l: 1, h: 1 },
             files: { svg: "cube.svg", png: "cube.png" }, sprite: { w: 34, h: 34, minX: -17, minY: -25.5 } },
 
   // --- Transportables (circuitos): sólidos, empujables, recogibles y caen ---
   prop_cube:     { label: "Cubo", kind: "object", group: "Transportables", traits: { solid: true, movable: true, carriable: true, falls: true },
-                   draw: "sprite", anchor: "center", foot: { w: P2, l: P2, h: PROP.H },
+                   draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: P2, l: P2, h: PROP.H },
                    files: { svg: "prop_cube.svg", png: null }, sprite: { w: 22, h: 22, minX: -11, minY: -16 } },
   prop_pyramid:  { label: "Pirámide", kind: "object", group: "Transportables", traits: { solid: true, movable: true, carriable: true, falls: true },
-                   draw: "sprite", anchor: "center", foot: { w: P2, l: P2, h: PROP.H },
+                   draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: P2, l: P2, h: PROP.H },
                    files: { svg: "prop_pyramid.svg", png: null }, sprite: { w: 22, h: 17, minX: -11, minY: -11 } },
   prop_dome:     { label: "Domo", kind: "object", group: "Transportables", traits: { solid: true, movable: true, carriable: true, falls: true },
-                   draw: "sprite", anchor: "center", foot: { w: P2, l: P2, h: PROP.H },
+                   draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: P2, l: P2, h: PROP.H },
                    files: { svg: "prop_dome.svg", png: null }, sprite: { w: 17, h: 13, minX: -9, minY: -9 } },
   prop_cylinder: { label: "Cilindro", kind: "object", group: "Transportables", traits: { solid: true, movable: true, carriable: true, falls: true },
-                   draw: "sprite", anchor: "center", foot: { w: P2, l: P2, h: PROP.H },
+                   draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: P2, l: P2, h: PROP.H },
                    files: { svg: "prop_cylinder.svg", png: null }, sprite: { w: 15, h: 18, minX: -8, minY: -15 } },
 
   // --- Receptáculo (zócalo): UN asset genérico, sólido, que recibe un circuito compatible y se
   //     ilumina. Qué circuito PIDE (requires) y cuál tiene PUESTO (filled) son datos de INSTANCIA
   //     (data/rooms.js + estado de partida), no del asset → acepta circuitos nuevos sin tocarlo. ---
   socket: { label: "Zócalo", kind: "object", group: "Receptáculos", traits: { solid: true, receptacle: true, stateful: true },
-            draw: "socket", anchor: "center", foot: { w: SH2, l: SH2, h: SOCKET.BASE_H },
+            draw: "socket", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: SH2, l: SH2, h: SOCKET.BASE_H },
             files: { svg: "socket.svg", png: null }, sprite: { w: 32, h: 20, minX: -16, minY: -12 } },
 
   // --- Peligros ---
   spikes: { label: "Pinchos", kind: "object", group: "Peligros", traits: { hazard: true },
-            draw: "sprite", anchor: "center", foot: { w: 0.54, l: 0.54, h: 0.5 },
+            draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.54, l: 0.54, h: 0.5 },
             files: { svg: "spikes.svg", png: null }, sprite: { w: 14, h: 11, minX: -7, minY: -10 } },
 
   // --- Decoración (objetos sin más rol; la "decoración" es un object SIN traits especiales) ---
   plant:  { label: "Planta", kind: "object", group: "Decoración", traits: {},
-            draw: "sprite", anchor: "center", foot: { w: 0.32, l: 0.32, h: 0.5 },
+            draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.32, l: 0.32, h: 0.5 },
             files: { svg: "plant.svg", png: null }, sprite: { w: 8, h: 13, minX: -4, minY: -11 } },
   drone:  { label: "Dron", kind: "object", group: "Decoración", traits: {},
-            draw: "sprite", anchor: "center", foot: { w: 0.32, l: 0.32, h: 0.28, z: 0.6 },
+            draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.32, l: 0.32, h: 0.28, z: 0.6 },
             files: { svg: "drone.svg", png: null }, sprite: { w: 12, h: 16, minX: -6, minY: -22 } },
   // Ordenador: sólido + empujable + cae.
   computer: { label: "Ordenador", kind: "object", group: "Decoración", traits: { solid: true, movable: true, falls: true },
-            draw: "sprite", anchor: "center", foot: { w: 0.5, l: 0.5, h: 0.7 },
+            draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.5, l: 0.5, h: 0.7 },
             files: { svg: "computer.svg", png: null }, sprite: { w: 18, h: 22, minX: -9, minY: -17 } },
 
   // --- Personajes (individuos): huella VISUAL que rota con la orientación (eje x ↔ eje y). ---
   // (La colisión del robot es otra cosa: cuadrado simétrico CFG.PRAD; no se modela aquí.)
   robot: { label: "Robot Pocho", kind: "individual", group: "Personajes", traits: { controlled: true },
-           draw: "robot", anchor: "center", foot: { w: 2 * R.WID, l: 2 * R.DEP, h: R.H },
+           draw: "robot", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 2 * R.WID, l: 2 * R.DEP, h: R.H },
            variants: {
              axisX: { label: "+x", state: { facing: 0 }, foot: { w: 2 * R.DEP, l: 2 * R.WID, h: R.H } },
              axisY: { label: "+y", state: { facing: 1 }, foot: { w: 2 * R.WID, l: 2 * R.DEP, h: R.H } },
@@ -163,23 +167,24 @@ export function assetFoot(id, variant) {
   return a.foot || null;
 }
 
-// AABB de mundo {x,y,z,w,l,h} en celdas. Derivada de foot + footAnchor (o box de la variante).
+// AABB de mundo {x,y,z,w,l,h} en celdas. Derivada de foot + offset/footMode (o box explícita de la variante).
 export function assetBox(id, variant) {
   const a = ASSETS[id]; if (!a) return null;
   const v = pickVariant(a, variant);
   if (v && v.box) return { ...v.box };                      // puerta: caja explícita por eje
   const f = (v && v.foot) || a.foot; if (!f) return null;
-  const z = f.z || 0, place = a.footAnchor || a.anchor;     // dónde se sitúa la huella en la celda
-  if (place === "center") return { x: 0.5 - f.w / 2, y: 0.5 - f.l / 2, z, w: f.w, l: f.l, h: f.h };
-  return { x: 0, y: 0, z, w: f.w, l: f.l, h: f.h };          // "corner"
+  const z = f.z || 0, o = a.offset || { x: 0, y: 0 };       // ancla = esquina (0,0) + offset
+  if (a.footMode === "center") return { x: o.x - f.w / 2, y: o.y - f.l / 2, z, w: f.w, l: f.l, h: f.h };
+  return { x: o.x, y: o.y, z, w: f.w, l: f.l, h: f.h };      // "corner": huella desde el ancla
 }
 
-// Punto de anclaje iso {x,y,z} donde el juego ancla el sprite. Derivado de anchor.
+// Punto de ANCLA iso {x,y,z} = esquina (0,0,0) de la celda + offset. Donde el juego ancla el sprite.
 export function assetRef(id, variant) {
   const a = ASSETS[id]; if (!a) return null;
   const v = pickVariant(a, variant);
-  if (v && v.ref) return { ...v.ref };                      // puerta: anclaje explícito por eje
-  return a.anchor === "center" ? { x: 0.5, y: 0.5, z: 0 } : { x: 0, y: 0, z: 0 };
+  if (v && v.offset) return { x: v.offset.x, y: v.offset.y, z: v.offset.z || 0 };   // puerta: offset explícito por eje
+  const o = a.offset || { x: 0, y: 0 };
+  return { x: o.x, y: o.y, z: o.z || 0 };
 }
 
 // Región contenedora alineada a celdas: ceil de cada dimensión (mín. 1).
