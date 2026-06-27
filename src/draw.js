@@ -108,15 +108,26 @@ export const AP = (() => {
   }
   // Dibuja el marco de puerta (un solo sprite) anclado en P(a0,fixed,0). `hole` solo elige el OFFSET del ancla
   // (front protruye / back retrocede; mismo dibujo). false = aún no cargó. El vacío negro lo pinta render (pre-pase).
-  function drawDoorSprite(ctx, p, axis, fixed, a0, a1, H, hole, col, half) {
+  function drawDoorSprite(ctx, p, axis, fixed, a0, a1, H, hole, col, half, box) {
     const def = ASSETS.door.tiles[hole ? "back" : "front"];
     const tex = _doorTexture(col); if (!tex) return false;
     const ref = (axis === "x") ? p(a0, fixed, 0) : p(fixed, a0, 0);
     const dx = Math.round(ref.x + def.minX), dy = Math.round(ref.y + def.minY);
     ctx.save();
-    if (half) {   // PIEZA: recorta el sprite por el CENTRO DEL VANO (transparente) → cada poste se pinta por separado.
+    if (half === "lintel") {   // DINTEL: recorta a su SILUETA hexagonal (la caja iso de la viga, proyectada).
+      // Pinta solo la viga, pero esta pieza la ORDENA depthSort por su caja alta → queda delante de la cabeza
+      // del robot al saltar bajo la puerta. La silueta = mismo hexágono que ENGINE.box: [A,B,Bb,Cb,Db,D].
+      const b = box, A = p(b.x0, b.y0, b.z1), B = p(b.x1, b.y0, b.z1), D = p(b.x0, b.y1, b.z1),
+            Bb = p(b.x1, b.y0, b.z0), Cb = p(b.x1, b.y1, b.z0), Db = p(b.x0, b.y1, b.z0);
+      ctx.beginPath(); ctx.moveTo(A.x, A.y);
+      for (const q of [B, Bb, Cb, Db, D]) ctx.lineTo(q.x, q.y);
+      ctx.closePath(); ctx.clip();
+    } else if (half) {   // POSTE: recorta el sprite por el CENTRO DEL VANO (transparente) → cada poste por separado.
       // Xc = centro del vano en pantalla. Igual en ambos ejes: en el eje y el espejo recoloca el −SPAN a +SPAN.
-      const Xc = ref.x + DOOR.SPAN_HALF * p.TW / 2;
+      // REDONDEADO a píxel entero (defensivo): si el corte cayera a mitad de píxel, esa columna recibiría
+      // cobertura parcial en CADA mitad (clip antialiased) → costura de 1px al pintar el mismo sprite dos
+      // veces. Hoy Xc ya cae entero en todas las salas; el redondeo lo GARANTIZA si cambian tamaños/origen.
+      const Xc = Math.round(ref.x + DOOR.SPAN_HALF * p.TW / 2);
       ctx.beginPath();
       if (half === "L") ctx.rect(0, 0, Xc, ctx.canvas.height);                    // poste a0 (≤ centro)
       else ctx.rect(Xc, 0, ctx.canvas.width - Xc, ctx.canvas.height);            // poste a1 (≥ centro)
@@ -172,8 +183,8 @@ export const AP = (() => {
   }
   // PUERTA: desde fichero (PNG si existe, si no SVG). "front" = marco con vano transparente;
   // "back" = marco del fondo + hueco negro detrás (lo añade drawDoorSprite).
-  function door(ctx, p, axis, fixed, a0, a1, H, col, hole, half) {
-    drawDoorSprite(ctx, p, axis, fixed, a0, a1, H, hole, col, half);
+  function door(ctx, p, axis, fixed, a0, a1, H, col, hole, half, box) {
+    drawDoorSprite(ctx, p, axis, fixed, a0, a1, H, hole, col, half, box);
   }
 
   // Zócalo: peana con indentación cuadrada desde SVG (socket.svg), teñida por ESTADO (vacío =
@@ -283,7 +294,7 @@ export const AP = (() => {
     flatWall: (c, P, t, col) => { const a = ASSETS[t.asset];   // sala: tramo [a0,a1]; preview de la tool (sin a1): un tile (foot.w)
                                   flatWall(c, P, t.axis || "x", t.fixed || 0, t.a0 || 0, t.a1 != null ? t.a1 : (t.a0 || 0) + a.foot.w, col, t.tile || t.asset); },
     door:     (c, P, t, col) => { const a0 = t.a0 != null ? t.a0 : 1.5 - DOOR.SPAN_HALF, a1 = t.a1 != null ? t.a1 : 1.5 + DOOR.SPAN_HALF;
-                                  door(c, P, t.axis || "x", t.fixed || 0, a0, a1, WALL_H, col, t.hole != null ? t.hole : true, t.half); },
+                                  door(c, P, t.axis || "x", t.fixed || 0, a0, a1, WALL_H, col, t.hole != null ? t.hole : true, t.half, t.aabb); },
   };
   // Punto de entrada genérico: resuelve la clave base (antes de ":") y delega en su drawer.
   function drawAsset(ctx, P, t, col) { return DRAWERS[ASSETS[t.asset].draw.split(":")[0]](ctx, P, t, col); }

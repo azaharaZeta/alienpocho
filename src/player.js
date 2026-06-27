@@ -14,7 +14,7 @@ import { CFG, ROBOT } from "./config.js";
 import { AP } from "./draw.js";
 import { pressed, held } from "./input.js";
 import { ctx, P } from "./view.js";
-import { blocksHoriz, supportHeight, objBox, overlapsBox, objBlocked, objAsset, thingHas } from "./physics.js";
+import { blocksHoriz, supportHeight, ceilingHeight, objBox, overlapsBox, objBlocked, objAsset, thingHas } from "./physics.js";
 import { propAsset, assetFoot } from "./data/assets.js";   // forma→asset del objeto en brazos + huella del robot por orientación
 import { MISSION } from "./data/mission.js";    // posición inicial del robot (MISSION.start)
 import { game, interact, resetGame } from "./game.js";
@@ -140,6 +140,12 @@ player.update = function (room, dt) {
   // --- Gravedad / eje Z ---
   player.vz -= CFG.GRAVITY * dt;
   let nz = player.z + player.vz * dt;
+  // Techo: subiendo, si la cabeza fuese a entrar en un sólido por encima (p. ej. el dintel de una
+  // puerta), corta el ascenso a ras de su base y anula la velocidad → la gravedad lo hace caer (topetazo).
+  if (player.vz > 0) {
+    const maxZ = ceilingHeight(room, player.x, player.y, player.z) - ROBOT.H;
+    if (nz > maxZ) { nz = maxZ; player.vz = 0; }
+  }
   const support = supportHeight(room, player.x, player.y, player.z);
   // Solo se aterriza bajando (vz<=0): subiendo no se engancha al borde de un bloque.
   if (nz <= support && player.vz <= 0) {

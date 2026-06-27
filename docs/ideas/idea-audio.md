@@ -16,5 +16,5 @@ Baja-media. Aporta jugo retro y feedback, pero no desbloquea ni corrige nada. En
 Spectrum (beeps).
 
 ## Sugerencia
-**Mantener como pulido tardío.** Hacerlo cuando el bucle (reloj, pantallas) esté cerrado. Mantenerlo
+**Mantener como pulido tardío.** Hacerlo cuando el bucle (pantallas de victoria/game over) esté cerrado. Mantenerlo
 **opcional y silenciable** desde el principio.

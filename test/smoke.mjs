@@ -61,18 +61,22 @@ test("roomThings/roomShell coherentes y roomSolids = sólidos de objetos ∪ cá
 test("roomShell = paredes (tramos) + postes de cada puerta (cajas del painter, todas las salas)", () => {
   const T = DOOR.T, W = DOOR.POST_W, span = (n) => [n / 2 - DOOR.SPAN_HALF, n / 2 + DOOR.SPAN_HALF];
   const segs = (n, s) => s ? [[0, s[0]], [s[1], n]] : [[0, n]];
-  // Una puerta aporta sus DOS postes (extremos del vano), no una caja entera (cada poste se ordena solo en el painter).
+  // Una puerta aporta sus DOS postes (extremos del vano) + el DINTEL (banda superior, ancho completo): 3
+  // piezas del painter, no una caja entera (cada una se ordena sola → el robot se intercala entre postes y
+  // bajo la viga).
   const posts = (axis, f) => axis === "x" ? [{ ...f, x1: f.x0 + W }, { ...f, x0: f.x1 - W }]
                                           : [{ ...f, y1: f.y0 + W }, { ...f, y0: f.y1 - W }];
-  // Cáscara esperada: paredes (tramos enteros, sin recorte) + los 2 postes de cada puerta (fondo inset / frente protruido).
+  const lintel = (f) => ({ ...f, z0: WALL_H - DOOR.LINTEL_H });   // dintel: misma huella, solo la banda alta
+  const doorBoxes = (axis, f) => [...posts(axis, f), lintel(f)];
+  // Cáscara esperada: paredes (tramos enteros, sin recorte) + por puerta 2 postes + 1 dintel (fondo inset / frente protruido).
   const oldShell = (r) => {
     const b = [];
     for (const [c0, c1] of segs(r.w, r.exits.ym ? span(r.w) : null)) if (c1 > c0) b.push({ x0: c0, y0: 0, z0: 0, x1: c1, y1: 0, z1: WALL_H });
-    if (r.exits.ym) { const [s0, s1] = span(r.w); b.push(...posts("x", { x0: s0, y0: -T, z0: 0, x1: s1, y1: 0, z1: WALL_H })); }
+    if (r.exits.ym) { const [s0, s1] = span(r.w); b.push(...doorBoxes("x", { x0: s0, y0: -T, z0: 0, x1: s1, y1: 0, z1: WALL_H })); }
     for (const [c0, c1] of segs(r.h, r.exits.xm ? span(r.h) : null)) if (c1 > c0) b.push({ x0: 0, y0: c0, z0: 0, x1: 0, y1: c1, z1: WALL_H });
-    if (r.exits.xm) { const [s0, s1] = span(r.h); b.push(...posts("y", { x0: -T, y0: s0, z0: 0, x1: 0, y1: s1, z1: WALL_H })); }
-    if (r.exits.yp) { const [s0, s1] = span(r.w); b.push(...posts("x", { x0: s0, y0: r.h, z0: 0, x1: s1, y1: r.h + T, z1: WALL_H })); }
-    if (r.exits.xp) { const [s0, s1] = span(r.h); b.push(...posts("y", { x0: r.w, y0: s0, z0: 0, x1: r.w + T, y1: s1, z1: WALL_H })); }
+    if (r.exits.xm) { const [s0, s1] = span(r.h); b.push(...doorBoxes("y", { x0: -T, y0: s0, z0: 0, x1: 0, y1: s1, z1: WALL_H })); }
+    if (r.exits.yp) { const [s0, s1] = span(r.w); b.push(...doorBoxes("x", { x0: s0, y0: r.h, z0: 0, x1: s1, y1: r.h + T, z1: WALL_H })); }
+    if (r.exits.xp) { const [s0, s1] = span(r.h); b.push(...doorBoxes("y", { x0: r.w, y0: s0, z0: 0, x1: r.w + T, y1: s1, z1: WALL_H })); }
     return b;
   };
   const key = (a) => [a.x0, a.y0, a.z0, a.x1, a.y1, a.z1].map(n => +n.toFixed(6)).join(",");

@@ -135,9 +135,16 @@ export function roomShell(room) {
   const door = (axis, fixed, a0, a1, side, hole) => {
     const aabb = placeShellAabb(axis, fixed, a0, a1, DOOR.T, side);
     const [pL, pR] = doorPosts(axis, aabb);
+    // DINTEL: banda superior del vano (alto DOOR.LINTEL_H). Es a la vez:
+    //  · SÓLIDO → frena el salto alto que se colaría por encima del paso (deja libre el hueco bajo); y
+    //  · PIEZA PROPIA del painter, ordenada por SU caja (alta, ancho completo) → depthSort la pinta DELANTE
+    //    de la cabeza del robot al saltar bajo la puerta (la ocluye), en vez de que el sprite la tape. Antes
+    //    la viga la pintaban los postes (caja baja, al extremo) → mal orden con el robot en el centro del vano.
+    const lintel = { ...aabb, z0: aabb.z1 - DOOR.LINTEL_H };
     const base = { asset: "door", axis, fixed, a0, a1, hole, src: "shell", ...anchor(axis, fixed, a0) };
     t.push({ ...base, half: "L", aabb: pL, solids: [pL] });
     t.push({ ...base, half: "R", aabb: pR, solids: [pR] });
+    t.push({ ...base, half: "lintel", aabb: lintel, solids: [lintel] });
   };
   // borde y=0 (atrás-dcha, eje x): pared partida por su vano + puerta de fondo ym
   const sy = exits.ym ? doorSpan(w) : null;

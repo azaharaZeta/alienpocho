@@ -40,7 +40,6 @@ function loop(now) {
     for (const e of entities) e.update(room, dt);
     updateObjects(room, dt);   // gravedad de los objetos
     checkExits();
-    if (!game.won) game.lightYears = Math.max(0, game.lightYears - dt * 6); // cuenta atrás (cosmética)
     render(room);
   }
   // Snapshot de teclas para los flancos del próximo frame (una vez por frame).

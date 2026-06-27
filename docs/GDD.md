@@ -11,12 +11,13 @@
 
 *Alien Pocho* es un **puzzle-acción isométrico** de una sola pantalla por sala (flip-screen),
 que recrea la sensación del motor **Filmation**: explorar habitaciones de una nave, esquivar
-peligros y enemigos, y **recoger circuitos para colocarlos en su zócalo correcto** antes de que
-se acabe el tiempo. Estética **monocroma estilo ZX Spectrum** (trazos claros sobre negro).
+peligros y enemigos, y **recoger circuitos para colocarlos en su zócalo correcto**. Estética
+**monocroma estilo ZX Spectrum** (trazos claros sobre negro). **Sin límite de tiempo** (cero presión
+temporal: decisión de diseño — no hay reloj de cuenta atrás).
 
 **Bucle de juego:** entrar en sala → leer el puzzle → mover/saltar esquivando peligros →
 recoger un circuito → llevarlo a su zócalo correcto (puede estar en otra sala) → repetir hasta
-colocar todos → victoria antes de que el reloj de años luz llegue a 0.
+colocar todos → victoria. Sin reloj: el jugador explora a su ritmo.
 
 ---
 
@@ -32,7 +33,7 @@ colocar todos → victoria antes de que el reloj de años luz llegue a 0.
 | Flip-screen entre salas | ✅ Replicar | mapa laberíntico (~17 salas hoy) |
 | Peligros estáticos (pinchos) | ✅ Replicar | |
 | Enemigos móviles | ✅ Adaptar | Patrullas simples |
-| Reloj "años luz" | ✅ Adaptar | Límite global de partida |
+| Reloj "años luz" | ❌ Descartado | **Sin límite de tiempo** (decisión de diseño: cero presión) |
 | Sistema de vidas | ✅ Adaptar | En vez de energía: nº de vidas |
 | Drones teledirigidos | ⏸️ Pospuesto | Posible ampliación futura |
 | Empujar bloques | ✅ Implementado | Por trait `movable` de instancia; usado en puzzles (p. ej. REACTOR) |
@@ -95,7 +96,7 @@ NO libre en cualquier dirección:
 - **Zócalo vacío:** muestra un **fantasma** (silueta atenuada) del circuito que pide.
 - **Colocar el circuito correcto** → se **encaja** en la indentación del zócalo y la **base se ilumina**
   (el circuito se conserva ahí; no desaparece).
-- **Victoria:** todos los zócalos llenos antes de que el reloj llegue a 0. El total se **deriva del mapa**
+- **Victoria:** todos los zócalos llenos (sin límite de tiempo). El total se **deriva del mapa**
   (capa de misión, `data/mission.js`), no se fija a mano.
 
 ---
@@ -113,8 +114,7 @@ NO libre en cualquier dirección:
 Panel inferior estilo retro (referencia: capturas reales de *Alien 8*):
 - **Objeto que llevas** (icono grande) + contador, a la izquierda.
 - **Icono del robot** + número (vidas / sala), centrado-abajo.
-- **AÑOS LUZ** restantes en un recuadro destacado (cuenta atrás), a la derecha.
-- *Alien Pocho* (provisional): **VIDAS · CIRCUITOS x/total · AÑOS LUZ**.
+- *Alien Pocho* (provisional): **VIDAS · CIRCUITOS x/total**. (Sin reloj: descartado el "AÑOS LUZ".)
 
 ### Referencias visuales (de las capturas del original aportadas)
 Para las fases de arte/salas, imitar:
@@ -132,7 +132,7 @@ Para las fases de arte/salas, imitar:
 
 - Pantalla de **título** con estética Spectrum.
 - **Victoria:** todos los circuitos colocados.
-- **Game Over:** 0 vidas o reloj a 0.
+- **Game Over:** 0 vidas. (No hay derrota por tiempo: el juego no tiene reloj.)
 
 ---
 

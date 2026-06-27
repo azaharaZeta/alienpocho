@@ -58,14 +58,15 @@ export function overlapsBox(b, x, y) {
 }
 
 /* ¿El movimiento horizontal a (nx,ny) choca, con los pies a feetZ?
-   Un sólido solo bloquea si su cima queda por encima del pie (no se sube andando:
-   hay que saltar); al nivel del pie o por debajo es pisable/transitable. */
+   Un sólido solo bloquea si su cima queda por encima del pie (no se sube andando: hay que saltar) Y su
+   base queda por debajo de la cabeza (si está más arriba — p. ej. el DINTEL de una puerta — se pasa por
+   debajo). Al nivel del pie o por debajo es pisable/transitable. */
 export function blocksHoriz(room, nx, ny, feetZ) {
   const r = CFG.PRAD;
   if (outOfBounds(room, nx - r, ny - r) || outOfBounds(room, nx + r, ny - r) ||
       outOfBounds(room, nx - r, ny + r) || outOfBounds(room, nx + r, ny + r)) return true;
   for (const b of roomSolids(room))
-    if (b.top > feetZ + CFG.STEP && overlapsBox(b, nx, ny)) return true;
+    if (b.top > feetZ + CFG.STEP && b.z0 < feetZ + ROBOT.H && overlapsBox(b, nx, ny)) return true;
   return false;
 }
 
@@ -76,6 +77,16 @@ export function supportHeight(room, x, y, feetZ) {
   for (const b of roomSolids(room))
     if (b.top <= feetZ + CFG.STEP && b.top > h && overlapsBox(b, x, y)) h = b.top;
   return h;
+}
+
+/* Altura de TECHO sobre la cabeza del robot en (x,y): la base (z0) del sólido más bajo que quede por
+   ENCIMA de la cabeza actual y solape en planta (p. ej. el DINTEL de una puerta). Infinity = cielo libre.
+   Simétrico de supportHeight (suelo bajo los pies): acota cuánto puede SUBIR la cabeza en un salto. */
+export function ceilingHeight(room, x, y, feetZ) {
+  const headZ = feetZ + ROBOT.H; let c = Infinity;
+  for (const b of roomSolids(room))
+    if (b.z0 >= headZ - 0.05 && b.z0 < c && overlapsBox(b, x, y)) c = b.z0;
+  return c;
 }
 
 /* ¿Cabe el robot DE PIE con los pies a feetZ en (x,y)? (límites + que ningún sólido

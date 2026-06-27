@@ -18,7 +18,7 @@ import { assetHas } from "./data/assets.js";   // traits del asset (receptacle/c
 import { MISSION, missionTotal, missionComplete } from "./data/mission.js";   // meta + arranque (posición inicial) del puzzle
 
 /* Estado de partida. circuitsTotal se DERIVA del mapa (ver buildWorld abajo), no se hardcodea. */
-export const game = { state: "title", lives: 3, circuits: 0, circuitsTotal: 0, carried: null, lightYears: 9999, won: false };
+export const game = { state: "title", lives: 3, circuits: 0, circuitsTotal: 0, carried: null, won: false };
 
 /* interact() — interacción vertical con los objetos:
    - LLEVANDO algo: si estás sobre el destino de un zócalo compatible, lo colocas y se
@@ -107,5 +107,5 @@ export function resetGame() {
   });
   game.lives = 3; game.circuits = 0; game.carried = null;
   game.circuitsTotal = missionTotal(world.rooms);   // re-derivar (mundo reconstruido)
-  game.lightYears = 9999; game.won = false;
+  game.won = false;
 }
