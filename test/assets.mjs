@@ -101,6 +101,29 @@ test("ORÁCULO DE PÍXEL: el blit del sprite respecto a la esquina (0,0,0) es ES
   }
 });
 
+test("GUARDARRAÍL anti-#2: la caja de orden (huella) ACOTA el sprite dibujado (≤ TOL px)", () => {
+  // El painter ordena por la HUELLA (assetBox); el sprite se dibuja anclado en assetRef + (minX,minY).
+  // Si sus píxeles se salen MUCHO de la caja, el orden de pintado no los acota → mis-orden de profundidad (#2,
+  // ver docs/ideas/assessment-motor-iso.md). Hoy todo lo colocable cumple ≤0.85px; este test lo FIJA: un sprite
+  // alto/flotante NUEVO que escape su huella se detecta aquí → darle huella honesta o, si colisión y silueta deben
+  // diferir de verdad, declarar `bounds` visual (refactor pendiente: docs/ideas/idea-motor-bounds-visuales.md).
+  const TW = 34, TH = 17, BH = 17, TOL = 2;
+  const P = (x, y, z) => ({ x: (x - y) * TW / 2, y: (x + y) * TH / 2 - z * BH });
+  for (const [id, a] of Object.entries(ASSETS)) {
+    if (!a.sprite) continue;                                  // solo assets de sprite (pared/puerta/robot van por otra vía)
+    const b = assetBox(id), r = assetRef(id), s = a.sprite;
+    const C = [[b.x, b.y, b.z], [b.x + b.w, b.y, b.z], [b.x + b.w, b.y + b.l, b.z], [b.x, b.y + b.l, b.z],
+              [b.x, b.y, b.z + b.h], [b.x + b.w, b.y, b.z + b.h], [b.x + b.w, b.y + b.l, b.z + b.h], [b.x, b.y + b.l, b.z + b.h]]
+              .map(c => P(c[0], c[1], c[2]));                 // 8 esquinas de la caja → AABB de pantalla
+    const box = { xMin: Math.min(...C.map(p => p.x)), xMax: Math.max(...C.map(p => p.x)),
+                  yMin: Math.min(...C.map(p => p.y)), yMax: Math.max(...C.map(p => p.y)) };
+    const ref = P(r.x, r.y, r.z);                             // ancla del sprite (igual que el draw)
+    const spr = { xL: ref.x + s.minX, xR: ref.x + s.minX + s.w, yT: ref.y + s.minY, yB: ref.y + s.minY + s.h };
+    const ov = Math.max(box.yMin - spr.yT, spr.yB - box.yMax, box.xMin - spr.xL, spr.xR - box.xMax);  // peor lado
+    assert.ok(ov <= TOL, `${id}: el sprite escapa su caja de orden ${ov.toFixed(1)}px (> ${TOL}) → #2; dale huella honesta o declara bounds visual`);
+  }
+});
+
 test("variantes de orientación intercambian ancho/largo (robot) y caja por eje (puerta)", () => {
   const rx = assetBox("robot", "axisX"), ry = assetBox("robot", "axisY");
   assert.ok(Math.abs(rx.w - ry.l) < 1e-9 && Math.abs(rx.l - ry.w) < 1e-9, "robot: no se intercambian w/l");

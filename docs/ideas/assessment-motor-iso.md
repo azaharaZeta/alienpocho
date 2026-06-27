@@ -106,3 +106,14 @@ dependencias de assets en el motor.
 ## Lo que NO se toca
 La proyección 2:1, la SSOT de assets, el **pipeline único** cáscara+objetos+entidades hacia un solo
 `depthSort`, y Kahn. Eso es lo que hace el motor reutilizable; está bien planteado.
+
+## Estado (progreso)
+- **Paso 1 — HECHO**: gate del painter por silueta hexagonal exacta + oráculo endurecido (red→green). Era el
+  bug de corrección real (commit `motor iso: gate de painter por silueta hexagonal…`).
+- **Paso 2/5 — HECHO (lean)**: medido todo el mapa, la huella ya acota el sprite (≤0.85px) → #2 no se
+  manifiesta. En vez del refactor se añadió el **guardarraíl anti-#2** (`test/assets.mjs`, ≤2px) y se dio
+  huella honesta al dron (único divergente). El refactor completo (`bounds` visual ≠ huella) queda
+  documentado como idea: [idea-motor-bounds-visuales.md](idea-motor-bounds-visuales.md).
+- **Paso 3 (pared slab) y Paso 4 (doorHole) — APLAZADOS**: hoy son benignos (las paredes van siempre
+  estrictamente detrás → sin ciclos). Recogidos en la idea de `bounds`.
+- **Paso 7 (cachear `roomSolids` por frame) — PENDIENTE**: limpieza independiente (rendimiento/elegancia).

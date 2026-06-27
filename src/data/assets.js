@@ -129,7 +129,9 @@ export const ASSETS = {
             draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.32, l: 0.32, h: 0.5 },
             files: { svg: "plant.svg", png: null }, sprite: { w: 8, h: 13, minX: -4, minY: -11 } },
   drone:  { label: "Dron", kind: "object", group: "Decoración", traits: {},
-            draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.32, l: 0.32, h: 0.28, z: 0.6 },
+            // huella ELEVADA que ENVUELVE el sprite flotante: el painter ordena por esta caja, así que debe
+            // acotar los píxeles dibujados (lo fija el guardarraíl anti-#2 de test/assets.mjs). No es sólido.
+            draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.4, l: 0.4, h: 0.7, z: 0.45 },
             files: { svg: "drone.svg", png: null }, sprite: { w: 12, h: 16, minX: -6, minY: -22 } },
   // Ordenador: sólido + empujable + cae.
   computer: { label: "Ordenador", kind: "object", group: "Decoración", traits: { solid: true, movable: true, falls: true },
