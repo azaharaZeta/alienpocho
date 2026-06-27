@@ -116,4 +116,8 @@ La proyección 2:1, la SSOT de assets, el **pipeline único** cáscara+objetos+e
   documentado como idea: [idea-motor-bounds-visuales.md](idea-motor-bounds-visuales.md).
 - **Paso 3 (pared slab) y Paso 4 (doorHole) — APLAZADOS**: hoy son benignos (las paredes van siempre
   estrictamente detrás → sin ciclos). Recogidos en la idea de `bounds`.
-- **Paso 7 (cachear `roomSolids` por frame) — PENDIENTE**: limpieza independiente (rendimiento/elegancia).
+- **Paso 7 (cachear `roomSolids` por frame) — HECHO**: la cáscara (invariante en partida) se memoiza por sala
+  (`world.roomShell`, WeakMap); los objetos (mutan) se dejan frescos. Limpieza, sin cambio de comportamiento.
+- **Extra (debug)**: el overlay del robot pinta ahora su **caja de colisión/orden** (verde) junto a la huella
+  visual (roja) → hace visible que el robot se dibuja más ancho que su caja de orden (análogo del #2 para
+  entidades; ver la idea de `bounds` y [idea-robot-huella-cuadrada.md](idea-robot-huella-cuadrada.md)).

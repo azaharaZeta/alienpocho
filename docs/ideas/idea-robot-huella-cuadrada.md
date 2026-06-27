@@ -4,6 +4,16 @@
 > robot↔circuito. La usuaria propuso hacer el robot "mismo ancho que largo"; se aparcó porque NO era la
 > causa del bug (lo era la `vbox` de los objetos, resuelta con "painter = huella"). Esto es limpieza de
 > registro/debug, no un cambio de jugabilidad. Relacionado: [[alien-pocho-assets-modularity]].
+>
+> **Actualización 2026-06-27:** la confusión volvió a surgir (la región del robot "invade" celdas vecinas).
+> El debug ahora pinta DOS cajas del robot —**roja** = huella del registro (orientable, ≈ lo que se dibuja),
+> **verde** = colisión/orden (±`PRAD`)— para verlo de un vistazo (`player.debugInfo` / `render.drawDebug`). La
+> doble definición SIGUE sin unificar. **Matiz importante:** el análisis del motor iso
+> ([idea-motor-bounds-visuales.md](idea-motor-bounds-visuales.md)) sugiere que la huella orientable NO es solo
+> cosmética: es la base natural de la caja de **ORDEN** del painter, que hoy usa `PRAD` —demasiado estrecha
+> para el dibujo (los hombros se salen ~0.18 celdas)—. O sea, antes de ELIMINAR las variantes, decidir si más
+> bien el painter debería **ORDENAR por esa huella** (≈ dibujo) dejando `PRAD` solo para colisión. Reconsiderar
+> las dos ideas juntas.
 
 ## El problema
 

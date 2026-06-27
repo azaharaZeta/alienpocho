@@ -31,33 +31,23 @@ Convenio de nombres: usar minúsculas y guiones en lugar de espacios para `<titu
 
 
 ## IDEAS IA
-
-### 🅿️ Enemigos, peligros y vidas — APARCADO (quizá en el futuro)
-- **Pinchos letales**: hoy decorativos (`room.hazards` + `AP.spikes`). Tocarlos = perder vida.
-- **Enemigos**: patrulla simple (ida/vuelta o ciclo de celdas); contacto = perder vida.
-- **Vidas**: `game.lives` baja al recibir daño; reaparición con breve invulnerabilidad; Game Over a 0.
-
-
-### Técnica
-- **Precargar los assets (PNG/SVG) al arrancar**: ahora que los migrados solo se dibujan desde fichero (sin fallback procedural), mientras cargan no se dibujan → parpadeo en cada recarga. Cargar todas las imágenes antes de iniciar el bucle (o pantalla de carga breve) para que no falte nada en el primer frame.
-- **Quitar (o gating) el debug visual `j`/`k`/`l` antes de publicar**: overlays de desarrollo (cubo de referencia / región estándar / punto de anclaje) dentro del juego (`render.js`→`drawDebug`, teclas en `config.js`). Es utillaje temporal, no para el jugador.
-
-### Presentación y pulido
-- **Pantallas** de victoria y game over con entidad propia (hoy solo banner); reutilizar el
-  estilo del menú de inicio (estado `title`).
-- **Audio** WebAudio (saltar, coger, soltar, colocar) + toggle de silencio persistente.
-- **Más salas / retos** que exploten las mecánicas nuevas (apilar/empujar objetos para
-  alcanzar zócalos altos); plataformas móviles; dron (el asset `drone` ya existe).
+<!-- vacío: todas las ideas listadas se procesaron a docs/ideas/idea-*.md (2026-06-27). -->
 
 
 
 
 ## IDEAS USUARIA
-- cambiar en assets.js  files: { svg: "<filename>.svg", png: <filename>.png } por algo tipo  filename: <filename> . solo se necesitaría saber el nombre del fichero, y luego buscarlo por la extensión png, y si no existe, por la svg
-- el robot debería poder empujar los objetos que se encuentre en mitad de un salto
+<!-- vacío: las ideas listadas se procesaron a docs/ideas/idea-*.md (2026-06-27). Esta sección la rellena solo la usuaria. -->
+- Ya no permitimos salas con largo o ancho >8. Y todas se centran con el pico más cercano al usuario en el centro de la pantalla. Ya no es necesario que la UI se adapte, siempre será fija en su sitio. Revisar si hay código obsoleto de resize de la UI. Y:
+  - Colocar el texto "Alien Pocho" arriba a la izda de la pantalla. Ojo que no colisione con la info de debug, mira si se puede poner la info de debug debajo del título, o donde no moleste.
+  - Las vidas: colocalas en la zona derecha
+  - Ojo, no solo se podrán recoger circuitos, también eventualmente otros objetos. Marca el actual objeto computer como recogible.
+  - Ahora que se pueden recoger otros objetos además de circuitos, desliga el contador de circuitos colocados del visor del objeto colocado. Llévalo a otra zona del UI y ponle un label tipo "Circuitos activados" o algo así.
+  - El objeto recogido: a la izqiuerda.  Y añádele un label con el nombre de ese objeto. Todos los objetos recogibles tienen que tener un nombre :)
 
-- Esta es gorda: convertir el juego en un roguelike. Cada run, mapa random, ubicaciones random.
-- Todos los objetos deberían usar la misma lógica de posicionamento, tanto si son movibles como si no. Ahora mismo creo que  los objetos se posicionan en el centro del tile, pero los bloques  van en un extremo del tile, con dibujado distinto. Implementar que algunos bloques sí sean movibles, empujándolos.
+- En menú principal, listar los controles de teclado.
+
+
 ## 🐞 BUGS CONOCIDOS
-- `floor` declara `files.svg: "example.svg"` pero se dibuja procedural (`draw:"floor"`) → es un SVG declarado que no se usa. Decidir: quitar la declaración, o dibujar el suelo desde fichero como el resto de sprites.
-- con un salto alto, el robot puede atravesar el marco superior de la puerta. Debería chocar y caer
+- `floor` declara `files.svg: "example.svg"` pero se dibuja procedural (`draw:"floor"`) → es un SVG declarado que no se usa. Decidir: quitar la declaración, o dibujar el suelo desde fichero como el resto de sprites. (Directo de resolver; pendiente de decisión.)
+- La representación del objeto recogido en la UI no cabe en su cuadro

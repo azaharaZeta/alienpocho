@@ -177,14 +177,18 @@ player.addDraws = function (draws, room) {
   });
 };
 
-/* player.debugInfo() — caja (huella visual del cuerpo) + punto de anclaje del robot, para los
-   overlays de depuración (j/k/l) de render.js. Cada entidad expone el suyo (los overlays son genéricos). */
+/* player.debugInfo() — para los overlays de depuración (j/k/l) de render.js. Devuelve DOS cajas:
+   - `box`   : huella VISUAL del cuerpo (hombros + alto) = lo que se DIBUJA.
+   - `solid` : caja de COLISIÓN/ORDEN (cuadrado ±PRAD) = la que usan física y painter (player.addDraws).
+   Son distintas a propósito (los hombros son más anchos que la caja de colisión); verlas juntas explica por
+   qué la región/huella "invade" celdas vecinas sin que el robot las atraviese. Cada entidad expone el suyo. */
 player.debugInfo = function () {
   // Huella del REGISTRO según la orientación (variantes axisX/axisY: intercambian ancho/largo, robot más ANCHO
   // que profundo). facing 0/2 = mira en x → axisX; 1/3 = mira en y → axisY. Centrada en el jugador (footMode center).
-  const f = assetFoot("robot", (player.facing & 1) ? "axisY" : "axisX");
-  return { box: { x: player.x - f.w / 2, y: player.y - f.l / 2, z: player.z, w: f.w, l: f.l, h: f.h },
-           ref: { x: player.x, y: player.y, z: player.z } };
+  const f = assetFoot("robot", (player.facing & 1) ? "axisY" : "axisX"), pr = CFG.PRAD;
+  return { box:   { x: player.x - f.w / 2, y: player.y - f.l / 2, z: player.z, w: f.w, l: f.l, h: f.h },
+           solid: { x: player.x - pr, y: player.y - pr, z: player.z, w: 2 * pr, l: 2 * pr, h: ROBOT.H },
+           ref:   { x: player.x, y: player.y, z: player.z } };
 };
 
 /* Lista de ENTIDADES vivas (se actualizan y se dibujan en bloque). De momento solo

@@ -24,7 +24,7 @@ Dependencias en UNA dirección (hojas abajo → `main` arriba):
 
 ## Motor isométrico
 - **Proyección 2:1** (`engine.js`): `P(x,y,z) = (ox + (x−y)·TW/2, oy + (x+y)·TH/2 − z·BH)`, con `TW=34, TH=17, BH=17`.
-- **Painter `depthSort`**: orden por *separating-axis* con *gating* por solape en pantalla + **orden topológico
+- **Painter `depthSort`**: orden por *separating-axis* con *gating* por solape en pantalla (**silueta hexagonal exacta**, no el AABB de pantalla) + **orden topológico
   (Kahn)** determinista. Desempate canónico estable (centro-z, luego profundidad de suelo) para pares
   ambiguos/interpenetrados → el orden NO depende del orden de entrada y respeta "lo de delante tapa lo de detrás".
 - **Invariante** (determinismo + sin violaciones cuando el grafo es acíclico): lo fija `test/painter.mjs` (fuzz).
