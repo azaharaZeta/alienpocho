@@ -109,12 +109,21 @@ function doorPosts(axis, b) {
     : [{ ...b, y1: b.y0 + W }, { ...b, y0: b.y1 - W }];
 }
 
+/* CACHÉ de la cáscara por sala: la cáscara es ESTRUCTURAL e INVARIANTE durante la partida (depende solo de
+   exits/w/h/wallTile, fijados en makeRoom y nunca mutados) pero se pide muchas veces por frame (física la
+   consulta en cada colisión/apoyo, render una o dos). Se computa UNA vez por sala y se reutiliza. Clave por
+   identidad de `room` (WeakMap) → resetGame crea salas nuevas = caché fresco automáticamente. Nadie muta los
+   placements devueltos (render los lee, roomSolids copia campos), así que es seguro compartir el array.
+   Los `things` (objetos) NO se cachean: SÍ mutan (empuje/gravedad/colocar) y deben verse al instante. */
+const _shellCache = new WeakMap();
+
 /* LISTA UNIFORME de la CÁSCARA estructural de la sala (paredes de fondo x=0/y=0 partidas por su vano +
    marcos de puerta). HERMANA de roomThings: emite los mismos placements { asset, aabb, ...estado } que
    consumen IGUAL render (painter, vía AP.drawAsset) y física (sólidos, vía roomSolids). Las puertas de
    FONDO (xm/ym) retroceden tras el plano del muro (side −1); las FRONTALES (xp/yp) protruyen del borde
    abierto (side +1). `src:"shell"` nunca es un objeto de room.objects (no choca consigo en empuje). */
 export function roomShell(room) {
+  const hit = _shellCache.get(room); if (hit) return hit;
   const t = [], { exits, w, h } = room, wallId = room.wallTile || WALL_TILE;
   // Ancla de la pieza = esquina de inicio del tramo en el plano del borde (a0, fixed) → mismo punto que el blit.
   const anchor = (axis, fixed, a0) => axis === "x" ? { x: a0, y: fixed, z: 0 } : { x: fixed, y: a0, z: 0 };
@@ -141,6 +150,7 @@ export function roomShell(room) {
   // bordes FRONTALES abiertos (sin muro): solo el marco de puerta protruido (yp eje x en y=h; xp eje y en x=w)
   if (exits.yp) { const [s0, s1] = doorSpan(w); door("x", h, s0, s1, +1, false); }
   if (exits.xp) { const [s0, s1] = doorSpan(h); door("y", w, s0, s1, +1, false); }
+  _shellCache.set(room, t);
   return t;
 }
 

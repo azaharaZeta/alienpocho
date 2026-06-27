@@ -48,8 +48,8 @@ function dbgOne(box, ref) {
 // Pasada de depuración: recorre lo dibujable (cáscara + colocable + entidades) con su caja/ancla.
 function drawDebug(room) {
   if (!(DBG.box || DBG.region || DBG.anchor)) return;
-  // El SUELO se excepciona a propósito (es la rejilla de referencia; ensucia y tapa lo demás).
-  for (const t of [...roomShell(room), ...roomThings(room)])               // cáscara (paredes/puertas) + colocable
+  // El SUELO y la cáscara (paredes/puertas) se excepciona a propósito (es la rejilla de referencia; ensucia y tapa lo demás).
+  for (const t of [...roomThings(room)])               // cáscara (paredes/puertas) + colocable
     dbgOne(aabbBox(t.aabb), { x: t.x, y: t.y, z: t.z });
   for (const e of entities) { const d = e.debugInfo && e.debugInfo(); if (d) dbgOne(d.box, d.ref); }   // entidades
   // indicador de qué overlays están activos (esquina sup-izq)
