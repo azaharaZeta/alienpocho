@@ -221,25 +221,25 @@ test("coger un circuito lo retira de la sala y lo pone en la mano", () => {
   assert.equal(entrada.objects.length, 3, "ENTRADA arranca con 3 (2 bloques de la plataforma + circuito)");
   player.x = 3.5; player.y = 4.5; player.z = 1.66; game.carried = null;   // subido sobre el circuito de la plataforma
   interact(entrada);
-  assert.equal(game.carried, "cube", "lleva el cubo");
+  assert.equal(game.carried, "prop_cube", "lleva el circuito cubo (carried = asset id)");
   assert.equal(entrada.objects.length, 2, "el circuito ya no está suelto (quedan los 2 bloques)");
 });
 
 test("colocar la forma correcta en su zócalo lo activa y suma circuito", () => {
   resetGame();
   const entrada = room;
-  player.x = 5.5; player.y = 5.5; player.z = 0; game.carried = "cube";   // casilla del zócalo cube (5,5)
+  player.x = 5.5; player.y = 5.5; player.z = 0; game.carried = "prop_cube";   // carried = asset id; casilla del zócalo cube (5,5)
   const before = game.circuits;
   interact(entrada);
   assert.equal(game.carried, null, "el circuito se coloca");
-  assert.equal(entrada.sockets[0].filled, "cube", "el zócalo queda con el circuito puesto");
+  assert.equal(entrada.sockets[0].filled, "cube", "el zócalo queda con la FORMA puesta (filled = shape)");
   assert.equal(game.circuits, before + 1, "el contador de circuitos sube");
 });
 
 test("colocar el último circuito gana la partida", () => {
   resetGame();
   game.circuits = game.circuitsTotal - 1;      // a falta de uno
-  player.x = 5.5; player.y = 5.5; player.z = 0; game.carried = "cube";
+  player.x = 5.5; player.y = 5.5; player.z = 0; game.carried = "prop_cube";   // carried = asset id
   interact(room);
   assert.equal(game.won, true, "game.won al completar todos");
 });
@@ -257,7 +257,7 @@ test("un objeto en el aire cae hasta su apoyo", () => {
 test("resetGame reconstruye el mundo sin arrastrar estado mutado", () => {
   // ensucia el estado
   resetGame();
-  player.x = 5.5; player.y = 5.5; player.z = 0; game.carried = "cube";
+  player.x = 5.5; player.y = 5.5; player.z = 0; game.carried = "prop_cube";   // carried = asset id
   interact(room);                              // coloca el cubo en el zócalo (ensucia estado)
   // reinicia
   resetGame();

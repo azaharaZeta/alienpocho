@@ -10,11 +10,11 @@
    ============================================================================= */
 "use strict";
 
-import { CFG, PROP } from "./config.js";
+import { CFG } from "./config.js";
 import { canStandOn, socketTop, overlapsBox, objBox } from "./physics.js";
 import { player } from "./player.js";
-import { buildWorld, roomThings } from "./world.js";
-import { assetHas } from "./data/assets.js";   // traits del asset (receptacle/carriable)
+import { buildWorld, roomThings, objAsset } from "./world.js";
+import { assetHas, assetFoot, propAsset } from "./data/assets.js";   // traits + huella(alto) + forma→asset del zócalo
 import { MISSION, missionTotal, missionComplete } from "./data/mission.js";   // meta + arranque (posición inicial) del puzzle
 
 /* Estado de partida. circuitsTotal se DERIVA del mapa (ver buildWorld abajo), no se hardcodea. */
@@ -33,20 +33,21 @@ export function interact(room) {
     for (const t of things) {
       if (!assetHas(t.asset, "receptacle")) continue;
       const s = t.src;
-      if (!s.filled && t.requires === game.carried &&
+      if (!s.filled && propAsset(t.requires) === game.carried &&   // carried = asset id; el zócalo pide una FORMA → su asset
           Math.abs(player.x - t.x) < 0.5 && Math.abs(player.y - t.y) < 0.5 &&
           Math.abs(player.z - t.z) < 0.4) {
-        s.filled = game.carried; game.carried = null; game.circuits++;   // el circuito se MANTIENE en el zócalo (filled)
+        s.filled = t.requires; game.carried = null; game.circuits++;   // filled = la FORMA puesta (la dibuja el drawer del zócalo); el circuito se MANTIENE
         if (missionComplete(game)) game.won = true;
         player.z = socketTop(s); player.vz = 0; player.onGround = true;   // s.filled ya puesto → cima con circuito
         return;
       }
     }
     // 2) soltar bajo los pies y subirse encima — solo si hay sitio arriba
-    if (player.onGround && canStandOn(room, player.x, player.y, player.z + PROP.H)) {
-      room.objects.push({ x: player.x, y: player.y, z: player.z, shape: game.carried });
+    const ch = assetFoot(game.carried).h;   // alto del objeto que dejo = lo que subo al ponerme encima
+    if (player.onGround && canStandOn(room, player.x, player.y, player.z + ch)) {
+      room.objects.push({ x: player.x, y: player.y, z: player.z, asset: game.carried });   // carried = asset id (circuito o cualquier recogible)
       game.carried = null;
-      player.z += PROP.H;                 // subir encima
+      player.z += ch;                     // subir encima
       player.vz = 0; player.onGround = true;
     }
     return;                                  // sin hueco → no suelta
@@ -57,13 +58,13 @@ export function interact(room) {
   const REACH = 0.2;   // margen de alcance lateral para "pegado"
   for (const t of things) {
     if (!assetHas(t.asset, "carriable")) continue;
-    const o = t.src, b = objBox(o);
-    const encima = overlapsBox(b, player.x, player.y) && Math.abs((o.z + PROP.H) - player.z) < 0.25;
+    const o = t.src, b = objBox(o), oh = assetFoot(t.asset).h;   // alto del objeto (para "subido encima")
+    const encima = overlapsBox(b, player.x, player.y) && Math.abs((o.z + oh) - player.z) < 0.25;
     const pegado = Math.abs(player.z - o.z) < 0.4 &&
       (player.x - CFG.PRAD - REACH) < b.x1 && (player.x + CFG.PRAD + REACH) > b.x0 &&
       (player.y - CFG.PRAD - REACH) < b.y1 && (player.y + CFG.PRAD + REACH) > b.y0;
     if (encima || pegado) {
-      game.carried = o.shape;
+      game.carried = objAsset(o);   // asset id del recogido (circuito = prop_<shape>; otros = su asset)
       const i = room.objects.indexOf(o); if (i >= 0) room.objects.splice(i, 1);
       if (encima) { player.onGround = false; player.vz = 0; }  // que se vea caer hasta o.z
       return;

@@ -15,7 +15,7 @@ import { AP } from "./draw.js";
 import { pressed, held } from "./input.js";
 import { ctx, P } from "./view.js";
 import { blocksHoriz, supportHeight, ceilingHeight, objBox, overlapsBox, objBlocked, objAsset, thingHas } from "./physics.js";
-import { propAsset, assetFoot } from "./data/assets.js";   // forma→asset del objeto en brazos + huella del robot por orientación
+import { assetFoot, assetTint } from "./data/assets.js";   // huella del robot por orientación + tinte del objeto en brazos
 import { MISSION } from "./data/mission.js";    // posición inicial del robot (MISSION.start)
 import { game, interact, resetGame } from "./game.js";
 
@@ -178,7 +178,10 @@ player.addDraws = function (draws, room) {
       AP.shadow(ctx, P, player.x, player.y, gz);
       AP.robot(ctx, P, player.x, player.y, player.z, player.facing, ink,
                { moving: player.moving, walkPhase: player.walkPhase });
-      if (game.carried) AP.drawSprite(propAsset(game.carried), ctx, P(player.x, player.y, player.z + 1.6), room.ink2 || ink);
+      if (game.carried) {   // carried = asset id; se tiñe con SU tinta (igual que en la escena), no siempre secundaria
+        const ccol = assetTint(game.carried) === "secondary" ? (room.ink2 || ink) : ink;
+        AP.drawSprite(game.carried, ctx, P(player.x, player.y, player.z + 1.6), ccol);
+      }
     }
   });
 };

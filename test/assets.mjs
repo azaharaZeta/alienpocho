@@ -50,6 +50,13 @@ test("cada asset DECLARA kind, group y traits (clase + propiedades componibles)"
   }
 });
 
+test("cada asset CARRIABLE tiene nombre (label) para mostrar en el HUD", () => {
+  // El objeto recogido se muestra con su nombre; el `label` del registro hace de nombre legible.
+  for (const [id, a] of Object.entries(ASSETS))
+    if (a.traits && a.traits.carriable)
+      assert.ok(typeof a.label === "string" && a.label.length > 0, `${id}: carriable sin label/nombre`);
+});
+
 test("assetsByGroup agrupa TODOS los assets y respeta GROUP_ORDER", () => {
   const groups = assetsByGroup();
   const total = groups.reduce((n, g) => n + g.ids.length, 0);

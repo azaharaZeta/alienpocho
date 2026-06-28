@@ -135,8 +135,10 @@ export const ASSETS = {
             // acotar los píxeles dibujados (lo fija el guardarraíl anti-#2 de test/assets.mjs). No es sólido.
             draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.4, l: 0.4, h: 0.7, z: 0.45 },
             files: { svg: "drone.svg", png: null }, sprite: { w: 12, h: 16, minX: -6, minY: -22 } },
-  // Ordenador: sólido + empujable + cae.
-  computer: { label: "Ordenador", kind: "object", group: "Decoración", traits: { solid: true, movable: true, falls: true },
+  // Ordenador: sólido + empujable + cae + RECOGIBLE (como los circuitos, pero no encaja en zócalos).
+  // tint:"primary" → se pinta en la tinta primaria de la sala (NO en secundario, aunque sea carriable).
+  computer: { label: "Ordenador", kind: "object", group: "Decoración", traits: { solid: true, movable: true, carriable: true, falls: true },
+            tint: "primary",
             draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.5, l: 0.5, h: 0.7 },
             files: { svg: "computer.svg", png: null }, sprite: { w: 18, h: 22, minX: -9, minY: -17 } },
 
@@ -212,6 +214,9 @@ export function socketTop(s) {
 export function assetKind(id) { const a = ASSETS[id]; return a ? a.kind : null; }
 export function assetTraits(id) { const a = ASSETS[id]; return (a && a.traits) || {}; }
 export function assetHas(id, trait) { return !!assetTraits(id)[trait]; }
+
+// Nombre legible para el HUD: el `label` del asset (su nombre humano); un id sin label cae a su id.
+export function assetName(id) { const a = ASSETS[id]; return (a && a.label) || id; }
 
 // Tinte de dibujo: "secondary" para transportables/receptáculos, "primary" el resto. El
 // asset puede forzarlo con `tint`. Render/tool eligen room.ink (primario) o room.ink2.

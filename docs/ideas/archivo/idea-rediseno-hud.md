@@ -1,8 +1,7 @@
 # Idea — Rediseño del HUD / layout de UI fija
 
-> **Estado: PENDIENTE — Prioridad ALTA.** Origen: usuaria, procesado 2026-06-28.
-> Depende en parte de [[idea-objetos-recogibles-genericos]] (la etiqueta del objeto recogido necesita
-> que todo recogible tenga `name`).
+> **Estado: ✅ IMPLEMENTADA (2026-06-28).** Origen: usuaria. Relayout completo del HUD + visor que escala
+> cualquier sprite. Ver "Resultado" al final.
 
 ## Qué pide
 Ahora que las salas son ≤8 en ambos ejes y se centran en un marco fijo (pico frontal al centro), la UI
@@ -65,3 +64,24 @@ el terreno para objetos recogibles variados. Alineado con la esencia retro (HUD 
 ## Nota de bug absorbido
 El bug conocido *"la representación del objeto recogido no cabe en su cuadro"* se resuelve dentro de esta
 idea (punto 6): no se trata como bug aparte. Se retira del listado de BUGS.
+
+## Resultado (implementación 2026-06-28)
+Hecho y verificado (`npm test` verde + preview en los 3 estados: circuito, ordenador, sin objeto). Todo en
+[render.js](../../src/render.js) (presentación; no toca física ni painter). Nuevo reparto de 4 zonas:
+- **Arriba-izquierda:** solo el título "ALIEN POCHO" (`drawTitle` movido al top).
+- **Arriba-derecha:** minimapa + nombre de sala (sin cambios).
+- **Abajo-izquierda:** objeto recogido — label "LLEVAS" + visor + **nombre del objeto** (`assetName`, nuevo
+  helper en `data/assets.js` = el `label`). El visor se tiñe con la tinta del propio asset.
+- **Abajo-derecha:** **vidas** (mini-robot + ×N) arriba y, **abajo del todo**, el **OBJETIVO** "CIRCUITOS
+  ACTIVADOS x/N" en UNA sola línea (label 7px + cifra bold 9px, ya no 13px) — desligado del visor del objeto.
+  El mini-robot identifica las vidas, sin label de texto. (Posición/forma a petición de la usuaria, 2026-06-28.)
+- **Debug j/k/l:** su texto se movió a `(10,26)` (justo debajo del título) → ya no lo pisa.
+- **Márgenes uniformes:** todo el contenido respeta el mismo inset con los bordes — izquierda `LM=10`
+  (título, debug, LLEVAS+visor) y derecha `RM=W-10` (vidas, circuitos, nombre de sala); el minimapa se
+  reubicó (`ox = W-MM-14`) para que su marco caiga también en `W-10`. Despeja las barras del marco (x=6/W-6).
+- **Visor que SÍ cabe** (bug #6): `drawCarrySlot` reescrito — escala el sprite (`AP.SPRITES`) con
+  `k=min(1, inner/w, inner/h)` y lo centra → cualquier recogible (incl. el ordenador, el más alto) entra en
+  el marco sin recortarse.
+- **Resize obsoleto (punto 1):** confirmado que NO queda lógica de resize; la UI ya era de posición fija. El
+  `fc = P(w,h,0)` del marco en "V" es el ancla estable del marco fijo, no "resize".
+- `drawStat` (helper de fila del marcador viejo) eliminado; ya no se usa.

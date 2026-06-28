@@ -37,7 +37,9 @@ Convenio de nombres: usar minúsculas y guiones en lugar de espacios para `<titu
 
 
 ## IDEAS USUARIA
-<!-- vacío: las ideas listadas se procesaron a docs/ideas/idea-*.md (2026-06-28: rediseno-hud, objetos-recogibles-genericos, controles-en-menu). Esta sección la rellena solo la usuaria. -->
+<!-- Esta sección la rellena solo la usuaria. -->
+- Distintos assets de suelo
+- Coordenadas UNIFICADAS para TODOS los assets: UNA sola forma de definir y manejar la posición, sin convenciones distintas por tipo de asset (hoy conviven `cx,cy` de celda para fijos y `x,y`+`z` continuos para móviles/recogibles; `physics.objBox` solo entiende las continuas → fuente de bugs como computer/REACTOR sin `z`). [PEDIDA VARIAS VECES — pendiente]
 
 
 ## 🐞 BUGS CONOCIDOS

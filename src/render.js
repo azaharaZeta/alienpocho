@@ -12,7 +12,7 @@ import { CFG } from "./config.js";
 import { ENGINE } from "./engine.js";
 import { AP } from "./draw.js";
 import { roomThings, roomShell } from "./world.js";   // listas uniformes de la escena (objetos + cáscara)
-import { assetTint, propAsset } from "./data/assets.js";   // tinte por asset; mapeo forma→asset del icono HUD
+import { assetTint, assetName } from "./data/assets.js";   // tinte por asset (primario/secundario) + nombre legible (HUD)
 import { ctx, P, setProjector, applyRoomTheme } from "./view.js";
 import { entities } from "./player.js";
 import { game, world, room } from "./game.js";
@@ -56,11 +56,11 @@ function drawDebug(room) {
     dbgOne(d.box, d.ref);                                                   // huella VISUAL (lo que se dibuja)
     if (d.solid && DBG.box) wireBox(d.solid, DBG_COL.order);                // caja de colisión/orden = la que usan física y painter (±PRAD = ROBOT.WID = ancho dibujado)
   }
-  // indicador de qué overlays están activos (esquina sup-izq)
+  // indicador de qué overlays están activos: DEBAJO del bloque título+objetivo de arriba-izq (no lo pisa)
   const on = [DBG.box && "J:caja", DBG.region && "K:región", DBG.anchor && "L:ancla"].filter(Boolean).join("  ");
   ctx.fillStyle = "#ffffff"; ctx.font = "8px 'Courier New', monospace"; ctx.textBaseline = "top"; ctx.textAlign = "left";
-  ctx.fillText("DEBUG  " + on, 6, 6);
-  if (DBG.box) ctx.fillText("caja  rojo=dibujo  verde=colision/orden", 6, 16);   // entidades: las dos cajas (difieren a propósito)
+  ctx.fillText("DEBUG  " + on, 14, 26);
+  if (DBG.box) ctx.fillText("caja  rojo=dibujo  verde=colision/orden", 14, 36);   // entidades: las dos cajas (difieren a propósito)
 }
 
 export function render(room) {
@@ -127,16 +127,20 @@ function drawSegBar(cx, y0, y1, col) {
   ctx.fillStyle = col || CFG.COL.hud;
   for (let y = y0; y < y1; y += 6) ctx.fillRect(cx - 3, y, 6, 4);
 }
-// Casilla del objeto que llevas: marco cuadrado centrado en (cx,cy); si hay objeto,
-// se dibuja centrado y RECORTADO dentro del marco (sea cual sea su forma).
-function drawCarrySlot(cx, cy, shape, frameCol, circuitCol) {
-  const s = 9;                                    // semilado del marco
+// Casilla del objeto que llevas: marco cuadrado centrado en (cx,cy). El sprite del asset (sea cual sea su
+// tamaño: circuito, ordenador…) se ESCALA para caber y se centra en el marco → ya no se sale ni se recorta.
+function drawCarrySlot(cx, cy, asset, frameCol, spriteCol) {
+  const s = 11;                                   // semilado del marco (22px)
   ctx.strokeStyle = frameCol; ctx.lineWidth = 1;
   ctx.strokeRect(cx - s + 0.5, cy - s + 0.5, s * 2 - 1, s * 2 - 1);
-  if (!shape) return;
+  const def = asset && AP.SPRITES[asset]; if (!def) return;
+  const inner = s * 2 - 6;                         // lado útil (con margen interior)
+  const k = Math.min(1, inner / def.w, inner / def.h);   // encoge si no cabe; nunca agranda
   ctx.save();
   ctx.beginPath(); ctx.rect(cx - s + 1, cy - s + 1, s * 2 - 2, s * 2 - 2); ctx.clip();
-  AP.drawSprite(propAsset(shape), ctx, { x: cx, y: cy + 4 }, circuitCol);   // mismo sprite, anclado a un punto de pantalla
+  ctx.imageSmoothingEnabled = false;
+  ctx.translate(cx, cy); ctx.scale(k, k);
+  AP.drawSprite(asset, ctx, { x: -def.minX - def.w / 2, y: -def.minY - def.h / 2 }, spriteCol);   // centrado en (0,0)
   ctx.restore();
 }
 // Mini robot (icono de vidas) en estilo línea, centrado en (cx,cy).
@@ -166,7 +170,7 @@ function drawMinimap() {
   if (room.wx === undefined) return;
   const ink = room.ink, ink2 = room.ink2 || ink;
   const MM = 45, oy = 18;                   // viewport cuadrado (oy deja hueco al nombre encima)
-  const ox = CFG.W - MM - 8;                // SIEMPRE a la derecha
+  const ox = CFG.W - MM - 18;               // SIEMPRE a la derecha; su marco (bg, ox+MM+4) cae en W-14 = margen uniforme de la UI
   const WS = 26, sc = MM / WS, INS = 0.6;   // INS: medio hueco entre salas (= pared)
   const ccx = room.wx + room.w / 2, ccy = room.wy + room.h / 2;   // centro de la sala actual
   const toX = wx => ox + MM / 2 + (wx - ccx) * sc, toY = wy => oy + MM / 2 + (wy - ccy) * sc;
@@ -207,49 +211,57 @@ function drawMinimap() {
   }
 }
 
-/* HUD — el marcador (circuitos + vidas + título) va dentro del triángulo negro mayor
-   que deja el rombo del suelo abajo, repartido en varias filas. */
+/* HUD (posición FIJA, ya no depende del hueco): marco inferior en "V" + cuatro zonas —
+   ARRIBA-IZQ título "ALIEN POCHO" + OBJETIVO (circuitos activados, desligado del visor),
+   ABAJO-IZQ objeto recogido (visor + su nombre), ABAJO-DCHA vidas. El minimapa va aparte (arriba-dcha). */
 function drawHUD() {
   const C = CFG.COL, W = CFG.W;
-  ctx.textBaseline = "top";
+  const ink = room.ink, ink2 = room.ink2 || C.roomName;
+  ctx.textBaseline = "top"; ctx.textAlign = "left";
 
-  const ink2 = room.ink2 || C.roomName;   // secundario de la sala para los textos del HUD
-
-  // ── Marco inferior: barras segmentadas a los lados + aristas en "V" PARALELAS a los bordes
-  //    frontales del rombo (pendiente ±0.5). Se dibuja PRIMERO, el marcador queda por encima.
-  const ink = room.ink, fc = P(room.w, room.h, 0);   // pico frontal del rombo (proyectado)
+  // ── Marco inferior: barras segmentadas a los lados + aristas en "V" paralelas a los bordes del rombo.
+  const fc = P(room.w, room.h, 0);                    // pico frontal del rombo (proyectado)
   const GAP = Math.round(AP.DOOR.T * CFG.TILE_W);     // hueco bajo el pico (= ancho iso de puerta)
-  const vx = Math.round(fc.x);
-  const vy = Math.round(fc.y) + GAP;                  // vértice de la "V", GAP por debajo del pico
-  const leftTopY = vy - 0.5 * (vx - 6), rightTopY = vy - 0.5 * ((W - 6) - vx);   // aristas a ±0.5
+  const vx = Math.round(fc.x), vy = Math.round(fc.y) + GAP;
+  const leftTopY = vy - 0.5 * (vx - 6), rightTopY = vy - 0.5 * ((W - 6) - vx);
   drawSegBar(6, Math.round(leftTopY), 236, ink);
   drawSegBar(W - 6, Math.round(rightTopY), 236, ink);
   ctx.strokeStyle = ink; ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(6, leftTopY);      ctx.lineTo(vx, vy);   // arista izquierda
-  ctx.moveTo(W - 6, rightTopY); ctx.lineTo(vx, vy);   // arista derecha
+  ctx.moveTo(6, leftTopY);      ctx.lineTo(vx, vy);
+  ctx.moveTo(W - 6, rightTopY); ctx.lineTo(vx, vy);
   ctx.stroke();
 
-  // ── MARCADOR: SIEMPRE a la IZQUIERDA (el minimapa va fijo a la derecha). El triángulo se ensancha
-  //    hacia abajo: la fila inferior (más ancha) lleva el título; las de arriba, los iconos.
-  const PAD = 20, ax = PAD;                            // borde de anclaje (margen dentro del marco)
-  const dy = 20, yTitle = 222, yCirc = yTitle - dy, yLife = yCirc - dy;
+  // ── ARRIBA-IZQUIERDA: solo el título (el objetivo de circuitos va abajo-dcha, junto a las vidas).
+  const LM = 14;                                                  // margen izquierdo uniforme de la UI
+  drawTitle(LM, 4);                                               // "ALIEN POCHO"
 
-  drawTitle(ax, yTitle);                                           // título "ALIEN POCHO"
-  drawStat(ax, yCirc, 18, (cx, cy) => drawCarrySlot(cx, cy, game.carried, ink, ink2),
-           game.circuits + "/" + game.circuitsTotal, ink2);        // circuitos: casilla + N/M
-  drawStat(ax, yLife, 14, (cx, cy) => drawMiniRobot(cx, cy, ink2),
-           "×" + game.lives, ink2);                                // vidas: carita + ×N
-}
+  // ── ABAJO-IZQUIERDA: objeto recogido (visor + su nombre). El visor se tiñe con la tinta del asset.
+  const oy = 224;
+  const carryCol = (game.carried && assetTint(game.carried) === "secondary") ? ink2 : ink;
+  ctx.fillStyle = ink2; ctx.font = "7px 'Courier New', monospace"; ctx.textAlign = "left"; ctx.textBaseline = "top";
+  ctx.fillText("LLEVAS", LM, oy - 19);
+  drawCarrySlot(LM + 11, oy, game.carried, ink, carryCol);       // marco (semilado 11) con su borde izq. en LM
+  if (game.carried) {
+    ctx.fillStyle = ink; ctx.font = "bold 9px 'Courier New', monospace"; ctx.textBaseline = "middle";
+    ctx.fillText(assetName(game.carried), LM + 26, oy);
+  }
 
-/* Una FILA del marcador anclada al borde IZQUIERDO: [ICONO][NÚMERO] empezando en ax. El icono
-   lo pinta `drawIcon(cx, cy)` centrado; `iw` = su ancho, para reservarle el hueco. */
-function drawStat(ax, y, iw, drawIcon, text, col) {
-  const gap = 4, cy = y + 7;                          // centro vertical del icono ≈ centro del texto
-  ctx.font = "bold 14px 'Courier New', monospace";
-  ctx.fillStyle = col; ctx.textBaseline = "top";
-  drawIcon(ax + iw / 2, cy);
-  ctx.textAlign = "left"; ctx.fillText(text, ax + iw + gap, y);
+  // ── ABAJO-DERECHA: vidas (mini-robot + ×N) arriba y, ABAJO DEL TODO, "circuitos activados" en UNA línea.
+  const RM = W - 14;                                              // margen derecho uniforme de la UI
+  drawMiniRobot(RM - 30, 202, ink2);
+  ctx.fillStyle = ink2; ctx.font = "bold 14px 'Courier New', monospace";
+  ctx.textAlign = "right"; ctx.textBaseline = "middle";
+  ctx.fillText("×" + game.lives, RM, 202);
+  // circuitos: una sola línea (label + cifra en cuerpo pequeño), pegada al borde inferior
+  ctx.textBaseline = "alphabetic";
+  ctx.font = "bold 9px 'Courier New', monospace";
+  const count = game.circuits + " / " + game.circuitsTotal;
+  const cw = ctx.measureText(count).width;
+  ctx.fillText(count, RM, 232);                                   // cifra (cuerpo reducido vs. antes)
+  ctx.font = "7px 'Courier New', monospace";
+  ctx.fillText("CIRCUITOS ACTIVADOS", RM - cw - 5, 232);          // label, a la izquierda de la cifra (misma línea)
+  ctx.textAlign = "left"; ctx.textBaseline = "top";
 }
 
 /* Título "ALIEN POCHO" con look neón: glow en el color de la sala + núcleo brillante. Anclado a la izquierda. */

@@ -55,15 +55,17 @@ export const ROOMS = {
     objects: [{ asset: "cube", cx: 3, cy: 0 }, { asset: "cube", cx: 5, cy: 2 }],   // cx5cy2: fuera del vano de xp
     sockets: [{ cx: 5, cy: 0, z: 0, id: "gal", filled: null }] },
 
-  // NUDO — hub 6×6 (3 salidas). Zócalo del DOMO.
+  // NUDO — hub 6×6 (3 salidas). Zócalo del DOMO + un ORDENADOR recogible.
   "2,0": { name: "NUDO", paletteIndex: 4, w: 6, h: 6,
     exits: { xm: "1,0", xp: "3,0", ym: "2,-1" },
+    objects: [{ asset: "computer", x: 1.5, y: 1.5, z: 0 }],   // recogible → coord CONTINUA; esquina trasera, fuera del vano/columna iso de xp
     sockets: [{ cx: 3, cy: 2, z: 0, id: "nudo", filled: null }] },
 
-  // CRUCE — 6×6 (bifurca). Laberinto.
+  // CRUCE — 6×6 (bifurca). Laberinto + un ORDENADOR recogible.
   "3,0": { name: "CRUCE", paletteIndex: 1, w: 6, h: 6,
     exits: { xm: "2,0", xp: "4,0", yp: "3,1" },
-    objects: [{ asset: "cube", cx: 2, cy: 1 }, { asset: "cube", cx: 4, cy: 3 }] },
+    objects: [{ asset: "cube", cx: 2, cy: 1 }, { asset: "cube", cx: 4, cy: 3 },
+              { asset: "computer", x: 1.5, y: 1.5, z: 0 }] },   // recogible → coord CONTINUA; esquina trasera (x−y=0), fuera de las columnas iso de xp/yp
 
   // ARCHIVO — 4×6 (callejón). Zócalo del CUBO (#2).
   "4,0": { name: "ARCHIVO", paletteIndex: 3, w: 4, h: 6,
@@ -71,10 +73,11 @@ export const ROOMS = {
     objects: [{ asset: "cube", cx: 1, cy: 3 }],
     sockets: [{ cx: 2, cy: 2, z: 0, id: "a4", filled: null }] },
 
-  // POZO — 6×6 (callejón). Laberinto.
+  // POZO — 6×6 (callejón). Laberinto + un ORDENADOR recogible.
   "1,1": { name: "POZO", paletteIndex: 5, w: 6, h: 6,
     exits: { ym: "1,0" },
-    objects: [{ asset: "cube", cx: 1, cy: 2 }, { asset: "cube", cx: 3, cy: 4, h: 2 }] },
+    objects: [{ asset: "cube", cx: 1, cy: 2 }, { asset: "cube", cx: 3, cy: 4, h: 2 },
+              { asset: "computer", x: 4.5, y: 1.5, z: 0 }] },   // recogible → coord CONTINUA; sin puerta frontal aquí, solo evito el vano de ym (x∈{2,3})
 
   // ALTILLO — 6×4 (callejón arriba). Circuito PIRÁMIDE en plataforma → SALTO.
   "2,-1": { name: "ALTILLO", paletteIndex: 1, w: 6, h: 4,
@@ -88,10 +91,11 @@ export const ROOMS = {
     objects: [{ asset: "cube", cx: 1, cy: 1 }, { asset: "cube", cx: 2, cy: 1 },
               { x: 2.5, y: 1.5, z: 1, shape: "pyramid" }] },
 
-  // VERTEDERO — pasillo 8×6 (laberinto + pinchos deco).
+  // VERTEDERO — pasillo 8×6 (laberinto + pinchos deco + un ORDENADOR recogible).
   "3,1": { name: "VERTEDERO", paletteIndex: 5, w: 8, h: 6,
     exits: { ym: "3,0", xp: "4,1" },
-    objects: [{ asset: "cube", cx: 1, cy: 2 }, { asset: "cube", cx: 3, cy: 4 }, { asset: "cube", cx: 2, cy: 1 }],
+    objects: [{ asset: "cube", cx: 1, cy: 2 }, { asset: "cube", cx: 3, cy: 4 }, { asset: "cube", cx: 2, cy: 1 },
+              { asset: "computer", x: 6.5, y: 4.5, z: 0 }],   // recogible → coord CONTINUA; x−y=2, fuera de la columna iso de xp (banda [3,5]) y del vano de ym
     hazards: [{ cx: 1, cy: 3 }] },
 
   // REACTOR — 8×6 (callejón). Circuito DOMO en plataforma 2-alto → EMPUJA el bloque y SALTA.
@@ -114,10 +118,11 @@ export const ROOMS = {
               { asset: "cube", cx: 3, cy: 5 }],
     sockets: [{ cx: 1, cy: 4, z: 0, id: "cond", filled: null }] },
 
-  // CISTERNA — 8×6 (laberinto + pinchos deco).
+  // CISTERNA — 8×6 (laberinto + pinchos deco + un ORDENADOR recogible).
   "0,2": { name: "CISTERNA", paletteIndex: 0, w: 8, h: 6,
     exits: { ym: "0,1", xp: "1,2" },
-    objects: [{ asset: "cube", cx: 2, cy: 2 }, { asset: "cube", cx: 4, cy: 3, h: 2 }, { asset: "cube", cx: 1, cy: 3 }],
+    objects: [{ asset: "cube", cx: 2, cy: 2 }, { asset: "cube", cx: 4, cy: 3, h: 2 }, { asset: "cube", cx: 1, cy: 3 },
+              { asset: "computer", x: 6.5, y: 4.5, z: 0 }],   // recogible → coord CONTINUA; x−y=2, fuera de la columna iso de xp (banda [3,5]); ≠ hazard (cx5cy4)
     hazards: [{ cx: 5, cy: 4 }] },
 
   // TUBO — 6×6 (laberinto).

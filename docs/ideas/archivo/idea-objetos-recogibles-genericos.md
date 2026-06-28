@@ -1,7 +1,8 @@
 # Idea — Recogibles genéricos (no solo circuitos) + `name` por asset
 
-> **Estado: PENDIENTE — Prioridad ALTA (enabler).** Origen: usuaria, procesado 2026-06-28.
-> Desbloquea el label de objeto recogido de [[idea-rediseno-hud]].
+> **Estado: ✅ IMPLEMENTADA (2026-06-28).** Origen: usuaria. El modelo genérico, `computer` recogible y los
+> nombres ya están; falta solo MOSTRAR el nombre en el HUD, que pertenece a [[idea-rediseno-hud]] (el objeto
+> recogido "a la izquierda con su label"). Ver "Resultado" al final.
 
 ## Qué pide
 - Que **no solo se puedan recoger circuitos**, también otros objetos. En concreto: **marcar `computer`
@@ -57,3 +58,25 @@ shape-específico para `computer`. Si la usuaria prefiriera lo mínimo (computer
 2. `data/assets.js`: `computer` → `carriable`; `name` en todos los `carriable`.
 3. `drawCarrySlot`: pintar el asset llevado + su `name`.
 4. **`npm test`** (interacción) + recorrer en preview: coger circuito, encajarlo, coger/soltar `computer`.
+
+## Resultado (implementación 2026-06-28)
+Hecho y verificado (`npm test` verde + preview):
+- **`carried` = asset id** (no `shape`). Coger: `game.carried = objAsset(o)` ([game.js](../../src/game.js));
+  soltar empuja `{…, asset: carried}`; dibujo del objeto en brazos y en el HUD por `AP.drawSprite(carried,…)`
+  ([player.js](../../src/player.js), [render.js](../../src/render.js) `drawCarrySlot`).
+- **Puente con el zócalo:** el zócalo sigue pidiendo una FORMA; el encaje compara `propAsset(t.requires) ===
+  game.carried` y guarda `s.filled = t.requires` (la forma) → el drawer del zócalo no cambia. Un recogible
+  no-circuito (computer) simplemente no casa con ningún zócalo y cae a "soltar".
+- **`computer` → `carriable`** (sigue `solid+movable+falls`). Las alturas de soltar/subirse y de "subido
+  encima" se generalizaron a `assetFoot(asset).h` (antes `PROP.H` fijo) → vale para cualquier recogible.
+- **Nombres:** se usa el `label` del registro como nombre legible (decisión: **no** se añadió un campo
+  `name` aparte — sería redundante con `label`, que ya es el nombre humano de cada asset; YAGNI). Guardarraíl
+  nuevo en `test/assets.mjs`: **todo `carriable` debe tener `label`**.
+- **Tests:** smoke actualizado al nuevo contrato (`carried = "prop_cube"`, `filled = "cube"`).
+
+### Lo que NO entra aquí (pasa a [[idea-rediseno-hud]])
+- **Mostrar el nombre** del objeto recogido en el HUD (label de texto, "a la izquierda"): es parte del
+  relayout del HUD. El dato (label) y el helper de tinte ya están listos.
+- **Colocar un `computer` en alguna sala**: hoy `computer` está en el registro pero **no se coloca en ningún
+  cuarto** (rooms.js), así que la mecánica es funcional pero latente hasta que se añada contenido
+  ([[idea-mas-salas-retos]]). El modelo se verificó en preview inyectando un `computer` en brazos.
