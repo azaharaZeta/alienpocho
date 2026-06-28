@@ -128,13 +128,17 @@ player.update = function (room, dt) {
   }
 
   // --- Desplazamiento horizontal en el aire (impulso del salto) ---
-  // Al chocar con un bloque no anulamos la velocidad: solo no avanzamos ese eje este
-  // frame. Así el arco te sube por encima de la cima y aterrizas encima.
+  // Al chocar con un bloque no anulamos la velocidad: solo no avanzamos ese eje este frame (el arco te sube
+  // por encima de la cima y aterrizas encima). Si el choque es contra un MOVABLE a la altura del pie, se
+  // EMPUJA igual que en el suelo (reusa tryPush) → también se empujan objetos en mitad de un salto.
   if (!player.onGround && (player.vx !== 0 || player.vy !== 0)) {
-    const nx = player.x + player.vx * dt;
-    const ny = player.y + player.vy * dt;
-    if (!blocksHoriz(room, nx, player.y, player.z)) player.x = nx;
-    if (!blocksHoriz(room, player.x, ny, player.z)) player.y = ny;
+    const nx = player.x + player.vx * dt, ny = player.y + player.vy * dt;
+    const blockedX = player.vx !== 0 && blocksHoriz(room, nx, player.y, player.z);
+    const blockedY = player.vy !== 0 && blocksHoriz(room, player.x, ny, player.z);
+    if (player.vx !== 0 && !blockedX) player.x = nx;
+    if (player.vy !== 0 && !blockedY) player.y = ny;
+    if (blockedX || blockedY)   // bloqueado en el eje del salto → empuja el movable de delante (a su altura)
+      tryPush(room, { dx: player.jdx, dy: player.jdy }, Math.hypot(player.vx, player.vy) * dt, player.z);
   }
 
   // --- Gravedad / eje Z ---

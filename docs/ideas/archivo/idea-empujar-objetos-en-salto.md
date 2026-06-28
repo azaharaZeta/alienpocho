@@ -1,6 +1,6 @@
 # Idea — Empujar objetos en mitad de un salto
 
-> **Estado: PENDIENTE — Prioridad MEDIA.** Origen: usuaria, procesado 2026-06-27.
+> **Estado: ✅ IMPLEMENTADA (2026-06-28).** Origen: usuaria. Ver "Resultado" al final.
 
 ## Qué pide
 Que el robot pueda **empujar** los objetos movables con los que se encuentra **mientras salta**, no solo
@@ -32,3 +32,15 @@ debe ser más débil o condicionado. Verificar en preview los casos límite.
 
 > **Relacionado:** [[bug-empuje-revalida-robot]] — `tryPush` no revalida la posición destino del robot contra
 > otros sólidos. Si se aborda este empuje en el aire, conviene revalidar también ahí (mismo helper).
+
+## Resultado (implementación 2026-06-28)
+- En [player.js](../../src/player.js), rama aérea: si el avance del salto choca en su eje (`blockedX`/
+  `blockedY`), se llama a **`tryPush`** con la dirección del salto (`jdx/jdy`) y `feetZ = player.z` — el mismo
+  helper que en el suelo. Como `tryPush` exige `b.top > feetZ + STEP`, **solo empuja si el objeto está a la
+  altura del pie**: si saltas POR ENCIMA (más alto que su cima) pasas sin empujarlo.
+- **Verificado:** vía `player.update` conduciendo al robot en el aire contra un `computer` — a baja altura lo
+  empuja y avanza con él; alto, pasa por encima sin moverlo. Nuevo test en `smoke.mjs` ("empuje EN EL AIRE…")
+  fija ambos casos. `npm test` verde (21 smoke).
+- El empuje en el aire usa la velocidad horizontal del salto (`hypot(vx,vy)·dt`) como paso; **afinable** si se
+  quiere más débil. La revalidación de la posición del robot ([[bug-empuje-revalida-robot]]) sigue pendiente
+  (afecta a suelo y aire por igual).

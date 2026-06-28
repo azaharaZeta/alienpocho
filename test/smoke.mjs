@@ -253,6 +253,29 @@ test("un objeto en el aire cae hasta su apoyo", () => {
   assert.ok(o.z <= 1e-3, "termina en el suelo (z≈0)");
 });
 
+/* ---------------------------------------------- EMPUJE EN EL AIRE (salto) -------- */
+test("empuje EN EL AIRE: choca con un movable a la altura del pie y lo empuja; por encima NO", () => {
+  // A SU ALTURA: robot en el aire, bajo, avanzando contra un movable → lo empuja.
+  resetGame();
+  room.objects.push({ asset: "computer", x: 2.5, y: 2.5, z: 0 });   // movable de prueba en suelo despejado
+  const comp = room.objects[room.objects.length - 1];
+  Object.assign(player, { x: 1.9, y: 2.5, z: 0.3, vx: 2.2, vy: 0, vz: 1.0,
+    onGround: false, facing: 0, jdx: 1, jdy: 0, jumpPending: false, turnTimer: 0 });
+  const cx0 = comp.x;
+  for (let i = 0; i < 5; i++) player.update(room, 1 / 60);
+  assert.ok(comp.x > cx0 + 1e-3, "el movable se empuja en mitad del salto");
+
+  // POR ENCIMA (cima del movable 0.7 < pies+STEP): salta por encima, NO lo empuja.
+  resetGame();
+  room.objects.push({ asset: "computer", x: 2.5, y: 2.5, z: 0 });
+  const comp2 = room.objects[room.objects.length - 1];
+  Object.assign(player, { x: 1.9, y: 2.5, z: 1.0, vx: 2.2, vy: 0, vz: 0.5,
+    onGround: false, facing: 0, jdx: 1, jdy: 0, jumpPending: false, turnTimer: 0 });
+  const cx2 = comp2.x;
+  for (let i = 0; i < 5; i++) player.update(room, 1 / 60);
+  assert.equal(comp2.x, cx2, "saltando por encima NO se empuja");
+});
+
 /* ----------------------------------- RESET: SIN FUGA DE ESTADO ENTRE PARTIDAS -- */
 test("resetGame reconstruye el mundo sin arrastrar estado mutado", () => {
   // ensucia el estado
