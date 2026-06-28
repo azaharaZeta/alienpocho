@@ -45,4 +45,4 @@ Convenio de nombres: usar minúsculas y guiones en lugar de espacios para `<titu
 ## 🐞 BUGS CONOCIDOS
 <!-- vacío. (2026-06-28) Resuelto el del `floor`: opción B — el suelo se dibuja desde assets/svg/floor.svg
      como el resto (sprite teñido por sala); borrado el example.svg fantasma. -->
-
+- Hay valores numéricos reutilizados repetidos por el código. Revisarlo para llevarlos a constantes o a parámetros. (El ejemplo citado —el margen del contenido de la UI respecto al borde— YA está resuelto: constante única `UI_MARGIN` en render.js, 2026-06-28. Queda una pasada general por otros números repetidos.)

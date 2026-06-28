@@ -42,15 +42,25 @@ export const AP = (() => {
     const c = document.createElement("canvas"); c.width = def.w; c.height = def.h;
     c.getContext("2d").drawImage(img, 0, 0, def.w, def.h); return c;
   }
-  // Neutro (gris) de `file` rasterizado a def.w×def.h; lazy-carga el PNG y cae al SVG. null = aún cargando.
+  // Arranca la carga del neutro (gris) de `file` a def.w×def.h: PNG si ASSET_USE_PNG, con fallback a SVG.
+  // Crea _raster[file] de inmediato (para no relanzar) y llama `done` al terminar (cargado o fallo). Lo
+  // comparten la carga PEREZOSA (_neutral) y la PRECARGA (preload).
+  function _startLoad(file, def, done) {
+    const s = _raster[file] || (_raster[file] = { neutral: null, tints: {} });
+    if (s.neutral) { if (done) done(); return; }
+    const load = (url, onfail) => {
+      const img = new Image();
+      img.onload = () => { s.neutral = _rasterTo(def, img); if (done) done(); };
+      img.onerror = onfail || done || null;
+      img.src = url;
+    };
+    if (ASSET_USE_PNG) load("/assets/png/" + file + ".png", () => load("/assets/svg/" + file + ".svg", done));
+    else load("/assets/svg/" + file + ".svg", done);
+  }
+  // Neutro (gris) de `file` rasterizado a def.w×def.h; lazy-carga (PNG→SVG) en el primer uso. null = aún cargando.
   function _neutral(file, def) {
     let s = _raster[file];
-    if (!s) {
-      s = _raster[file] = { neutral: null, tints: {} };
-      const load = (url, onfail) => { const img = new Image(); img.onload = () => { s.neutral = _rasterTo(def, img); }; img.onerror = onfail || null; img.src = url; };
-      if (ASSET_USE_PNG) load("/assets/png/" + file + ".png", () => load("/assets/svg/" + file + ".svg"));
-      else load("/assets/svg/" + file + ".svg");
-    }
+    if (!s) { _startLoad(file, def); s = _raster[file]; }
     return s.neutral;
   }
   function _tintSprite(neutral, col) {   // tiñe el gris por multiply y remáscara al alfa original
@@ -75,6 +85,21 @@ export const AP = (() => {
     const t = _tinted(name, def, col); if (!t) return false;  // imagen aún cargando
     ctx.drawImage(t, Math.round(ref.x + def.minX), Math.round(ref.y + def.minY));
     return true;
+  }
+
+  /* PRECARGA: arranca la carga de TODOS los neutros con fichero del registro (sprites, tile de pared, puerta)
+     y resuelve cuando están listos → el bucle entra a "playing" con todas las imágenes ya cargadas (sin el
+     parpadeo del primer frame de cada sala). Los tintes por color se calculan luego al dibujar (síncronos).
+     Sin DOM (Node) es no-op. Lo llama main.js al arrancar, durante la pantalla de título. */
+  function preload() {
+    if (typeof document === "undefined") return Promise.resolve();
+    const jobs = [];
+    for (const [id, a] of Object.entries(ASSETS)) {
+      const def = a.sprite || a.tile || (a.tiles && a.tiles.front);   // dimensiones del raster del neutro
+      if (!def || !a.files || !(a.files.svg || a.files.png)) continue;  // procedurales (robot…) no tienen fichero
+      jobs.push(new Promise(res => _startLoad(id, def, res)));
+    }
+    return Promise.all(jobs);
   }
 
   /* ── PARED por TILE (panal SVG/PNG): tira de N tiles de ancho × 3 de alto, ya dibujada EN
@@ -290,6 +315,7 @@ export const AP = (() => {
     DOOR, darken, lighten,            // helpers usados fuera (DOOR en render; darken/lighten en la tool)
     projector,                        // primitiva de motor (screens/tool)
     drawAsset, drawSprite, SPRITES,   // API de dibujo genérica (SPRITES lo verifica el test)
+    preload,                          // precarga de imágenes al arrancar (main.js)
     floor, robot, shadow,             // primitivas usadas POR NOMBRE fuera (floor en render; robot/shadow en player/screens)
   };
 })();

@@ -20,6 +20,10 @@ import { pressed } from "./input.js";   // conmutadores (flanco) de los overlays
 
 let _themeRoom = null;
 
+/* Inset uniforme (px) del contenido del HUD respecto al borde — fuente ÚNICA: lo usan el marcador
+   (izda/dcha), el texto de debug y el marco del minimapa, para que todo comparta el mismo margen. */
+const UI_MARGIN = 14;
+
 /* ── OVERLAYS DE DEPURACIÓN (teclas j/k/l): cubo de referencia / región estándar / punto de anclaje,
    sobre los objetos colocables y las entidades (no el suelo ni la cáscara). Mismos overlays que
    tools/tool-assets.html. Conmutables e independientes; se pintan SOBRE la escena. ── */
@@ -59,8 +63,8 @@ function drawDebug(room) {
   // indicador de qué overlays están activos: DEBAJO del bloque título+objetivo de arriba-izq (no lo pisa)
   const on = [DBG.box && "J:caja", DBG.region && "K:región", DBG.anchor && "L:ancla"].filter(Boolean).join("  ");
   ctx.fillStyle = "#ffffff"; ctx.font = "8px 'Courier New', monospace"; ctx.textBaseline = "top"; ctx.textAlign = "left";
-  ctx.fillText("DEBUG  " + on, 14, 26);
-  if (DBG.box) ctx.fillText("caja  rojo=dibujo  verde=colision/orden", 14, 36);   // entidades: las dos cajas (difieren a propósito)
+  ctx.fillText("DEBUG  " + on, UI_MARGIN, 26);
+  if (DBG.box) ctx.fillText("caja  rojo=dibujo  verde=colision/orden", UI_MARGIN, 36);   // entidades: las dos cajas (difieren a propósito)
 }
 
 export function render(room) {
@@ -170,7 +174,7 @@ function drawMinimap() {
   if (room.wx === undefined) return;
   const ink = room.ink, ink2 = room.ink2 || ink;
   const MM = 45, oy = 18;                   // viewport cuadrado (oy deja hueco al nombre encima)
-  const ox = CFG.W - MM - 18;               // SIEMPRE a la derecha; su marco (bg, ox+MM+4) cae en W-14 = margen uniforme de la UI
+  const ox = CFG.W - MM - 4 - UI_MARGIN;    // SIEMPRE a la derecha; su marco (bg, ox+MM+4) cae en W-UI_MARGIN (margen uniforme)
   const WS = 26, sc = MM / WS, INS = 0.6;   // INS: medio hueco entre salas (= pared)
   const ccx = room.wx + room.w / 2, ccy = room.wy + room.h / 2;   // centro de la sala actual
   const toX = wx => ox + MM / 2 + (wx - ccx) * sc, toY = wy => oy + MM / 2 + (wy - ccy) * sc;
@@ -233,7 +237,7 @@ function drawHUD() {
   ctx.stroke();
 
   // ── ARRIBA-IZQUIERDA: solo el título (el objetivo de circuitos va abajo-dcha, junto a las vidas).
-  const LM = 14;                                                  // margen izquierdo uniforme de la UI
+  const LM = UI_MARGIN;                                           // margen izquierdo uniforme de la UI
   drawTitle(LM, 4);                                               // "ALIEN POCHO"
 
   // ── ABAJO-IZQUIERDA: objeto recogido (visor + su nombre). El visor se tiñe con la tinta del asset.
@@ -248,7 +252,7 @@ function drawHUD() {
   }
 
   // ── ABAJO-DERECHA: vidas (mini-robot + ×N) arriba y, ABAJO DEL TODO, "circuitos activados" en UNA línea.
-  const RM = W - 14;                                              // margen derecho uniforme de la UI
+  const RM = W - UI_MARGIN;                                       // margen derecho uniforme de la UI
   drawMiniRobot(RM - 30, 202, ink2);
   ctx.fillStyle = ink2; ctx.font = "bold 14px 'Courier New', monospace";
   ctx.textAlign = "right"; ctx.textBaseline = "middle";
