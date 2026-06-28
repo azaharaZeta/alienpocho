@@ -74,9 +74,12 @@ Hecho y verificado (`npm test` verde + preview):
   nuevo en `test/assets.mjs`: **todo `carriable` debe tener `label`**.
 - **Tests:** smoke actualizado al nuevo contrato (`carried = "prop_cube"`, `filled = "cube"`).
 
-### Lo que NO entra aquí (pasa a [[idea-rediseno-hud]])
-- **Mostrar el nombre** del objeto recogido en el HUD (label de texto, "a la izquierda"): es parte del
-  relayout del HUD. El dato (label) y el helper de tinte ya están listos.
-- **Colocar un `computer` en alguna sala**: hoy `computer` está en el registro pero **no se coloca en ningún
-  cuarto** (rooms.js), así que la mecánica es funcional pero latente hasta que se añada contenido
-  ([[idea-mas-salas-retos]]). El modelo se verificó en preview inyectando un `computer` en brazos.
+### Lo que NO entra aquí (pasó a [[idea-rediseno-hud]])
+- **Mostrar el nombre** del objeto recogido en el HUD: lo resolvió el relayout del HUD ([[idea-rediseno-hud]],
+  ya implementado): el visor a la izquierda muestra el sprite + el `label`.
+
+### Después (mismo día)
+- **`computer` colocado:** se añadieron 5 ordenadores recogibles en salas (NUDO, CRUCE, POZO, VERTEDERO,
+  CISTERNA) con coordenada CONTINUA `x,y` + `z:0` (los móviles/recogibles deben usar `x,y` continuo, no
+  `cx,cy`, porque `physics.objBox` lee `o.x/o.y/o.z` en crudo — ver `bug-reactor-bloque-sin-z.md`). `computer`
+  lleva `tint:"primary"` para no pintarse en secundario al ser carriable. Verificado: se recogen en partida.

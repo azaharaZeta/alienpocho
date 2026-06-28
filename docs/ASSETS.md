@@ -17,14 +17,14 @@ migran a **PNG editado a mano** caso por caso, cuando merece la pena.
   assets. **No se publica** (ver [`.vercelignore`](../.vercelignore)) ni cuenta en el análisis del juego.
 - **El juego solo dibuja de DOS formas: PNG si existe; si no, SVG.** Nada más debería usarse en runtime.
 - **Los assets-sprite ya NO tienen fallback procedural.** Cada uno se dibuja SOLO desde su fichero
-  (PNG→SVG) por la vía única `AP.drawSprite`; mientras la imagen carga, no se pinta (de ahí la idea de
-  **precargar**, ver [`docs/ideas/ideas.md`](ideas/ideas.md)).
+  (PNG→SVG) por la vía única `AP.drawSprite`; mientras la imagen carga, no se pinta → por eso `main.js`
+  **precarga** todas las imágenes (`AP.preload`) durante el título antes de entrar a jugar (sin parpadeo).
 - **El dibujo procedural (`AP.*` en `src/draw.js`) queda solo para**: el **robot** (animado) y el chrome 2D
-  (HUD/minimapa/banner). El **suelo** ya es SVG en fichero (`floor.svg`, tesela rómbica teñida por sala,
+  (HUD, minimapa, pantallas de título/victoria). El **suelo** ya es SVG en fichero (`floor.svg`, tesela rómbica teñida por sala,
   dibujada por celda). Las **paredes** (tiras de panal `wall1/2.svg`)
   y la **puerta** (`door.svg`, un solo dibujo) ya son SVG en fichero; el código solo las **tesela/coloca**
   paramétricamente por tamaño de sala (`flatWall`/`door`). Objetivo a futuro: reducir el procedural al
-  mínimo (lo animado: robot; ver [assessment](ideas/assessment-graficos-procedurales.md)). El **zócalo** ya
+  mínimo (lo animado: robot; ver [assessment](ideas/archivo/assessment-graficos-procedurales.md)). El **zócalo** ya
   NO es procedural: su peana es `socket.svg` y el drawer solo COMPONE sprites (peana teñida por estado +
   circuito/fantasma), sin `box`/`poly`.
 
@@ -160,4 +160,4 @@ desde cualquier sitio que llame a su `AP.*`.
 - ✅ **Suelo en SVG**: `floor.svg` (tesela rómbica de 1 celda, teñida por sala, dibujada por celda por
   `AP.floor`→`drawSprite`). Migrado 2026-06-28.
 - ⬜ **Sigue procedural**: **robot** (animado). Ver
-  [assessment](ideas/assessment-graficos-procedurales.md) sobre viabilidad.
+  [assessment](ideas/archivo/assessment-graficos-procedurales.md) sobre viabilidad.

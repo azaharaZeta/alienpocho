@@ -125,7 +125,8 @@ export const AP = (() => {
     return _tinted("door", ASSETS.door.tiles.front, col);
   }
   // Dibuja el marco de puerta (un solo sprite) anclado en P(a0,fixed,0). `hole` solo elige el OFFSET del ancla
-  // (front protruye / back retrocede; mismo dibujo). false = aún no cargó. El vacío negro del vano es otra pieza del painter (ver door()).
+  // (front protruye / back retrocede; mismo dibujo). false = aún no cargó. El vano del sprite es transparente
+  // (deja ver el fondo); no hay pieza negra propia (ver world.roomShell).
   function drawDoorSprite(ctx, p, axis, fixed, a0, a1, H, hole, col, half, box) {
     const def = ASSETS.door.tiles[hole ? "back" : "front"];
     const tex = _doorTexture(col); if (!tex) return false;
@@ -151,8 +152,8 @@ export const AP = (() => {
 
   /* =====================  ASSETS  ===================== */
 
-  // Suelo: tesela rómbica desde fichero (floor.svg, PNG→SVG), teñida por la tinta de la sala. El gris del
-  // SVG está calibrado para que el multiply reproduzca el suelo anterior: relleno ink×0.10 + rejilla ink×0.30.
+  // Suelo: tesela rómbica desde fichero (floor.svg), teñida por la sala. El gris del SVG está calibrado para que
+  // el multiply dé relleno ink×0.10 + rejilla ink×0.30.
   function floor(ctx, p, cx, cy, col) {
     drawSprite("floor", ctx, p(cx, cy, 0), col);
   }
@@ -182,8 +183,8 @@ export const AP = (() => {
     }
   }
 
-  // PUERTA: desde fichero (PNG si existe, si no SVG). El vano es transparente en ambas variantes; en las de
-  // FONDO se ve a través el negro del fondo del canvas (sin pieza negra propia: ver bug puertas / world.js).
+  // PUERTA: desde fichero (PNG si existe, si no SVG). El vano es transparente; en las de FONDO se ve a través
+  // el negro del fondo (sin pieza negra propia; ver world.roomShell).
   function door(ctx, p, axis, fixed, a0, a1, H, col, hole, half, box) {
     drawDoorSprite(ctx, p, axis, fixed, a0, a1, H, hole, col, half, box);
   }

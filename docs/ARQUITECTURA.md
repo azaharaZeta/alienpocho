@@ -20,7 +20,7 @@ Dependencias en UNA dirección (hojas abajo → `main` arriba):
 - **`physics.js`** — colisión / apoyo / empuje (puro, sobre `room`); `roomSolids` = objetos sólidos **∪ cáscara** (paredes/puertas), todo como AABB (mismo cálculo).
 - **`player.js`** — entidad jugador · **`game.js`** — estado de partida + reglas + transiciones de sala.
 - **`view.js`** / **`input.js`** — canvas+proyector+tema / teclado+táctil. **No tocan el DOM al importar** (solo en `init*()`) → los módulos corren en Node (tests). `projectorFor` ancla el **pico frontal del suelo al centro-base de un marco FIJO 8×8** (la esquina `(w,h)` cae siempre en el mismo punto) → el marco del HUD queda centrado y estable en cualquier sala.
-- **`render.js`** — escena + HUD + minimapa · **`screens.js`** — título · **`main.js`** — bucle + arranque. Minimapa **fijo a la derecha**, marcador/UI **fijo a la izquierda** (posición fija, ya no según el hueco).
+- **`render.js`** — escena + HUD + minimapa · **`screens.js`** — pantallas de título y de **victoria** (mismo estilo; la victoria vuelve al menú) · **`main.js`** — bucle + arranque + **precarga** de imágenes (`AP.preload`) durante el título. Minimapa **fijo a la derecha**, marcador/UI **fijo a la izquierda**, todo a un margen uniforme (`UI_MARGIN`).
 
 ## Motor isométrico
 - **Proyección 2:1** (`engine.js`): `P(x,y,z) = (ox + (x−y)·TW/2, oy + (x+y)·TH/2 − z·BH)`, con `TW=34, TH=17, BH=17`.

@@ -26,3 +26,10 @@ el dron activo son features, no "más salas", y conviene separarlas.
 **Dividir:** (a) **añadir salas/retos** con apilar/empujar = hacer ya, es datos; (b) **plataformas móviles**
 y (c) **dron activo** = sacarlas a sus propias ideas cuando se aborden (ambas tocan motor/comportamiento).
 Empezar por (a).
+
+## Avance (2026-06-28)
+- Se colocaron **5 ordenadores recogibles** (`computer`) en salas (NUDO, CRUCE, POZO, VERTEDERO, CISTERNA) —
+  primer contenido que explota los recogibles genéricos. Recordatorio para futuras colocaciones de móviles/
+  recogibles: usar coordenada CONTINUA `x,y` + `z` numérico (no `cx,cy`), o no se podrán coger/empujar (ver
+  `bug-reactor-bloque-sin-z.md`).
+- Sigue pendiente lo demás (apilar para zócalos altos, plataformas móviles, dron activo).

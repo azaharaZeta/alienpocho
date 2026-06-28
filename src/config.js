@@ -17,7 +17,7 @@ export const CFG = {
   WALK: 3.0,                // velocidad de avance (celdas/seg)
   PRAD: ROBOT.WID,          // semihuella del robot = SU ANCHO DIBUJADO (colisión Y orden del painter usan la
                             //   MISMA caja, = la silueta): así no sobresale del cuerpo → el painter lo ordena
-                            //   como a cualquier objeto, sin overhang ni casos especiales. Ver refactor-motor-iso.md
+                            //   como a cualquier objeto, sin overhang ni casos especiales.
   STEP: 0.25,               // altura máx. (en bloques) que el robot salva andando sin saltar;
                             //   se sube solo a superficies bajas (peana del zócalo), no a un bloque entero
   TURN_TIME: 0.12,          // duración del giro de 90° (anim/cooldown)

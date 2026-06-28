@@ -68,7 +68,7 @@ test("roomShell = paredes (tramos) + postes de cada puerta (cajas del painter, t
                                           : [{ ...f, y1: f.y0 + W }, { ...f, y0: f.y1 - W }];
   const lintel = (f) => ({ ...f, z0: WALL_H - DOOR.LINTEL_H });   // dintel: misma huella, solo la banda alta
   const doorBoxes = (axis, f) => [...posts(axis, f), lintel(f)];
-  // (El vano de las puertas de FONDO ya NO emite pieza negra: el sprite deja ver el fondo del canvas.)
+  // (El vano de las puertas de FONDO no emite pieza propia: el sprite es transparente y deja ver el fondo.)
   // Pared TROCEADA por tile (N celdas): cada tramo del muro se parte en cajas locales (no un slab de toda la
   // fila). Mismo troceado que world.roomShell. N = ancho del tile de pared por defecto.
   const N = (ASSETS[WALL_TILE] && ASSETS[WALL_TILE].tile && ASSETS[WALL_TILE].tile.N) || 1;

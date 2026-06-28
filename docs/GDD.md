@@ -79,7 +79,8 @@ NO libre en cualquier dirección:
 - **Teclas parametrizables** en código fuente (objeto `CONTROLS` en `index.html`).
 - **Colisiones** conscientes de la altura: no se *anda* hacia un bloque más alto que los pies
   (hay que saltar); sí se camina sobre cimas a tu nivel o por debajo.
-- Lleva **un circuito a la vez** (lo carga encima). Acción de **soltar/colocar**.
+- Lleva **un objeto a la vez** encima (un circuito, o cualquier asset recogible —p. ej. el ordenador). Acción
+  de **soltar/colocar**. (El "carried" es un asset id genérico; solo los circuitos encajan en zócalos.)
 - **Vidas:** empieza con 3. Tocar enemigo o peligro → pierde una vida y reaparece en la entrada
   de la sala (con breve invulnerabilidad). 0 vidas → Game Over.
 
@@ -111,10 +112,13 @@ NO libre en cualquier dirección:
 
 ## 7. HUD
 
-Panel inferior estilo retro (referencia: capturas reales de *Alien 8*):
-- **Objeto que llevas** (icono grande) + contador, a la izquierda.
-- **Icono del robot** + número (vidas / sala), centrado-abajo.
-- *Alien Pocho* (provisional): **VIDAS · CIRCUITOS x/total**. (Sin reloj: descartado el "AÑOS LUZ".)
+Marco inferior en "V" estilo retro (referencia: capturas reales de *Alien 8*), con margen uniforme
+(`UI_MARGIN`). Reparto actual (posición fija, ya no depende del hueco):
+- **Arriba-izquierda:** título "ALIEN POCHO" (el overlay de debug, si está activo, va debajo).
+- **Arriba-derecha:** nombre de sala + minimapa.
+- **Abajo-izquierda:** objeto que llevas (visor con el sprite escalado) + su **nombre**.
+- **Abajo-derecha:** vidas (mini-robot + ×N) y, abajo del todo, "CIRCUITOS ACTIVADOS x/total".
+- Sin reloj (descartado el "AÑOS LUZ").
 
 ### Referencias visuales (de las capturas del original aportadas)
 Para las fases de arte/salas, imitar:
@@ -155,7 +159,7 @@ Modelo tipo tanque (ver §4):
 ## 10. Contrato técnico
 
 - **HTML5 + JavaScript vanilla**, render en `<canvas>` 2D. Sin frameworks, **sin build** (ES modules nativos).
-- **Sprites neutros teñidos por sala** (PNG→SVG; robot y cáscara estructural siguen siendo procedurales; ver [ASSETS.md](ASSETS.md)),
+- **Sprites neutros teñidos por sala** (PNG→SVG; suelo, paredes y puertas son sprites — solo el **robot** sigue procedural; ver [ASSETS.md](ASSETS.md)),
   paleta monocroma estilo Spectrum. **Sin assets con copyright.**
 - Resolución lógica fija (320×240, escalada con `image-rendering: pixelated`) para look retro.
 - Bucle con `requestAnimationFrame` y delta-time.
@@ -168,7 +172,8 @@ Modelo tipo tanque (ver §4):
 
 ## 11. Estado
 
-Implementadas las mecánicas núcleo: render iso + painter, movimiento tipo tanque, salto, alturas, recoger/
-colocar circuitos, empujar objetos, flip-screen entre salas, HUD y minimapa. **Aparcado** (ver
-[ideas/ideas.md](ideas/ideas.md)): enemigos, pinchos letales, audio, y pantallas de victoria/game-over con
-entidad propia (hoy banner).
+Implementadas las mecánicas núcleo: render iso + painter, movimiento tipo tanque, salto (con empuje de
+objetos también en el aire), alturas, recoger/llevar objetos (genéricos) y colocar circuitos, empujar
+objetos, flip-screen entre salas, HUD reorganizado, minimapa, **pantalla de victoria propia** (estilo menú,
+vuelve al título) y precarga de assets. **Aparcado** (ver [ideas/ideas.md](ideas/ideas.md) y `docs/ideas/`):
+enemigos, pinchos letales, audio, y la **pantalla de game over** (depende de las vidas, aparcadas).

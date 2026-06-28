@@ -1,7 +1,11 @@
 # Assessment — gráficos procedurales pendientes de migrar a SVG/PNG
 
+> **CONCLUIDO (2026-06-28) — archivado.** Sus recomendaciones se ejecutaron: paredes/puerta/**suelo** migrados
+> a SVG; **robot** se deja procedural a propósito (animado, bajo ROI); chrome 2D (HUD/minimapa) excluido del
+> objetivo por diseño. No queda acción pendiente; se conserva como referencia del inventario procedural↔sprite.
+
 **Objetivo declarado:** que todos los gráficos sean, eventualmente, SVG o PNG.
-**Fecha:** 2026-06-24 · **Estado:** análisis + paredes/puertas YA migradas (ver §2).
+**Fecha:** 2026-06-24 · **Estado:** CONCLUIDO (ver cabecera).
 
 > **Actualización 2026-06-25:** las **paredes** ya se dibujan como módulos SVG tira a tira (sin recorte;
 > `draw.flatWall`) y la **puerta** como UN solo SVG (`door.svg`) generado por `tools/gen-doors.mjs` (el

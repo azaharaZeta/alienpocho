@@ -40,7 +40,7 @@ Convenio de nombres: usar minúsculas y guiones en lugar de espacios para `<titu
 
 
 ## 🐞 BUGS CONOCIDOS
-<!-- vacío. (2026-06-28) Resuelto el del `floor`: opción B — el suelo se dibuja desde assets/svg/floor.svg
-     como el resto (sprite teñido por sala); borrado el example.svg fantasma. -->
-- ~~Hay valores numéricos reutilizados repetidos por el código. Revisarlo para llevarlos a constantes o a parámetros.~~ ✅ RESUELTO (2026-06-28): consolidados los repetidos con significado común → `UI_MARGIN` (margen del contenido del HUD), `CFG.COL.scrim` (panel negro semitransparente: menú/victoria/minimapa), `FRAME_MARGIN` (marco sci-fi de título/victoria) y `FE`/`BOT` (borde del marco del HUD). El resto son literales de un solo uso o de estilo contextual (tamaños de fuente), que se dejan a propósito.
-- ~~Hueco puertas "pegote": el rectángulo negro del vano (en 2d) salía más grande que el hueco del sprite y mordía el marco.~~ ✅ RESUELTO (2026-06-28): el cuadro negro `doorHole` se dibujaba en el plano y=0 mientras el sprite de la puerta de fondo retrocede −T → desalineado ~3px. Eliminado: el vano del sprite es transparente y deja ver el fondo negro del canvas (forma exacta del hueco); el robot cruza siempre por y>0, delante. Tocó painter/cáscara (`world.roomShell`, `draw.door`) + smoke test; verificado por píxeles y al cruzar.
+<!-- vacío de bugs SIN procesar. Bug abierto con análisis propio: docs/ideas/bug-empuje-revalida-robot.md
+     y docs/ideas/bug-reactor-bloque-sin-z.md. (Resueltos en 2026-06-28 y retirados de aquí: floor fantasma,
+     números mágicos del HUD, "pegote" del vano de puertas.) -->
+

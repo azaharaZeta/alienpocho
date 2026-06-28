@@ -152,9 +152,9 @@ export function roomShell(room) {
     t.push({ ...base, half: "R", aabb: pR, solids: [pR] });
     t.push({ ...base, half: "lintel", aabb: lintel, solids: [lintel] });
     // El VANO de las puertas de FONDO NO lleva pieza negra propia: el vano del sprite es transparente y deja
-    // ver el fondo negro del canvas, con la forma EXACTA del hueco. (Un cuadro negro aparte se dibujaba en el
-    // plano y=0 mientras el sprite retrocede −T → quedaba desalineado y "mordía" el marco; ver bug puertas.)
-    // El robot cruza siempre por y>0 (delante del vano), así que el fondo basta sin pieza en el painter.
+    // ver el fondo negro del canvas (forma EXACTA del hueco). El robot cruza siempre por y>0 (delante), así que
+    // el fondo basta. OJO: NO añadir aquí un cuadro negro en el plano y=0 — el sprite retrocede −T y quedaría
+    // desalineado, mordiendo el marco.
   };
   // borde y=0 (atrás-dcha, eje x): pared partida por su vano + puerta de fondo ym
   const sy = exits.ym ? doorSpan(w) : null;

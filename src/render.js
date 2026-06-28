@@ -108,8 +108,7 @@ export function render(room) {
   drawDebug(room);   // overlays de depuración (j/k/l) SOBRE la escena (bajo el HUD)
   drawHUD();
   drawMinimap();
-  // La victoria ya NO es un banner aquí: tiene pantalla propia (screens.drawVictoryScreen), que muestra
-  // main.js cuando game.won (en vez de render()).
+  // (La victoria tiene pantalla propia, screens.drawVictoryScreen, que muestra main.js cuando game.won.)
 }
 
 /* --- Helpers de HUD --- */
@@ -202,9 +201,9 @@ function drawMinimap() {
   }
 }
 
-/* HUD (posición FIJA, ya no depende del hueco): marco inferior en "V" + cuatro zonas —
-   ARRIBA-IZQ título "ALIEN POCHO" + OBJETIVO (circuitos activados, desligado del visor),
-   ABAJO-IZQ objeto recogido (visor + su nombre), ABAJO-DCHA vidas. El minimapa va aparte (arriba-dcha). */
+/* HUD (posición FIJA, margen uniforme UI_MARGIN): marco inferior en "V" + cuatro zonas —
+   ARRIBA-IZQ título "ALIEN POCHO"; ABAJO-IZQ objeto recogido (visor + su nombre); ABAJO-DCHA vidas y, abajo
+   del todo, el OBJETIVO "circuitos activados x/total". El minimapa va aparte (arriba-dcha). */
 function drawHUD() {
   const C = CFG.COL, W = CFG.W;
   const ink = room.ink, ink2 = room.ink2 || C.roomName;
