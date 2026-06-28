@@ -26,8 +26,6 @@ Cuando una idea ya documentada en `docs/ideas/idea-<titulo-idea>.md` haya termin
 - Si son complejos y requieren análisis, proceder igual que con las ideas, creando el fichero `docs/ideas/bug-<titulo-bug>.md`.
 Convenio de nombres: usar minúsculas y guiones en lugar de espacios para `<titulo-idea>` y `<titulo-bug>`.
 
-- Hueco puertas pegote: en las puertas de la pared, se ha dibujado un rectángulo negro más grande (en 2d) que el agujero de la puerta (en 2d), porque se ha hecho sobre el espacio 3d ,  no se ha tenido en cuenta que en 2d hay marco de la puerta, y arco. Quizá la solución es no dibujar ese negro encima de la puerta, sino antes de dibujar la puerta? O mejor aún,  en lugar de ñapas: simplemente no dibujar la pared en esos 2 tiles. porque la puerta ocupa exactamente 2 tiles. 
-
 
 ## IDEAS IA
 <!-- vacío: las ideas IA se procesaron a docs/ideas/idea-*.md (2026-06-28: minimapa-pistas-puzzle, pantalla-pausa). -->
@@ -44,4 +42,5 @@ Convenio de nombres: usar minúsculas y guiones en lugar de espacios para `<titu
 ## 🐞 BUGS CONOCIDOS
 <!-- vacío. (2026-06-28) Resuelto el del `floor`: opción B — el suelo se dibuja desde assets/svg/floor.svg
      como el resto (sprite teñido por sala); borrado el example.svg fantasma. -->
-- Hay valores numéricos reutilizados repetidos por el código. Revisarlo para llevarlos a constantes o a parámetros. (El ejemplo citado —el margen del contenido de la UI respecto al borde— YA está resuelto: constante única `UI_MARGIN` en render.js, 2026-06-28. Queda una pasada general por otros números repetidos.)
+- ~~Hay valores numéricos reutilizados repetidos por el código. Revisarlo para llevarlos a constantes o a parámetros.~~ ✅ RESUELTO (2026-06-28): consolidados los repetidos con significado común → `UI_MARGIN` (margen del contenido del HUD), `CFG.COL.scrim` (panel negro semitransparente: menú/victoria/minimapa), `FRAME_MARGIN` (marco sci-fi de título/victoria) y `FE`/`BOT` (borde del marco del HUD). El resto son literales de un solo uso o de estilo contextual (tamaños de fuente), que se dejan a propósito.
+- ~~Hueco puertas "pegote": el rectángulo negro del vano (en 2d) salía más grande que el hueco del sprite y mordía el marco.~~ ✅ RESUELTO (2026-06-28): el cuadro negro `doorHole` se dibujaba en el plano y=0 mientras el sprite de la puerta de fondo retrocede −T → desalineado ~3px. Eliminado: el vano del sprite es transparente y deja ver el fondo negro del canvas (forma exacta del hueco); el robot cruza siempre por y>0, delante. Tocó painter/cáscara (`world.roomShell`, `draw.door`) + smoke test; verificado por píxeles y al cruzar.

@@ -180,18 +180,9 @@ export const AP = (() => {
     }
   }
 
-  // VACÍO negro del vano de una puerta de FONDO (lo que se ve "a través"). Entra al painter como una
-  // PIEZA NORMAL de la cáscara (roomShell, half:"hole"): su caja, inset en y<0/x<0, se ordena por x+y
-  // SIEMPRE detrás del robot (que está en y>0). No es sólido (es aire).
-  function doorHole(ctx, p, axis, fixed, a0, a1, H) {
-    const w = DOOR.POST_W, l = H - DOOR.LINTEL_H;
-    if (axis === "x") poly(ctx, [p(a0 + w, fixed, l), p(a1 - w, fixed, l), p(a1 - w, fixed, 0), p(a0 + w, fixed, 0)], BLACK, null);
-    else              poly(ctx, [p(fixed, a0 + w, l), p(fixed, a1 - w, l), p(fixed, a1 - w, 0), p(fixed, a0 + w, 0)], BLACK, null);
-  }
-  // PUERTA: desde fichero (PNG si existe, si no SVG). "front" = marco con vano transparente;
-  // "back" = marco del fondo + hueco negro detrás (lo añade drawDoorSprite).
+  // PUERTA: desde fichero (PNG si existe, si no SVG). El vano es transparente en ambas variantes; en las de
+  // FONDO se ve a través el negro del fondo del canvas (sin pieza negra propia: ver bug puertas / world.js).
   function door(ctx, p, axis, fixed, a0, a1, H, col, hole, half, box) {
-    if (half === "hole") { doorHole(ctx, p, axis, fixed, a0, a1, H); return; }  // vacío negro del vano (pieza del painter)
     drawDoorSprite(ctx, p, axis, fixed, a0, a1, H, hole, col, half, box);
   }
 

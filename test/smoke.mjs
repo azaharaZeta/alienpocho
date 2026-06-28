@@ -68,9 +68,7 @@ test("roomShell = paredes (tramos) + postes de cada puerta (cajas del painter, t
                                           : [{ ...f, y1: f.y0 + W }, { ...f, y0: f.y1 - W }];
   const lintel = (f) => ({ ...f, z0: WALL_H - DOOR.LINTEL_H });   // dintel: misma huella, solo la banda alta
   const doorBoxes = (axis, f) => [...posts(axis, f), lintel(f)];
-  // VACÍO del vano (solo puertas de FONDO): hueco bajo el dintel, en el vano pasable (sin postes). NO sólido.
-  const holeBox = (axis, f) => axis === "x" ? { ...f, x0: f.x0 + W, x1: f.x1 - W, z1: WALL_H - DOOR.LINTEL_H }
-                                            : { ...f, y0: f.y0 + W, y1: f.y1 - W, z1: WALL_H - DOOR.LINTEL_H };
+  // (El vano de las puertas de FONDO ya NO emite pieza negra: el sprite deja ver el fondo del canvas.)
   // Pared TROCEADA por tile (N celdas): cada tramo del muro se parte en cajas locales (no un slab de toda la
   // fila). Mismo troceado que world.roomShell. N = ancho del tile de pared por defecto.
   const N = (ASSETS[WALL_TILE] && ASSETS[WALL_TILE].tile && ASSETS[WALL_TILE].tile.N) || 1;
@@ -83,9 +81,9 @@ test("roomShell = paredes (tramos) + postes de cada puerta (cajas del painter, t
   const oldShell = (r) => {
     const b = [];
     for (const [c0, c1] of segs(r.w, r.exits.ym ? span(r.w) : null)) if (c1 > c0) b.push(...wallTiles("x", c0, c1));
-    if (r.exits.ym) { const [s0, s1] = span(r.w); const f = { x0: s0, y0: -T, z0: 0, x1: s1, y1: 0, z1: WALL_H }; b.push(...doorBoxes("x", f), holeBox("x", f)); }
+    if (r.exits.ym) { const [s0, s1] = span(r.w); const f = { x0: s0, y0: -T, z0: 0, x1: s1, y1: 0, z1: WALL_H }; b.push(...doorBoxes("x", f)); }
     for (const [c0, c1] of segs(r.h, r.exits.xm ? span(r.h) : null)) if (c1 > c0) b.push(...wallTiles("y", c0, c1));
-    if (r.exits.xm) { const [s0, s1] = span(r.h); const f = { x0: -T, y0: s0, z0: 0, x1: 0, y1: s1, z1: WALL_H }; b.push(...doorBoxes("y", f), holeBox("y", f)); }
+    if (r.exits.xm) { const [s0, s1] = span(r.h); const f = { x0: -T, y0: s0, z0: 0, x1: 0, y1: s1, z1: WALL_H }; b.push(...doorBoxes("y", f)); }
     if (r.exits.yp) { const [s0, s1] = span(r.w); b.push(...doorBoxes("x", { x0: s0, y0: r.h, z0: 0, x1: s1, y1: r.h + T, z1: WALL_H })); }
     if (r.exits.xp) { const [s0, s1] = span(r.h); b.push(...doorBoxes("y", { x0: r.w, y0: s0, z0: 0, x1: r.w + T, y1: s1, z1: WALL_H })); }
     return b;

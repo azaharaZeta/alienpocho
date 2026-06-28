@@ -166,7 +166,7 @@ function drawMinimap() {
   const ccx = room.wx + room.w / 2, ccy = room.wy + room.h / 2;   // centro de la sala actual
   const toX = wx => ox + MM / 2 + (wx - ccx) * sc, toY = wy => oy + MM / 2 + (wy - ccy) * sc;
   // fondo + marco
-  ctx.fillStyle = "rgba(0,0,0,0.55)"; ctx.fillRect(ox - 4, oy - 4, MM + 8, MM + 8);
+  ctx.fillStyle = CFG.COL.scrim; ctx.fillRect(ox - 4, oy - 4, MM + 8, MM + 8);
   ctx.strokeStyle = ENGINE.darken(ink, 0.5); ctx.lineWidth = 1;
   ctx.strokeRect(ox - 3.5, oy - 3.5, MM + 7, MM + 7);
   ctx.save();
@@ -213,14 +213,15 @@ function drawHUD() {
   // ── Marco inferior: barras segmentadas a los lados + aristas en "V" paralelas a los bordes del rombo.
   const fc = P(room.w, room.h, 0);                    // pico frontal del rombo (proyectado)
   const GAP = Math.round(AP.DOOR.T * CFG.TILE_W);     // hueco bajo el pico (= ancho iso de puerta)
+  const FE = 6, BOT = 236;                            // inset del borde del marco · base (y) de las barras
   const vx = Math.round(fc.x), vy = Math.round(fc.y) + GAP;
-  const leftTopY = vy - 0.5 * (vx - 6), rightTopY = vy - 0.5 * ((W - 6) - vx);
-  drawSegBar(6, Math.round(leftTopY), 236, ink);
-  drawSegBar(W - 6, Math.round(rightTopY), 236, ink);
+  const leftTopY = vy - 0.5 * (vx - FE), rightTopY = vy - 0.5 * ((W - FE) - vx);
+  drawSegBar(FE, Math.round(leftTopY), BOT, ink);
+  drawSegBar(W - FE, Math.round(rightTopY), BOT, ink);
   ctx.strokeStyle = ink; ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(6, leftTopY);      ctx.lineTo(vx, vy);
-  ctx.moveTo(W - 6, rightTopY); ctx.lineTo(vx, vy);
+  ctx.moveTo(FE, leftTopY);      ctx.lineTo(vx, vy);
+  ctx.moveTo(W - FE, rightTopY); ctx.lineTo(vx, vy);
   ctx.stroke();
 
   // ── ARRIBA-IZQUIERDA: solo el título (el objetivo de circuitos va abajo-dcha, junto a las vidas).

@@ -225,6 +225,12 @@ mitad → el poste cercano salía con el orden del lejano → robot "delante del
 Con el recorte por silueta, cada pieza dibuja su trozo en su caja, independiente del espejo → arreglado.
 Validado: orden 0 mis-orders, test por hexágono 0 píxeles del robot sobre el poste dcho.
 
+> **Actualización posterior (2026-06-28): la pieza `doorHole` del painter se ELIMINÓ del todo.** El cuadro negro
+> se dibujaba en el plano y=0 mientras el sprite de la puerta de fondo retrocede −T → desalineado ~3px, "mordía"
+> el marco (bug "pegote"). Ahora el vano del sprite (transparente) deja ver el fondo negro del canvas con la forma
+> exacta del hueco; el robot cruza siempre por y>0 (delante), así que no hace falta pieza en el painter. Lo de
+> abajo queda como histórico.
+
 **Fase 3 — HECHA (2026-06-28): pre-pase `doorHole` eliminado.** El vacío negro del vano de las puertas de
 FONDO ya NO se pinta a mano antes del painter: se emite como una **pieza más de la cáscara** (`world.roomShell`,
 `half:"hole"`, caja inset en y<0/x<0, alto bajo el dintel, **no sólida**) y entra al `depthSort` como todo lo

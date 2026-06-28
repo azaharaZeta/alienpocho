@@ -61,9 +61,10 @@ Cada asset se describe a sí mismo:
   más las **entidades** (el robot ordena por su misma caja de colisión ±`PRAD` = `ROBOT.WID`: colisión = orden = dibujo, sin caja visual aparte) — y `depthSort` decide el orden atrás→adelante. **La cáscara ya NO se construye a mano**: sus
   cajas/anclaje salen del registro igual que las de los objetos (un solo pipeline). El painter ordena por la
   **MISMA huella** (`aabb`) que la colisión: UNA caja por asset → al "tocar", colisión y dibujo coinciden y el orden
-  nunca es ambiguo (sin caja visual aparte). El **suelo** (z=0) es el ÚNICO pre-pase de fondo. El **vacío negro del vano** de las puertas
-  de fondo (`doorHole`) ya NO es pre-pase: entra al painter como una pieza más de la cáscara (`roomShell`,
-  `half:"hole"`, caja inset y<0/x<0, **no sólida**) y el desempate x+y lo ordena detrás del robot al cruzar. Las **paredes de fondo son MÓDULOS SVG**: `flatWall`
+  nunca es ambiguo (sin caja visual aparte). El **suelo** (z=0) es el ÚNICO pre-pase de fondo. El **vano de las puertas
+  de fondo NO lleva pieza negra propia**: el vano del sprite es transparente y deja ver el fondo negro del canvas, con la
+  forma EXACTA del hueco (el robot cruza siempre por y>0, delante). El viejo cuadro `doorHole` (dibujado en el plano y=0
+  mientras el sprite retrocede −T) quedaba desalineado y mordía el marco → eliminado. Las **paredes de fondo son MÓDULOS SVG**: `flatWall`
   tesela las tiras de panal celda a celda **sin recorte**; el muro se parte por su vano en tramos de celdas enteras
   (`wallSegs`), posible porque la **puerta ocupa 2 celdas exactas** (`DOOR.SPAN_HALF=1`) y las salas son de
   dimensión PAR ∈ {4,6,8} (`world.makeRoom`). La **puerta de fondo RETROCEDE** tras el plano del muro (inset,

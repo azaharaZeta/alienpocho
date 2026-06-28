@@ -28,6 +28,7 @@ export const CFG = {
   JUMP_HIGH: { vz: 7.6, vh: 3.4 },  // largo y alto  (apex ~1.31, sube 1 bloque)
   COL: {
     bg:        "#000000",
+    scrim:     "rgba(0,0,0,0.55)",   // panel negro semitransparente tras la UI (menú/victoria/minimapa)
     floorLine: "#0c4747",
     floorFill: "#04181b",
     floorFill2:"#020f12",   // tablero sutil del suelo

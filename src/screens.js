@@ -16,6 +16,7 @@ import { ctx } from "./view.js";
 const KEYNAME = { ArrowLeft: "←", ArrowRight: "→", ArrowUp: "↑", ArrowDown: "↓", Space: "ESPACIO", Enter: "INTRO" };
 const keyGlyph = (code) => KEYNAME[code] || (code.startsWith("Key") ? code.slice(3) : code);
 const keysOf = (action) => CONTROLS[action].map(keyGlyph).join(" / ");   // "↑ / W", "E / INTRO"…
+const FRAME_MARGIN = 12;   // inset del marco sci-fi respecto al borde de pantalla (título y victoria)
 
 /* Texto con look NEÓN (glow del primario + núcleo aclarado), centrado en (cx,cy). Reutilizado por el
    título y la pantalla de victoria. */
@@ -60,8 +61,8 @@ export function drawTitleScreen(now, pal) {
   const core = ENGINE.lighten(ink, 0.6);   // núcleo neón = primario muy aclarado (de la paleta)
   ctx.fillStyle = CFG.COL.bg; ctx.fillRect(0, 0, W, H);
 
-  const m = 12;
-  ctx.fillStyle = "rgba(0,0,0,0.55)"; ctx.fillRect(m, m, W - 2 * m, H - 2 * m);
+  const m = FRAME_MARGIN;
+  ctx.fillStyle = CFG.COL.scrim; ctx.fillRect(m, m, W - 2 * m, H - 2 * m);
   drawSciFiFrame(m, m, W - 2 * m, H - 2 * m, pal);
 
   // Logo "ALIEN POCHO" en dos líneas, estilo neón (glow primario + núcleo aclarado)
@@ -110,8 +111,8 @@ export function drawVictoryScreen(now, pal) {
   const core = ENGINE.lighten(ink, 0.6);
   ctx.fillStyle = CFG.COL.bg; ctx.fillRect(0, 0, W, H);
 
-  const m = 12;
-  ctx.fillStyle = "rgba(0,0,0,0.55)"; ctx.fillRect(m, m, W - 2 * m, H - 2 * m);
+  const m = FRAME_MARGIN;
+  ctx.fillStyle = CFG.COL.scrim; ctx.fillRect(m, m, W - 2 * m, H - 2 * m);
   drawSciFiFrame(m, m, W - 2 * m, H - 2 * m, pal);
 
   // Rótulo neón en dos líneas

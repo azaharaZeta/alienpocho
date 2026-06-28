@@ -1,6 +1,7 @@
 # Idea — Pistas de puzzle en el minimapa (zócalos pendientes / destino del circuito)
 
-> **Estado: PENDIENTE — Prioridad MEDIA.** Origen: IA, procesado 2026-06-28.
+> **Estado: 🅿️ APARCADA (decisión de la usuaria, 2026-06-28).** Origen: IA, procesado 2026-06-28.
+> Se retoma cuando la usuaria lo decida.
 
 ## Qué es
 Usar el minimapa como **ayuda de navegación del puzzle** en el laberinto flip-screen:
