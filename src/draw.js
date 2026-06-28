@@ -271,10 +271,22 @@ export const AP = (() => {
     ctx.restore();
   }
 
-  function shadow(ctx, p, x, y, z) {
-    const c = p(x, y, z);
-    ctx.fillStyle = "rgba(0,0,0,0.55)";
-    ctx.beginPath(); ctx.ellipse(c.x, c.y, 12, 6, 0, 0, Math.PI * 2); ctx.fill();
+  // Sombra/marcador de suelo bajo una entidad. (x,y,z) = punto de la SUPERFICIE de apoyo (no la entidad):
+  // así al saltar la sombra se queda en el suelo y la entidad se separa → percepción de altura.
+  //   col  = tinta de la sala → aro + disco TENUE en monocromo (visible sobre suelo oscuro, donde el negro
+  //          puro se perdía). Sin col (screens): cae al disco negro de antes (mascota sobre fondo del menú).
+  //   lift = altura de la entidad SOBRE la superficie → a más alto, sombra más pequeña y tenue (refuerza el salto).
+  function shadow(ctx, p, x, y, z, col = null, lift = 0) {
+    const c = p(x, y, z), k = 1 / (1 + lift * 0.6);   // 1 en el suelo → menor al subir
+    ctx.save();
+    ctx.beginPath(); ctx.ellipse(c.x, c.y, 12 * k, 6 * k, 0, 0, Math.PI * 2);
+    if (col) {
+      ctx.globalAlpha = 0.16 * k; ctx.fillStyle = col; ctx.fill();                              // disco tenue
+      ctx.globalAlpha = 0.55 * k; ctx.lineWidth = 1; ctx.strokeStyle = col; ctx.stroke();       // aro (lo que se ve)
+    } else {
+      ctx.fillStyle = "rgba(0,0,0,0.55)"; ctx.fill();
+    }
+    ctx.restore();
   }
 
   /* ===================== DRAWERS — DIBUJO NORMALIZADO POR CLAVE `draw` =====================

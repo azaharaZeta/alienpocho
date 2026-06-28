@@ -1,6 +1,12 @@
 # Idea — Sombra del robot proyectada al suelo
 
-> **Estado: PENDIENTE — Prioridad ALTA (mejor relación impacto/coste).** Origen: IA, procesado 2026-06-28.
+> **Estado: HECHA — 2026-06-28.** Origen: IA, procesado 2026-06-28.
+> Ya existía una sombra (`AP.shadow` en player.js, anclada a `supportHeight` → se separaba bien al saltar),
+> pero el DIBUJO no cumplía: negro puro hardcodeado, invisible sobre el suelo oscuro, tamaño fijo (no comunicaba
+> altura) y fuera de la paleta. Reescrito el drawer (`draw.js shadow`): aro + disco TENUE en la **tinta de la
+> sala** (visible y monocromo) que **encoge y se desvanece con la altura** (param `lift = player.z − gz`).
+> `screens.js` (mascota) sin `col` → conserva el disco negro previo. Verificado en preview (suelo vs aire) y
+> 52 tests verdes.
 
 ## Qué es
 Dibujar una **sombra tenue** (rombo/elipse) bajo el robot, sobre la superficie que tiene debajo. En proyección

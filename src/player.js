@@ -175,7 +175,7 @@ player.addDraws = function (draws, room) {
     x1: player.x + pr, y1: player.y + pr, z1: top,
     draw: () => {
       const gz = supportHeight(room, player.x, player.y, player.z);
-      AP.shadow(ctx, P, player.x, player.y, gz);
+      AP.shadow(ctx, P, player.x, player.y, gz, ink, Math.max(0, player.z - gz));   // en tinta de sala; encoge con la altura
       AP.robot(ctx, P, player.x, player.y, player.z, player.facing, ink,
                { moving: player.moving, walkPhase: player.walkPhase });
       if (game.carried) {   // carried = asset id; se tiñe con SU tinta (igual que en la escena), no siempre secundaria
