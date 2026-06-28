@@ -1,6 +1,6 @@
 # Idea — `files: {svg, png}` → un solo `filename` (resolver extensión en runtime)
 
-> **Estado: PENDIENTE — Prioridad MEDIA.** Origen: usuaria, procesado 2026-06-27.
+> **Estado: ✅ IMPLEMENTADA (2026-06-28).** Origen: usuaria. Ver "Resultado" al final.
 
 ## Qué pide
 En `data/assets.js`, sustituir el bloque `files: { svg: "<nombre>.svg", png: "<nombre>.png" }` por algo tipo
@@ -29,3 +29,16 @@ de mantenimiento si se hace bien; bajo si introduce probes frágiles.
 ## Sugerencia
 **Mantener, pero decidir primero el mecanismo de resolución** (probe en runtime vs. manifiesto vs. mantener
 una pista explícita de extensión). Hacerlo junto al saneo del `floor` fantasma. Correr `npm test`.
+
+## Resultado (implementación 2026-06-28)
+Resultó que el cargador **ya derivaba el nombre del id** (probaba `/<id>.png` → `/<id>.svg`); `files` solo lo
+usaban el test y la tool, y `files.svg` era siempre `"<id>.svg"`. Así que se **eliminó `files`** por completo:
+- **El id ES el nombre.** Helper nuevo `assetFiles(id)` (en `data/assets.js`) deriva `{ svg:"<id>.svg",
+  png:"<id>.png"|null }`; devuelve `null` para procedurales (sin sprite/tile/tiles, p. ej. `robot`).
+- **Flag `png: true`** solo en los assets con PNG editado en disco (`cube`, `door`, `wall1`). El cargador
+  (`draw.js`) solo intenta el PNG si el asset lo declara → **se acabaron los ~10 × 404** de PNG inexistentes
+  en consola/red (mejora tangible, además de la limpieza).
+- Consumidores actualizados a `assetFiles`: cargador/precarga (`draw.js`), test (`assets.mjs`) y la tool
+  (`tool-assets.html`); se quitó el `extraFiles` vestigial.
+- Verificado: `npm test` verde (16 assets); el juego renderiza igual (cube/door/wall1 desde PNG, resto SVG);
+  la recarga post-fix **no genera 404 nuevos**.

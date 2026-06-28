@@ -13,7 +13,7 @@ import assert from "node:assert/strict";
 import { readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { ASSETS, assetBox, assetRef, assetFoot, assetRegion, assetsByGroup, GROUP_ORDER, PROP, ROBOT, DOOR, SOCKET, WALL_H } from "../src/data/assets.js";
+import { ASSETS, assetBox, assetRef, assetFoot, assetRegion, assetsByGroup, assetFiles, GROUP_ORDER, PROP, ROBOT, DOOR, SOCKET, WALL_H } from "../src/data/assets.js";
 import { AP } from "../src/draw.js";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -154,18 +154,20 @@ test("manifest.json NO diverge del registro (w/h de sprites, tiles de pared y pu
     assert.equal(e.w, dim.w, `manifest ${file}.w (=${e.w}) ≠ registro ${label} (=${dim.w})`);
     assert.equal(e.h, dim.h, `manifest ${file}.h (=${e.h}) ≠ registro ${label} (=${dim.h})`); };
   for (const [id, a] of Object.entries(ASSETS)) {
+    const f = assetFiles(id);                                      // fichero DERIVADO del id (<id>.svg)
     const dim = a.sprite || a.tile;                                // sprite (anclado) o tile (pared)
-    if (dim && a.files && a.files.svg) check(a.files.svg, dim, id);
+    if (dim && f) check(f.svg, dim, id);
     // tiles front/back de la puerta: comparten UN solo fichero (door.svg); ambos offsets contra esa entrada
-    if (a.tiles) for (const [k, d] of Object.entries(a.tiles)) check(a.files && a.files.svg, d, `${id}.tiles.${k}`);
+    if (a.tiles && f) for (const [k, d] of Object.entries(a.tiles)) check(f.svg, d, `${id}.tiles.${k}`);
   }
 });
 
-test("los ficheros SVG/PNG referenciados por el registro existen en disco", () => {
-  for (const [id, a] of Object.entries(ASSETS)) {
-    if (!a.files) continue;
-    if (a.files.svg) assert.ok(existsSync(root + "assets/svg/" + a.files.svg), `${id}: falta assets/svg/${a.files.svg}`);
-    if (a.files.png) assert.ok(existsSync(root + "assets/png/" + a.files.png), `${id}: falta assets/png/${a.files.png}`);
+test("los ficheros del registro (derivados del id) existen en disco", () => {
+  for (const id of Object.keys(ASSETS)) {
+    const f = assetFiles(id);
+    if (!f) continue;   // asset procedural (sin fichero)
+    assert.ok(existsSync(root + "assets/svg/" + f.svg), `${id}: falta assets/svg/${f.svg}`);
+    if (f.png) assert.ok(existsSync(root + "assets/png/" + f.png), `${id}: falta assets/png/${f.png} (declara png:true)`);
   }
 });
 

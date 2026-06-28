@@ -12,8 +12,8 @@
 //                    primario      secundario (complementario claro)
 const PAIRS = [
   ["#36c8ff", "#ffd27a"],   // cian    ↔ ámbar
-  ["#d7d98a", "#aab0ff"],   // oliva   ↔ azul-violeta
-  ["#e070c5", "#86eaa0"],   // magenta ↔ verde
+  ["#c8d24f", "#a594ff"],   // lima    ↔ violeta   (subida de croma: antes oliva/azul-violeta, demasiado pastel)
+  ["#ec84d2", "#86eaa0"],   // magenta ↔ verde     (magenta un punto más claro, para igualar luminancia)
 ];
 const PRIM = PAIRS.map(p => p[0]), SEC = PAIRS.map(p => p[1]);
 export const INKS = [...PRIM, ...SEC];   // 0-2: pareja normal · 3-5: invertida

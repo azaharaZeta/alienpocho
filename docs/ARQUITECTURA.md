@@ -39,7 +39,7 @@ Cada asset se describe a sí mismo:
 - **`kind`** — qué ES: `structure` (suelo/pared/puerta) · `individual` (robot, enemigos) · `object` (lo demás).
 - **`traits`** — propiedades INDEPENDIENTES y componibles (ausente = false): `solid` (física), `movable` (empuje),
   `carriable` (item), `falls` (gravedad), `hazard`, `receptacle` (+ activa al recibir), `stateful`, `controlled`.
-- **`group`/`label`** (catálogo) · **`draw`** (clave de dibujo) · **`files`** (svg/png) · **`sprite`** (`w,h,minX,minY`)
+- **`group`/`label`** (catálogo) · **`draw`** (clave de dibujo) · **`png`** (true si hay `assets/png/<id>.png` editado; el fichero se DERIVA del id, `assetFiles`) · **`sprite`** (`w,h,minX,minY`)
   · **`offset`+`footMode`/`foot`** (ancla = esquina (0,0) + `offset`; `footMode` center/corner sitúa la huella) ·
   **`tile`/`tiles`** (encuadre de pared/puerta, en el registro) · **`variants`** (orientación: puerta eje x/y, robot ±x/±y).
 - Helpers: `assetBox`/`assetRef`/`assetFoot`/`assetRegion` · `assetKind`/`assetHas`/`assetTraits`/`assetTint` ·

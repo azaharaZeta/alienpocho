@@ -42,9 +42,10 @@ export const AP = (() => {
     const c = document.createElement("canvas"); c.width = def.w; c.height = def.h;
     c.getContext("2d").drawImage(img, 0, 0, def.w, def.h); return c;
   }
-  // Arranca la carga del neutro (gris) de `file` a def.w×def.h: PNG si ASSET_USE_PNG, con fallback a SVG.
-  // Crea _raster[file] de inmediato (para no relanzar) y llama `done` al terminar (cargado o fallo). Lo
-  // comparten la carga PEREZOSA (_neutral) y la PRECARGA (preload).
+  // Arranca la carga del neutro (gris) de `file` (= id del asset) a def.w×def.h. El FICHERO se deriva del id:
+  // assets/svg/<id>.svg, o assets/png/<id>.png si el asset trae `png:true` y ASSET_USE_PNG (entonces cae al SVG
+  // si fallara). Sin flag PNG no se prueba el .png → sin 404 en consola. Crea _raster[file] de inmediato (para no
+  // relanzar) y llama `done` al terminar (cargado o fallo). Lo comparten la carga PEREZOSA (_neutral) y la PRECARGA.
   function _startLoad(file, def, done) {
     const s = _raster[file] || (_raster[file] = { neutral: null, tints: {} });
     if (s.neutral) { if (done) done(); return; }
@@ -54,8 +55,9 @@ export const AP = (() => {
       img.onerror = onfail || done || null;
       img.src = url;
     };
-    if (ASSET_USE_PNG) load("/assets/png/" + file + ".png", () => load("/assets/svg/" + file + ".svg", done));
-    else load("/assets/svg/" + file + ".svg", done);
+    const a = ASSETS[file], svg = "/assets/svg/" + file + ".svg";
+    if (ASSET_USE_PNG && a && a.png) load("/assets/png/" + file + ".png", () => load(svg, done));
+    else load(svg, done);
   }
   // Neutro (gris) de `file` rasterizado a def.w×def.h; lazy-carga (PNG→SVG) en el primer uso. null = aún cargando.
   function _neutral(file, def) {
@@ -96,7 +98,7 @@ export const AP = (() => {
     const jobs = [];
     for (const [id, a] of Object.entries(ASSETS)) {
       const def = a.sprite || a.tile || (a.tiles && a.tiles.front);   // dimensiones del raster del neutro
-      if (!def || !a.files || !(a.files.svg || a.files.png)) continue;  // procedurales (robot…) no tienen fichero
+      if (!def) continue;                                             // procedurales (robot…) no tienen fichero
       jobs.push(new Promise(res => _startLoad(id, def, res)));
     }
     return Promise.all(jobs);

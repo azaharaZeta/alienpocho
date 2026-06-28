@@ -164,7 +164,7 @@
 import { AP } from "../src/draw.js";
 import { INKS, INK2 } from "../src/palette.js";
 // FUENTE ÚNICA: la tool LEE todo del registro; no conoce nombres ni tipos de asset.
-import { ASSETS, assetBox, assetRef, assetFoot, assetRegion, assetsByGroup, assetViews, assetTint, assetTraits } from "../src/data/assets.js";
+import { ASSETS, assetBox, assetRef, assetFoot, assetRegion, assetsByGroup, assetViews, assetTint, assetTraits, assetFiles } from "../src/data/assets.js";
 
 // 0-2: parejas base · 3-5: las mismas invertidas (ver src/palette.js)
 const NAMES = ["cian", "oliva", "magenta", "ámbar", "azul", "verde"];
@@ -194,7 +194,8 @@ function makeItem(id) {
     },
   }));
   const a = ASSETS[id], traits = Object.keys(assetTraits(id));
-  const allFiles = a.files ? [a.files.svg, a.files.png, ...(a.extraFiles || [])].filter(Boolean) : [];
+  const ff = assetFiles(id);   // ficheros derivados del id (null si procedural)
+  const allFiles = ff ? [ff.svg, ff.png].filter(Boolean) : [];
   const svgFiles = allFiles.filter(f => /\.svg$/i.test(f));
   // PNG por EXISTENCIA (no por el flag del registro): candidato = mismo basename que cada SVG (+ los
   // .png que el registro declare). La tool intenta cargarlos y descarta los que no existan (onerror).

@@ -10,7 +10,11 @@
 
    --- Esquema de un asset en ASSETS ---
      draw    : clave de la función de dibujo procedural (AP.*), o "fn:variante".
-     files   : { svg, png }  ficheros (silueta neutra); null = no migrado.
+     (fichero): NO se declara: el FICHERO de un asset de imagen es su propio id → assets/svg/<id>.svg
+               (y assets/png/<id>.png si el asset trae `png: true`). Lo deriva `assetFiles(id)`. Un asset
+               es "de fichero" si tiene sprite/tile/tiles (los procedurales como `robot` no).
+     png     : true si existe el PNG editado (assets/png/<id>.png) y se prefiere al SVG (con ASSET_USE_PNG).
+               Ausente = solo SVG (sin probe PNG → sin 404).
      sprite  : { w, h, minX, minY }  encuadre del raster en px de juego, o null.
                El píxel-ancla del PNG/SVG es derivado = (−minX, −minY); no se almacena.
      offset  : { x, y, z? }  desplazamiento del ANCLA respecto a la esquina (0,0,0) de la celda (en celdas).
@@ -71,18 +75,18 @@ export const ASSETS = {
   // --- Estructura (cáscara paramétrica de sala) ---
   floor:  { label: "Suelo", kind: "structure", group: "Estructura", traits: {},
             draw: "floor", offset: { x: 0, y: 0 }, footMode: "corner", foot: { w: 1, l: 1, h: 0 },
-            files: { svg: "floor.svg", png: null }, sprite: { w: 34, h: 17, minX: -17, minY: 0 } },
+            sprite: { w: 34, h: 17, minX: -17, minY: 0 } },
   // Paredes: se dibujan por TILE (no por drawSprite), por eso no llevan `sprite`.
   // tile = tamaño del .svg del tile.
   wall1:  { label: "Pared (wall1)", kind: "structure", group: "Estructura", traits: { solid: true },
             draw: "flatWall", offset: { x: 0, y: 0 }, footMode: "corner", foot: { w: 1, l: 0, h: WALL_H },
-            files: { svg: "wall1.svg", png: null }, tile: { N: 1, w: 17, h: 60, minX: 0, minY: -51 } },
+            png: true, tile: { N: 1, w: 17, h: 60, minX: 0, minY: -51 } },
   wall2:  { label: "Pared (wall2)", kind: "structure", group: "Estructura", traits: { solid: true },
             draw: "flatWall", offset: { x: 0, y: 0 }, footMode: "corner", foot: { w: 2, l: 0, h: WALL_H },
-            files: { svg: "wall2.svg", png: null }, tile: { N: 2, w: 34, h: 68, minX: 0, minY: -51 } },
+            tile: { N: 2, w: 34, h: 68, minX: 0, minY: -51 } },
   // Puerta (arco): cáscara con hueco de paso. Huella por EJE (x / y), no centro/esquina.
   door: { label: "Puerta (arco)", kind: "structure", group: "Estructura", traits: {},
-          draw: "door", files: { svg: "door.svg", png: null },
+          draw: "door", png: true,
           // UN solo sprite (door): front y back son el MISMO dibujo; solo cambia el ANCLA (front protruye +y del
           // plano, back retrocede −y) → offset desplazado por la proyección del grosor T. Por eso 2 offsets, 1 imagen.
           tiles: { front: { w: 40, h: 71, minX: -6, minY: -51 }, back: { w: 40, h: 71, minX: 0, minY: -54 } },
@@ -98,49 +102,49 @@ export const ASSETS = {
   // --- Bloques (piezas sólidas fijas con las que se "construye") ---
   cube:   { label: "Bloque", kind: "object", group: "Bloques", traits: { solid: true },
             draw: "cube", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 1, l: 1, h: 1 },
-            files: { svg: "cube.svg", png: "cube.png" }, sprite: { w: 34, h: 34, minX: -17, minY: -25.5 } },
+            png: true, sprite: { w: 34, h: 34, minX: -17, minY: -25.5 } },
 
   // --- Transportables (circuitos): sólidos, empujables, recogibles y caen ---
   prop_cube:     { label: "Cubo", kind: "object", group: "Transportables", traits: { solid: true, movable: true, carriable: true, falls: true },
                    draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: P2, l: P2, h: PROP.H },
-                   files: { svg: "prop_cube.svg", png: null }, sprite: { w: 22, h: 22, minX: -11, minY: -16 } },
+                   sprite: { w: 22, h: 22, minX: -11, minY: -16 } },
   prop_pyramid:  { label: "Pirámide", kind: "object", group: "Transportables", traits: { solid: true, movable: true, carriable: true, falls: true },
                    draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: P2, l: P2, h: PROP.H },
-                   files: { svg: "prop_pyramid.svg", png: null }, sprite: { w: 22, h: 17, minX: -11, minY: -11 } },
+                   sprite: { w: 22, h: 17, minX: -11, minY: -11 } },
   prop_dome:     { label: "Domo", kind: "object", group: "Transportables", traits: { solid: true, movable: true, carriable: true, falls: true },
                    draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: P2, l: P2, h: PROP.H },
-                   files: { svg: "prop_dome.svg", png: null }, sprite: { w: 17, h: 13, minX: -9, minY: -9 } },
+                   sprite: { w: 17, h: 13, minX: -9, minY: -9 } },
   prop_cylinder: { label: "Cilindro", kind: "object", group: "Transportables", traits: { solid: true, movable: true, carriable: true, falls: true },
                    draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: P2, l: P2, h: PROP.H },
-                   files: { svg: "prop_cylinder.svg", png: null }, sprite: { w: 15, h: 18, minX: -8, minY: -15 } },
+                   sprite: { w: 15, h: 18, minX: -8, minY: -15 } },
 
   // --- Receptáculo (zócalo): UN asset genérico, sólido, que recibe un circuito compatible y se
   //     ilumina. Qué circuito PIDE (requires) y cuál tiene PUESTO (filled) son datos de INSTANCIA
   //     (data/rooms.js + estado de partida), no del asset → acepta circuitos nuevos sin tocarlo. ---
   socket: { label: "Zócalo", kind: "object", group: "Receptáculos", traits: { solid: true, receptacle: true, stateful: true },
             draw: "socket", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: SH2, l: SH2, h: SOCKET.BASE_H },
-            files: { svg: "socket.svg", png: null }, sprite: { w: 32, h: 20, minX: -16, minY: -12 } },
+            sprite: { w: 32, h: 20, minX: -16, minY: -12 } },
 
   // --- Peligros ---
   spikes: { label: "Pinchos", kind: "object", group: "Peligros", traits: { hazard: true },
             draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.54, l: 0.54, h: 0.5 },
-            files: { svg: "spikes.svg", png: null }, sprite: { w: 14, h: 11, minX: -7, minY: -10 } },
+            sprite: { w: 14, h: 11, minX: -7, minY: -10 } },
 
   // --- Decoración (objetos sin más rol; la "decoración" es un object SIN traits especiales) ---
   plant:  { label: "Planta", kind: "object", group: "Decoración", traits: {},
             draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.32, l: 0.32, h: 0.5 },
-            files: { svg: "plant.svg", png: null }, sprite: { w: 8, h: 13, minX: -4, minY: -11 } },
+            sprite: { w: 8, h: 13, minX: -4, minY: -11 } },
   drone:  { label: "Dron", kind: "object", group: "Decoración", traits: {},
             // huella ELEVADA que ENVUELVE el sprite flotante: el painter ordena por esta caja, así que debe
             // acotar los píxeles dibujados (lo fija el guardarraíl anti-#2 de test/assets.mjs). No es sólido.
             draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.4, l: 0.4, h: 0.7, z: 0.45 },
-            files: { svg: "drone.svg", png: null }, sprite: { w: 12, h: 16, minX: -6, minY: -22 } },
+            sprite: { w: 12, h: 16, minX: -6, minY: -22 } },
   // Ordenador: sólido + empujable + cae + RECOGIBLE (como los circuitos, pero no encaja en zócalos).
   // tint:"primary" → se pinta en la tinta primaria de la sala (NO en secundario, aunque sea carriable).
   computer: { label: "Ordenador", kind: "object", group: "Decoración", traits: { solid: true, movable: true, carriable: true, falls: true },
             tint: "primary",
             draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.5, l: 0.5, h: 0.7 },
-            files: { svg: "computer.svg", png: null }, sprite: { w: 18, h: 22, minX: -9, minY: -17 } },
+            sprite: { w: 18, h: 22, minX: -9, minY: -17 } },
 
   // --- Personajes (individuos): huella VISUAL que rota con la orientación (eje x ↔ eje y). ---
   // (La colisión del robot es otra cosa: cuadrado simétrico CFG.PRAD; no se modela aquí.)
@@ -217,6 +221,14 @@ export function assetHas(id, trait) { return !!assetTraits(id)[trait]; }
 
 // Nombre legible para el HUD: el `label` del asset (su nombre humano); un id sin label cae a su id.
 export function assetName(id) { const a = ASSETS[id]; return (a && a.label) || id; }
+
+// Ficheros de un asset de imagen, DERIVADOS del id (el id ES el nombre): { svg:"<id>.svg", png:"<id>.png"|null }.
+// `null` si el asset es procedural (sin sprite/tile/tiles, p. ej. el robot). png solo si el asset trae `png:true`.
+export function assetFiles(id) {
+  const a = ASSETS[id];
+  if (!a || !(a.sprite || a.tile || a.tiles)) return null;
+  return { svg: id + ".svg", png: a.png ? id + ".png" : null };
+}
 
 // Tinte de dibujo: "secondary" para transportables/receptáculos, "primary" el resto. El
 // asset puede forzarlo con `tint`. Render/tool eligen room.ink (primario) o room.ink2.

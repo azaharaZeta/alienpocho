@@ -105,9 +105,11 @@ su huella, igual que el robot con sus hombros; es arte, no cambia el orden).
 Vive en [`src/draw.js`](../src/draw.js) (no en `render.js`): así un asset migrado se dibuja igual
 desde cualquier sitio que llame a su `AP.*`.
 
-- **Parámetro global** `ASSET_USE_PNG` en [`src/config.js`](../src/config.js): si `true`, un asset
-  migrado usa su PNG (`assets/png/<name>.png`) si existe; si no, su SVG (`assets/svg/<name>.svg`).
-  Si `false`, siempre el SVG.
+- **Fichero = id del asset:** el SVG es siempre `assets/svg/<id>.svg`; el PNG editado es `assets/png/<id>.png`
+  y solo se usa si el asset declara **`png: true`** en el registro (lo deriva el helper `assetFiles(id)`). Ya
+  no hay un campo `files`: el id ES el nombre. Sin `png:true` no se intenta cargar el PNG → **sin 404** en consola.
+- **Parámetro global** `ASSET_USE_PNG` en [`src/config.js`](../src/config.js): si `true`, los assets con
+  `png:true` usan su PNG (cayendo al SVG si fallara); si `false`, siempre el SVG.
 - **Encuadre del sprite** (`{ minX, minY, w, h }`) por asset: en el registro `src/data/assets.js`
   (`AP.SPRITES` en draw.js lo deriva de ahí).
 - **`drawSprite(name, ctx, ref, col)`**: carga (PNG→SVG) y rasteriza a `w×h` (cacheado), tiñe por
