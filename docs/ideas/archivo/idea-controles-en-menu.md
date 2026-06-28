@@ -1,6 +1,6 @@
 # Idea — Listar los controles de teclado en el menú principal
 
-> **Estado: PENDIENTE — Prioridad MEDIA (quick win).** Origen: usuaria, procesado 2026-06-28.
+> **Estado: ✅ IMPLEMENTADA (2026-06-28).** Origen: usuaria. Ver "Resultado" al final.
 
 ## Qué pide
 En la **pantalla de título**, mostrar la lista de controles de teclado (girar, avanzar, saltar, usar).
@@ -29,3 +29,13 @@ controles) y la esencia retro (los juegos Spectrum listaban teclas en la pantall
 ## Sugerencia
 **Mantener; quick win.** Implementar en `screens.js`, derivando de `CONTROLS` si el mapeo código→glifo sale
 barato. Se complementa con [[idea-pantalla-pausa]] (mismo listado reutilizable en pausa).
+
+## Resultado (implementación 2026-06-28)
+- En [screens.js](../../src/screens.js): bloque **CONTROLES** en la pantalla de título, **derivado de
+  `CONTROLS`** (helper `keyGlyph` código→glifo: `ArrowLeft`→"←", `Space`→"ESPACIO", `Enter`→"INTRO",
+  `KeyX`→"X"). 5 filas (Girar izq./der., Avanzar, Saltar, Coger/Soltar) → si se reasignan teclas, el menú
+  se actualiza solo.
+- **Layout:** la mascota robot se movió a abajo-izquierda y la lista de controles va a la derecha (la
+  pantalla estaba llena; así caben sin amontonar). Logo + créditos + prompt parpadeante intactos.
+- Verificado en preview (las 5 filas con sus glifos, prompt parpadeante, todo dentro del marco). `npm test`
+  verde. El listado/`keyGlyph` se podrá reutilizar en [[idea-pantalla-pausa]].

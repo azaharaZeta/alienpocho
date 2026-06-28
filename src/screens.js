@@ -7,10 +7,15 @@
    ============================================================================= */
 "use strict";
 
-import { CFG } from "./config.js";
+import { CFG, CONTROLS } from "./config.js";
 import { ENGINE } from "./engine.js";
 import { AP } from "./draw.js";
 import { ctx } from "./view.js";
+
+/* Código de tecla (KeyboardEvent.code) → glifo legible para el menú de controles. */
+const KEYNAME = { ArrowLeft: "←", ArrowRight: "→", ArrowUp: "↑", ArrowDown: "↓", Space: "ESPACIO", Enter: "INTRO" };
+const keyGlyph = (code) => KEYNAME[code] || (code.startsWith("Key") ? code.slice(3) : code);
+const keysOf = (action) => CONTROLS[action].map(keyGlyph).join(" / ");   // "↑ / W", "E / INTRO"…
 
 // Marco grande estilo panel de nave: doble borde, línea segmentada, corchetes de
 // esquina y remaches. Todo a base de rectángulos → look pixel-art al escalar.
@@ -56,23 +61,40 @@ export function drawTitleScreen(now, pal) {
     ctx.strokeText(txt, W / 2, cy); ctx.fillText(txt, W / 2, cy);
     ctx.letterSpacing = "0px"; ctx.restore();
   };
-  neon("ALIEN", 56, 34);
-  neon("POCHO", 92, 34);
+  neon("ALIEN", 50, 32);
+  neon("POCHO", 84, 32);
 
-  // Mascota robot centrada (primario de la paleta)
-  const pm = AP.projector(W / 2, 150);
+  // Mascota robot (abajo-izquierda; deja sitio a la lista de controles a la derecha)
+  const pm = AP.projector(80, 178);
   AP.shadow(ctx, pm, 0, 0, 0);
   AP.robot(ctx, pm, 0, 0, 0, 0, ink, {});
 
-  // Créditos
-  ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillStyle = core; ctx.font = "12px 'Courier New', monospace";
-  ctx.fillText("Hecho por Azahara con Claude Code 4.8", W / 2, 178);
+  // CONTROLES (derivados de CONTROLS → si se reasignan teclas, el menú se actualiza solo)
+  const rows = [
+    ["Girar izq.",     "turnLeft"],
+    ["Girar der.",     "turnRight"],
+    ["Avanzar",        "forward"],
+    ["Saltar",         "jump"],
+    ["Coger / Soltar", "use"],
+  ];
+  ctx.textBaseline = "alphabetic"; ctx.textAlign = "center";
+  ctx.fillStyle = ink2; ctx.font = "bold 9px 'Courier New', monospace";
+  ctx.fillText("CONTROLES", 220, 116);
+  ctx.font = "8px 'Courier New', monospace";
+  rows.forEach(([label, action], i) => {
+    const y = 132 + i * 13;
+    ctx.textAlign = "left";
+    ctx.fillStyle = core; ctx.fillText(keysOf(action), 152, y);   // teclas (brillante)
+    ctx.fillStyle = ink2; ctx.fillText(label, 224, y);            // acción (secundario)
+  });
 
-  // Prompt parpadeante (secundario)
+  // Créditos + prompt parpadeante (centrados, abajo)
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = core; ctx.font = "9px 'Courier New', monospace";
+  ctx.fillText("Hecho por Azahara con Claude Code 4.8", W / 2, 200);
   if (Math.floor(now / 500) % 2 === 0) {
-    ctx.fillStyle = ink2; ctx.font = "bold 12px 'Courier New', monospace";
-    ctx.fillText("PULSA UN BOTON PARA EMPEZAR", W / 2, 204);
+    ctx.fillStyle = ink2; ctx.font = "bold 11px 'Courier New', monospace";
+    ctx.fillText("PULSA UN BOTON PARA EMPEZAR", W / 2, 214);
   }
   ctx.textAlign = "left"; ctx.textBaseline = "top";
 }
