@@ -49,7 +49,7 @@ function dbgOne(box, ref) {
 function drawDebug(room) {
   if (!(DBG.box || DBG.region || DBG.anchor)) return;
   // El SUELO y la cáscara (paredes/puertas) se excepciona a propósito (es la rejilla de referencia; ensucia y tapa lo demás).
-  for (const t of [...roomThings(room)])               // objetos colocables (suelo y cáscara omitidos)
+  for (const t of roomThings(room))                    // objetos colocables (suelo y cáscara omitidos)
     dbgOne(aabbBox(t.aabb), { x: t.x, y: t.y, z: t.z });
   for (const e of entities) {                                              // entidades: huella visual (J/K/L) + su caja de COLISIÓN/ORDEN
     const d = e.debugInfo && e.debugInfo(); if (!d) continue;
@@ -88,11 +88,12 @@ export function render(room) {
   //     placement con su caja (aabb) + drawer genérico (AP.drawAsset); la cáscara sale del registro igual que
   //     los objetos. El inset (puerta de fondo) / protrusión (frontal) va en su aabb. depthSort es determinista
   //     (independiente del orden de inserción) → el robot se intercala solo al cruzar una puerta.
-  for (const t of [...roomShell(room), ...roomThings(room)]) {
-    const col = assetTint(t.asset) === "secondary" ? ink2 : ink;
-    const a = t.aabb;   // el painter ordena por la MISMA huella que la colisión (una caja por asset) → "tocar" = orden limpio
-    box3(a.x0, a.y0, a.z0, a.x1, a.y1, a.z1, () => AP.drawAsset(ctx, P, t, col));
-  }
+  for (const list of [roomShell(room), roomThings(room)])
+    for (const t of list) {
+      const col = assetTint(t.asset) === "secondary" ? ink2 : ink;
+      const a = t.aabb;   // el painter ordena por la MISMA huella que la colisión (una caja por asset) → "tocar" = orden limpio
+      box3(a.x0, a.y0, a.z0, a.x1, a.y1, a.z1, () => AP.drawAsset(ctx, P, t, col));
+    }
 
   // 2b) entidades (jugador, etc.): cada una añade su caja al orden.
   for (const e of entities) e.addDraws(draws, room);
@@ -231,42 +232,33 @@ function drawHUD() {
 
   // ── MARCADOR: SIEMPRE a la IZQUIERDA (el minimapa va fijo a la derecha). El triángulo se ensancha
   //    hacia abajo: la fila inferior (más ancha) lleva el título; las de arriba, los iconos.
-  const onRight = false;                               // marcador anclado a la izquierda
   const PAD = 20, ax = PAD;                            // borde de anclaje (margen dentro del marco)
   const dy = 20, yTitle = 222, yCirc = yTitle - dy, yLife = yCirc - dy;
 
-  drawTitle(ax, yTitle, onRight);                                  // título "ALIEN POCHO"
-  drawStat(ax, yCirc, onRight, 18, (cx, cy) => drawCarrySlot(cx, cy, game.carried, ink, ink2),
+  drawTitle(ax, yTitle);                                           // título "ALIEN POCHO"
+  drawStat(ax, yCirc, 18, (cx, cy) => drawCarrySlot(cx, cy, game.carried, ink, ink2),
            game.circuits + "/" + game.circuitsTotal, ink2);        // circuitos: casilla + N/M
-  drawStat(ax, yLife, onRight, 14, (cx, cy) => drawMiniRobot(cx, cy, ink2),
+  drawStat(ax, yLife, 14, (cx, cy) => drawMiniRobot(cx, cy, ink2),
            "×" + game.lives, ink2);                                // vidas: carita + ×N
 }
 
-/* Una FILA del marcador anclada a un borde: ICONO + NÚMERO (en este orden si va a la
-   izquierda; invertido si va a la derecha, para que el icono quede pegado al borde). El icono
+/* Una FILA del marcador anclada al borde IZQUIERDO: [ICONO][NÚMERO] empezando en ax. El icono
    lo pinta `drawIcon(cx, cy)` centrado; `iw` = su ancho, para reservarle el hueco. */
-function drawStat(ax, y, onRight, iw, drawIcon, text, col) {
+function drawStat(ax, y, iw, drawIcon, text, col) {
   const gap = 4, cy = y + 7;                          // centro vertical del icono ≈ centro del texto
   ctx.font = "bold 14px 'Courier New', monospace";
   ctx.fillStyle = col; ctx.textBaseline = "top";
-  if (onRight) {                                      // [texto][icono] terminando en ax
-    drawIcon(ax - iw / 2, cy);
-    ctx.textAlign = "right"; ctx.fillText(text, ax - iw - gap, y);
-  } else {                                            // [icono][texto] empezando en ax
-    drawIcon(ax + iw / 2, cy);
-    ctx.textAlign = "left"; ctx.fillText(text, ax + iw + gap, y);
-  }
-  ctx.textAlign = "left";
+  drawIcon(ax + iw / 2, cy);
+  ctx.textAlign = "left"; ctx.fillText(text, ax + iw + gap, y);
 }
 
-/* Título "ALIEN POCHO" con look neón: glow en el color de la sala + núcleo brillante.
-   Anclado al borde (izq/dcha) según onRight. */
-function drawTitle(ax, vy, onRight) {
+/* Título "ALIEN POCHO" con look neón: glow en el color de la sala + núcleo brillante. Anclado a la izquierda. */
+function drawTitle(ax, vy) {
   const ink = room.ink, y = vy + 2;
   ctx.save();
   ctx.font = "bold 13px 'Courier New', monospace";
   ctx.letterSpacing = "1.5px";
-  ctx.textBaseline = "top"; ctx.textAlign = onRight ? "right" : "left";
+  ctx.textBaseline = "top"; ctx.textAlign = "left";
   ctx.lineJoin = "round";
   const draw = () => { ctx.strokeText("ALIEN POCHO", ax, y); ctx.fillText("ALIEN POCHO", ax, y); };
   ctx.shadowColor = ink; ctx.shadowBlur = 6;          // resplandor (color de la sala)

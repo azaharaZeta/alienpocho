@@ -8,14 +8,14 @@
    ============================================================================= */
 "use strict";
 
-import { CFG, PROP, ROBOT, SOCKET, DOOR } from "./config.js";
+import { CFG, ROBOT, DOOR } from "./config.js";
 import { assetHas, assetFoot, socketTop } from "./data/assets.js";   // traits + huella + cima del zócalo
 import { roomThings, roomShell, objAsset, thingHas } from "./world.js";   // placements uniformes (objetos + cáscara) + asset/traits
 export { socketTop, objAsset, thingHas };
 
-// Semilado / alto de un MÓVIL según la huella de su asset.
-const objHalf = o => (assetFoot(objAsset(o)) || { w: PROP.HALF * 2 }).w / 2;
-const objTopH = o => (assetFoot(objAsset(o)) || { h: PROP.H }).h;
+// Semilado / alto de un MÓVIL según la huella de su asset (siempre definida: objAsset da un id válido).
+const objHalf = o => assetFoot(objAsset(o)).w / 2;
+const objTopH = o => assetFoot(objAsset(o)).h;
 
 /* ¿Está la coord. dentro del HUECO de la puerta? Coincide con el hueco visual entre postes. */
 const DOOR_HALF = DOOR.SPAN_HALF - DOOR.POST_W;   // semiancho passable del vano = vano − postes (= 0.60)
@@ -42,7 +42,10 @@ export function objBox(o) {
    uniformes con el MISMO formato de placement: los `objects` con trait `solid` (roomThings) y la CÁSCARA
    estructural (roomShell): las paredes aportan su caja, las puertas sus dos POSTES (campo `solids`, dejando
    libre el vano). Así paredes, puertas y bloques se colisionan EXACTAMENTE igual (AABB). La cima (zócalo
-   activo, ya con el circuito) la trae el placement. `obj` = fuente (para no chocar consigo en el empuje). */
+   activo, ya con el circuito) la trae el placement. `obj` = fuente (para no chocar consigo en el empuje).
+   Se RECALCULA en cada llamada A PROPÓSITO (no cachear): los objetos son MUTABLES (empuje/gravedad/colocar)
+   → "siempre fresco" evita un caché con invalidación frágil; la parte INMUTABLE (la cáscara) ya la cachea
+   world.js (roomShell). Las salas son pequeñas, así que el recálculo es ruido. */
 export function roomSolids(room) {
   const s = [], add = (a, obj) => s.push({ x0: a.x0, y0: a.y0, z0: a.z0, x1: a.x1, y1: a.y1, top: a.z1, obj });
   for (const t of roomThings(room)) if (assetHas(t.asset, "solid")) add(t.aabb, t.src);

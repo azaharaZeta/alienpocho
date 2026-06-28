@@ -14,17 +14,17 @@
 "use strict";
 
 import { ENGINE } from "./engine.js";
-import { INKS, INK2, ROBOT_INK } from "./palette.js";
-import { DOOR, PROP, ROBOT, SOCKET, ASSET_USE_PNG, WALL_TILE } from "./config.js";
+import { ROBOT_INK } from "./palette.js";
+import { DOOR, ROBOT, SOCKET, ASSET_USE_PNG, WALL_TILE } from "./config.js";
 import { ASSETS, WALL_H, propAsset } from "./data/assets.js";   // FUENTE ÚNICA: encuadre de sprites + altura de pared
 
 export const AP = (() => {
 
   // Primitivas genéricas del motor (proyección, cajas, painter…).
   const ENG = ENGINE;
-  const { BLACK, darken, lighten, projector, poly, facePt, edgeLine, box } = ENG;
+  const { BLACK, darken, lighten, projector, poly, facePt, box } = ENG;
 
-  // Paletas (palette.js) y geometría compartida (config.js): se usan aquí y se reexportan en AP.
+  // Paletas (palette.js) y geometría compartida (config.js): se usan aquí; AP solo reexporta lo que se consume fuera.
 
   /* ===================== SPRITES EXTERNOS (flujo PNG/SVG, ver docs/ASSETS.md) =====================
      Cada asset-sprite se dibuja desde un fichero (PNG editado si ASSET_USE_PNG y existe; si no, su
@@ -34,15 +34,25 @@ export const AP = (() => {
   const SPRITES = Object.fromEntries(
     Object.entries(ASSETS).filter(([, a]) => a.sprite).map(([id, a]) => [id, a.sprite])
   );
-  const _spr = {};   // name → { neutral: canvas|null, tints: { col: canvas } }
+  /* REGISTRO ÚNICO de rasters teñidos. Cubre los TRES tipos de imagen externa (sprite de objeto, tile de
+     pared y sprite de puerta): el flujo es EL MISMO — lazy-load PNG→SVG, rasterizar a w×h, teñir por color
+     y cachear. Clave = fichero base (sin extensión): { neutral, tints }. (Antes eran tres copias casi
+     idénticas: _spr/_wallTex/_doorTex con su propio cargador.) null = imagen aún cargando. */
+  const _raster = {};
   function _rasterTo(def, img) {
     const c = document.createElement("canvas"); c.width = def.w; c.height = def.h;
     c.getContext("2d").drawImage(img, 0, 0, def.w, def.h); return c;
   }
-  function _loadSprite(name, def, s) {
-    const load = (url, onfail) => { const img = new Image(); img.onload = () => { s.neutral = _rasterTo(def, img); }; img.onerror = onfail || null; img.src = url; };
-    if (ASSET_USE_PNG) load("/assets/png/" + name + ".png", () => load("/assets/svg/" + name + ".svg"));
-    else load("/assets/svg/" + name + ".svg");
+  // Neutro (gris) de `file` rasterizado a def.w×def.h; lazy-carga el PNG y cae al SVG. null = aún cargando.
+  function _neutral(file, def) {
+    let s = _raster[file];
+    if (!s) {
+      s = _raster[file] = { neutral: null, tints: {} };
+      const load = (url, onfail) => { const img = new Image(); img.onload = () => { s.neutral = _rasterTo(def, img); }; img.onerror = onfail || null; img.src = url; };
+      if (ASSET_USE_PNG) load("/assets/png/" + file + ".png", () => load("/assets/svg/" + file + ".svg"));
+      else load("/assets/svg/" + file + ".svg");
+    }
+    return s.neutral;
   }
   function _tintSprite(neutral, col) {   // tiñe el gris por multiply y remáscara al alfa original
     const c = document.createElement("canvas"); c.width = neutral.width; c.height = neutral.height;
@@ -53,13 +63,17 @@ export const AP = (() => {
     x.globalCompositeOperation = "source-over";
     return c;
   }
+  // Raster de `file` teñido a `col` (cacheado por color), o null si aún no cargó.
+  function _tinted(file, def, col) {
+    const n = _neutral(file, def); if (!n) return null;
+    const s = _raster[file];
+    return s.tints[col] || (s.tints[col] = _tintSprite(n, col));
+  }
   // Dibuja el sprite externo de `name` teñido a `col`, anclado en ref+(minX,minY). false = no dibuja.
   function drawSprite(name, ctx, ref, col) {
     if (typeof document === "undefined") return false;        // sin DOM (Node/tests)
     const def = SPRITES[name]; if (!def) return false;        // asset sin sprite
-    let s = _spr[name]; if (!s) { s = _spr[name] = { neutral: null, tints: {} }; _loadSprite(name, def, s); }
-    if (!s.neutral) return false;                             // imagen aún cargando
-    let t = s.tints[col]; if (!t) t = s.tints[col] = _tintSprite(s.neutral, col);
+    const t = _tinted(name, def, col); if (!t) return false;  // imagen aún cargando
     ctx.drawImage(t, Math.round(ref.x + def.minX), Math.round(ref.y + def.minY));
     return true;
   }
@@ -69,42 +83,20 @@ export const AP = (() => {
      (sin transform); el muro del eje y se voltea en horizontal. N = ancho del hexágono = ancho de celda.
      El encuadre {N,w,h,minX,minY} (bbox + offset respecto a la esquina inf-izq BL=P(a,fixed,0)) lo declara
      el REGISTRO: `ASSETS[variant].tile` (fuente única, sin copia aquí). ── */
-  const _wallTex = {};   // variant → { neutral: canvas|null, tints: { col: canvas } }
-  function _loadWall(variant) {
-    const def = ASSETS[variant].tile, s = _wallTex[variant] = { neutral: null, tints: {} };
-    const load = (url, onfail) => { const img = new Image();
-      img.onload = () => { const c = document.createElement("canvas"); c.width = def.w; c.height = def.h;
-        c.getContext("2d").drawImage(img, 0, 0, def.w, def.h); s.neutral = c; };
-      img.onerror = onfail || null; img.src = url; };
-    if (ASSET_USE_PNG) load("/assets/png/" + variant + ".png", () => load("/assets/svg/" + variant + ".svg"));
-    else load("/assets/svg/" + variant + ".svg");
-  }
   function _wallTexture(variant, col) {
-    if (typeof document === "undefined" || !(ASSETS[variant] && ASSETS[variant].tile)) return null;
-    let s = _wallTex[variant]; if (!s) { _loadWall(variant); s = _wallTex[variant]; }
-    if (!s.neutral) return null;
-    return s.tints[col] || (s.tints[col] = _tintSprite(s.neutral, col));
+    const a = ASSETS[variant];
+    if (typeof document === "undefined" || !(a && a.tile)) return null;
+    return _tinted(variant, a.tile, col);   // mismo registro que los sprites; clave = nombre de variante (= fichero)
   }
   /* ── PUERTA por SPRITE (marco SVG/PNG ya en perspectiva, altura fija): assets/svg/door.svg (UN solo dibujo).
      "front" = marco del frente (vano transparente → se ve al robot al cruzar); "back" = marco del muro
      de fondo (con hueco negro detrás). El eje y se voltea en horizontal. El encuadre {w,h,minX,minY} (bbox +
      offset respecto a la esquina del vano P(a0,fixed,0)) lo declara el REGISTRO: `ASSETS.door.tiles[variant]`
      (front/back; autogenerado por tools/gen-doors.mjs, SPAN_HALF=1). ── */
-  const _doorTex = {};   // UN solo sprite "door": front/back comparten imagen (solo difiere el offset del ancla)
-  function _loadDoor() {
-    const def = ASSETS.door.tiles.front, s = _doorTex.it = { neutral: null, tints: {} };
-    const load = (url, onfail) => { const img = new Image();
-      img.onload = () => { const c = document.createElement("canvas"); c.width = def.w; c.height = def.h;
-        c.getContext("2d").drawImage(img, 0, 0, def.w, def.h); s.neutral = c; };
-      img.onerror = onfail || null; img.src = url; };
-    if (ASSET_USE_PNG) load("/assets/png/door.png", () => load("/assets/svg/door.svg"));
-    else load("/assets/svg/door.svg");
-  }
+  // UN solo sprite "door": front/back comparten imagen y w×h (solo difiere el offset del ancla → ver drawDoorSprite).
   function _doorTexture(col) {
     if (typeof document === "undefined") return null;
-    let s = _doorTex.it; if (!s) { _loadDoor(); s = _doorTex.it; }
-    if (!s.neutral) return null;
-    return s.tints[col] || (s.tints[col] = _tintSprite(s.neutral, col));
+    return _tinted("door", ASSETS.door.tiles.front, col);
   }
   // Dibuja el marco de puerta (un solo sprite) anclado en P(a0,fixed,0). `hole` solo elige el OFFSET del ancla
   // (front protruye / back retrocede; mismo dibujo). false = aún no cargó. El vacío negro del vano es otra pieza del painter (ver door()).
@@ -291,14 +283,14 @@ export const AP = (() => {
   // Punto de entrada genérico: resuelve la clave base (antes de ":") y delega en su drawer.
   function drawAsset(ctx, P, t, col) { return DRAWERS[ASSETS[t.asset].draw.split(":")[0]](ctx, P, t, col); }
 
-  /* SUPERFICIE PÚBLICA. Lo COLOCABLE se dibuja por `drawAsset`/`DRAWERS`; todo sprite (en sala,
-     zócalo, brazos o HUD) pasa por la MISMA `drawSprite(name, ctx, ref, col)` (ref = punto de pantalla).
-     Aquí van: constantes/helpers, la API genérica, y las primitivas referenciadas POR NOMBRE desde
-     fuera (cáscara estructural en render, robot/sombra en player/screens). */
+  /* SUPERFICIE PÚBLICA (mínima: solo lo que se consume FUERA de este módulo). Lo COLOCABLE y la CÁSCARA
+     se dibujan por `drawAsset`/`DRAWERS` (no por nombre); todo sprite (sala, zócalo, brazos o HUD) pasa por
+     la MISMA `drawSprite(name, ctx, ref, col)` (ref = punto de pantalla). Lo único expuesto POR NOMBRE es
+     `floor` (pre-pase z=0 de render) y `robot`/`shadow` (player/screens). */
   return {
-    INKS, INK2, ROBOT_INK, DIRS, ROBOT, BLACK, DOOR, PROP, darken, lighten,   // constantes + helpers
-    projector, poly, box, facePt, edgeLine,                                   // primitivas de motor
-    DRAWERS, drawAsset, drawSprite, SPRITES,                                  // API de dibujo genérica
-    floor, flatWall, door, doorHole, cube, spikes, plant, robot, shadow, // primitivas usadas por nombre
+    DOOR, darken, lighten,            // helpers usados fuera (DOOR en render; darken/lighten en la tool)
+    projector,                        // primitiva de motor (screens/tool)
+    drawAsset, drawSprite, SPRITES,   // API de dibujo genérica (SPRITES lo verifica el test)
+    floor, robot, shadow,             // primitivas usadas POR NOMBRE fuera (floor en render; robot/shadow en player/screens)
   };
 })();

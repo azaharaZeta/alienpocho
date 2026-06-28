@@ -51,3 +51,5 @@ Convenio de nombres: usar minúsculas y guiones en lugar de espacios para `<titu
 ## 🐞 BUGS CONOCIDOS
 - `floor` declara `files.svg: "example.svg"` pero se dibuja procedural (`draw:"floor"`) → es un SVG declarado que no se usa. Decidir: quitar la declaración, o dibujar el suelo desde fichero como el resto de sprites. (Directo de resolver; pendiente de decisión.)
 - La representación del objeto recogido en la UI no cabe en su cuadro
+- `tryPush` (`player.js`) mueve al robot junto al objeto sin revalidar su nueva posición (±PRAD) contra OTROS sólidos; solo valida el destino del objeto (`objBlocked`). Riesgo teórico de borde (empujar pegado a una esquina con otro sólido al costado); no reproducido. Verificar antes de abordar.
+- El asset `drone` arrastra el manejo especial de huella ELEVADA (anti-#2, `data/assets.js`) que solo se ejercita en tool/tests: nunca se coloca en una sala. No es defecto activo; al colocarlo por primera vez, verificar oclusión/orden en escena real (j/k/l).

@@ -221,9 +221,6 @@ export function assetTint(id) {
   return (assetHas(id, "carriable") || assetHas(id, "receptacle")) ? "secondary" : "primary";
 }
 
-// Nombre mostrable del asset (cae al id si no declara label).
-export function assetLabel(id) { const a = ASSETS[id]; return (a && a.label) || id; }
-
 // Asset id del transportable de una forma ("cube" → "prop_cube"). Mapeo ÚNICO forma→asset que
 // comparten: objeto de sala (world.objAsset), cima de zócalo activo, objeto en brazos e icono del HUD.
 export function propAsset(shape) { return "prop_" + shape; }

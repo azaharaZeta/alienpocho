@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Puzzle-acción isométrico monocromo (homenaje a Alien 8). Vanilla JS + canvas, sin build.",
   "scripts": {
-    "test": "node test/smoke.mjs && node test/painter.mjs && node test/assets.mjs",
+    "test": "node test/smoke.mjs && node test/painter.mjs && node test/assets.mjs && node test/mission.mjs",
     "serve": "python3 server.py"
   }
 }

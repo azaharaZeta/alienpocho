@@ -49,15 +49,6 @@ export const ENGINE = (() => {
       y: (L[0].y * (1 - u) + L[1].y * u) * (1 - v) + (L[3].y * (1 - u) + L[2].y * u) * v
     };
   }
-  // Línea horizontal que recorre las DOS caras frontales (+x y +y) de una caja de
-  // huella [x0,y0]-[x1,y1] a la altura z. Sigue la perspectiva iso (recodo en la
-  // arista delantera). Útil para ranuras de panel sobre postes/dinteles.
-  function edgeLine(ctx, p, x0, y0, x1, y1, z, col, lw) {
-    const a = p(x1, y0, z), b = p(x1, y1, z), c = p(x0, y1, z);
-    ctx.strokeStyle = col; ctx.lineWidth = lw || 1;
-    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(c.x, c.y); ctx.stroke();
-  }
-
   // Caja iso con sombreado plano: techo en el tono base, caras más oscuras,
   // contornos negros.
   function box(ctx, p, x0, y0, x1, y1, z0, z1, col) {
@@ -150,5 +141,5 @@ export const ENGINE = (() => {
     return out.map(i => boxes[i]);
   }
 
-  return { BLACK, darken, lighten, projector, poly, facePt, edgeLine, box, depthSort };
+  return { BLACK, darken, lighten, projector, poly, facePt, box, depthSort };
 })();
