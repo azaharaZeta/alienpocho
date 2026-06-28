@@ -28,7 +28,12 @@ Convenio de nombres: usar minúsculas y guiones en lugar de espacios para `<titu
 
 
 ## IDEAS IA
-<!-- vacío: las ideas IA se procesaron a docs/ideas/idea-*.md (2026-06-28: minimapa-pistas-puzzle, pantalla-pausa). -->
+<!-- vacío: las ideas IA se procesaron a docs/ideas/idea-*.md.
+     2026-06-28 (1ª tanda): minimapa-pistas-puzzle, pantalla-pausa.
+     2026-06-28 (2ª tanda, brainstorm): placas-de-presion, estacion-transmutacion, bloques-deslizantes,
+       suelo-fragil, cintas-ascensores, terminales-lore, sombra-robot, silueta-xray, transicion-flip-screen,
+       postproceso-crt, validador-solubilidad, persistencia-localstorage, replay-determinista, editor-salas,
+       juice-feedback. -->
 
 
 
