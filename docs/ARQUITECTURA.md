@@ -52,7 +52,9 @@ Cada asset se describe a sí mismo:
   placements `{asset, x, y, z, aabb, src?}` (en vivo: los móviles se mueven, los zócalos se llenan). **`objects`
   es la cubeta ÚNICA de lo colocable no-estructural** (bloques + circuitos + ordenadores…): el COMPORTAMIENTO lo
   deciden los TRAITS (del asset, o de instancia vía `o.traits`), NO la cubeta — un `cube` es fijo por defecto y
-  empujable si la instancia añade `movable`/`falls`. Posición por celda (`cx,cy`) o continua (`x,y`); `h` = pila.
+  empujable si la instancia añade `movable`/`falls`. Posición CONTINUA `x,y` (ancla en el mundo; centro para
+  los assets `center`) + `z` opcional (def. 0, normalizado en `makeRoom`) — UNA sola convención para objects,
+  sockets y hazards (sin `cx,cy` de celda); `h` = pila.
   El **zócalo es UN asset genérico** (`socket`); qué circuito pide lo decide la MISIÓN (`MISSION.requires[id]`)
   y `filled` (lo puesto) es estado de partida. El circuito incrustado lo dibuja el drawer del socket con el sprite del propio circuito
   (lleno = a color; vacío = fantasma del que pide) → un circuito nuevo no toca el socket.

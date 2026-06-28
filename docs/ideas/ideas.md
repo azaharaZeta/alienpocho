@@ -40,12 +40,13 @@ Convenio de nombres: usar minúsculas y guiones en lugar de espacios para `<titu
 
 ## IDEAS USUARIA
 <!-- Esta sección la rellena solo la usuaria. -->
+<!-- "Coordenadas UNIFICADAS para TODOS los assets" → HECHA 2026-06-28: docs/ideas/archivo/idea-coordenadas-unificadas.md
+     (convención continua única x,y + z normalizado en makeRoom; resolvió de paso bug-reactor-bloque-sin-z). -->
 - Distintos assets de suelo
-- Coordenadas UNIFICADAS para TODOS los assets: UNA sola forma de definir y manejar la posición, sin convenciones distintas por tipo de asset (hoy conviven `cx,cy` de celda para fijos y `x,y`+`z` continuos para móviles/recogibles; `physics.objBox` solo entiende las continuas → fuente de bugs como computer/REACTOR sin `z`). [PEDIDA VARIAS VECES — pendiente]
 
 
 ## 🐞 BUGS CONOCIDOS
-<!-- vacío de bugs SIN procesar. Bug abierto con análisis propio: docs/ideas/bug-empuje-revalida-robot.md
-     y docs/ideas/bug-reactor-bloque-sin-z.md. (Resueltos en 2026-06-28 y retirados de aquí: floor fantasma,
-     números mágicos del HUD, "pegote" del vano de puertas.) -->
+<!-- vacío de bugs SIN procesar. Bug abierto con análisis propio: docs/ideas/bug-empuje-revalida-robot.md.
+     (Resueltos en 2026-06-28 y retirados de aquí: floor fantasma, números mágicos del HUD, "pegote" del vano
+     de puertas, y bug-reactor-bloque-sin-z → absorbido por coordenadas unificadas, archivado.) -->
 

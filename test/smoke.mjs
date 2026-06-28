@@ -11,6 +11,7 @@
 import assert from "node:assert/strict";
 
 import { ENGINE } from "../src/engine.js";
+import { ROOMS } from "../src/data/rooms.js";
 import { buildWorld, roomThings, roomShell } from "../src/world.js";
 import { MISSION } from "../src/data/mission.js";
 import { game, room, interact, checkExits, resetGame } from "../src/game.js";
@@ -36,6 +37,20 @@ test("buildWorld arma 17 salas con la inicial presente", () => {
   assert.equal(Object.keys(w.rooms).length, 17);
   assert.ok(w.rooms[MISSION.start.room], "existe la sala inicial");
   assert.equal(w.start, MISSION.start.room);
+});
+
+test("GUARDARRAÍL: coordenadas UNIFICADAS — todo placeable usa x,y continuos (sin cx/cy de celda)", () => {
+  for (const [k, def] of Object.entries(ROOMS))
+    for (const bucket of ["objects", "sockets", "hazards"])
+      for (const e of def[bucket] || []) {
+        assert.ok(!("cx" in e) && !("cy" in e), `${k}.${bucket}: usa cx/cy (convención vieja); usa x,y continuos`);
+        assert.ok(typeof e.x === "number" && typeof e.y === "number", `${k}.${bucket}: x,y deben ser números`);
+        assert.ok(e.z === undefined || typeof e.z === "number", `${k}.${bucket}: z, si está, debe ser número`);
+      }
+  // makeRoom NORMALIZA z: tras armar, todo objeto/zócalo trae z numérico (def. 0) → física/render sin NaN.
+  for (const [k, room] of Object.entries(buildWorld().rooms))
+    for (const o of [...room.objects, ...room.sockets, ...room.hazards])
+      assert.ok(typeof o.z === "number" && Number.isFinite(o.z), `${k}: z normalizado a número finito`);
 });
 
 test("roomThings/roomShell coherentes y roomSolids = sólidos de objetos ∪ cáscara", () => {

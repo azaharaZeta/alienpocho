@@ -26,11 +26,15 @@ export function makeRoom(o) {
   // SIEMPRE centrada en celda entera → la pared se dibuja como módulos SVG sin recorte (ver draw.flatWall).
   let w = Math.min(8, Math.max(4, o.w || 8)); w += w & 1;
   let h = Math.min(8, Math.max(4, o.h || 8)); h += h & 1;
+  // Clona los arrays mutables y NORMALIZA `z` (punto ÚNICO): coordenadas continuas x,y + z opcional → todo
+  // placement queda con z numérico (def. 0). Así física (objBox/objSupport/objBlocked) y render leen `o.z`
+  // sin defensas dispersas: un objeto sin `z` cae al suelo, nunca da NaN (mata la clase de bug del bloque
+  // empujable sin z). `{ z: 0, ...e }` = z:0 salvo que la instancia traiga el suyo.
   return {
     w, h,
-    objects: (o.objects || []).map(e => ({ ...e })),   // ÚNICA cubeta de lo colocable no-estructural (bloques + móviles)
-    sockets: (o.sockets || []).map(e => ({ ...e })),
-    hazards: (o.hazards || []).map(e => ({ ...e })),
+    objects: (o.objects || []).map(e => ({ z: 0, ...e })),   // ÚNICA cubeta de lo colocable no-estructural (bloques + móviles)
+    sockets: (o.sockets || []).map(e => ({ z: 0, ...e })),
+    hazards: (o.hazards || []).map(e => ({ z: 0, ...e })),
     ink: o.ink, ink2: o.ink2, exits: o.exits || {}, name: o.name || "",
     wallTile: o.wallTile   // variante de panal por sala (opcional; si undefined → global WALL_TILE)
   };
@@ -62,23 +66,17 @@ export function roomThings(room) {
   const t = [];
   for (const o of room.objects) {                                // ÚNICA cubeta: bloques (cube), circuitos, ordenadores…
     const id = objAsset(o), a = ASSETS[id]; if (!a) continue;    // el comportamiento lo deciden los TRAITS, no la cubeta
-    const off = a.offset || { x: 0, y: 0 };                      // ancla = esquina (cx,cy) + offset, o punto continuo (x,y)
-    const ax = o.x != null ? o.x : o.cx + off.x;
-    const ay = o.y != null ? o.y : o.cy + off.y;
-    const az = o.z || 0;
     for (let k = 0; k < (o.h || 1); k++) {                       // h = pila de copias (terreno fijo); móviles = 1
-      const pz = az + k;
-      t.push({ asset: id, x: ax, y: ay, z: pz, shape: o.shape, src: o, aabb: placeAabb(id, ax, ay, pz) });
+      const pz = o.z + k;                                        // x,y,z = ancla continua en el mundo (z normalizado en makeRoom)
+      t.push({ asset: id, x: o.x, y: o.y, z: pz, shape: o.shape, src: o, aabb: placeAabb(id, o.x, o.y, pz) });
     }
   }
-  for (const s of room.sockets) {                                // zócalos (vivos: al llenarse suben)
-    const cx = s.cx + 0.5, cy = s.cy + 0.5, z = s.z || 0;        // qué circuito PIDE lo decide la MISIÓN (por id); filled = el puesto
-    t.push({ asset: "socket", x: cx, y: cy, z, requires: MISSION.requires[s.id], filled: s.filled, src: s,
-             aabb: placeAabb("socket", cx, cy, z, socketTop(s)) });
-  }
+  for (const s of room.sockets)                                  // zócalos (vivos: al llenarse suben)
+    t.push({ asset: "socket", x: s.x, y: s.y, z: s.z, requires: MISSION.requires[s.id], filled: s.filled, src: s,
+             aabb: placeAabb("socket", s.x, s.y, s.z, socketTop(s)) });   // qué circuito PIDE lo decide la MISIÓN (por id); filled = el puesto
   for (const h of room.hazards)                                  // pinchos (decorativos, estáticos)
-    t.push({ asset: "spikes", x: h.cx + 0.5, y: h.cy + 0.5, z: 0, src: h,
-             aabb: placeAabb("spikes", h.cx + 0.5, h.cy + 0.5, 0) });
+    t.push({ asset: "spikes", x: h.x, y: h.y, z: h.z, src: h,
+             aabb: placeAabb("spikes", h.x, h.y, h.z) });
   return t;
 }
 
