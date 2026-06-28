@@ -1,6 +1,6 @@
 # Bug — El robot atraviesa la viga (dintel) de la puerta al saltar
 
-> **Estado: RESUELTO (2026-06-27) — pendiente de confirmación visual en partida.** Candidato a archivar.
+> **Estado: RESUELTO y CONFIRMADO en partida (2026-06-28). Archivado.**
 > Origen: BUGS CONOCIDOS (caso horizontal) + hallazgo de la usuaria (caso vertical).
 
 ## Síntomas
@@ -49,4 +49,5 @@ Sondas sobre una puerta real:
   sigue intercalando. Falta confirmación visual en partida (el freeze peleaba con el flip-screen).
 
 ## Cierre
-Archivar a `docs/ideas/archivo/` cuando la usuaria confirme el topetazo en partida.
+Archivado a `docs/ideas/archivo/`: la usuaria confirmó "cero bugs / va perfecto" en partida tras el refactor
+del motor (2026-06-28).

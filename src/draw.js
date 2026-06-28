@@ -107,31 +107,23 @@ export const AP = (() => {
     return s.tints[col] || (s.tints[col] = _tintSprite(s.neutral, col));
   }
   // Dibuja el marco de puerta (un solo sprite) anclado en P(a0,fixed,0). `hole` solo elige el OFFSET del ancla
-  // (front protruye / back retrocede; mismo dibujo). false = aún no cargó. El vacío negro lo pinta render (pre-pase).
+  // (front protruye / back retrocede; mismo dibujo). false = aún no cargó. El vacío negro del vano es otra pieza del painter (ver door()).
   function drawDoorSprite(ctx, p, axis, fixed, a0, a1, H, hole, col, half, box) {
     const def = ASSETS.door.tiles[hole ? "back" : "front"];
     const tex = _doorTexture(col); if (!tex) return false;
     const ref = (axis === "x") ? p(a0, fixed, 0) : p(fixed, a0, 0);
     const dx = Math.round(ref.x + def.minX), dy = Math.round(ref.y + def.minY);
     ctx.save();
-    if (half === "lintel") {   // DINTEL: recorta a su SILUETA hexagonal (la caja iso de la viga, proyectada).
-      // Pinta solo la viga, pero esta pieza la ORDENA depthSort por su caja alta → queda delante de la cabeza
-      // del robot al saltar bajo la puerta. La silueta = mismo hexágono que ENGINE.box: [A,B,Bb,Cb,Db,D].
+    if (half && box) {
+      // Cada PIEZA de la puerta (poste L/R o dintel) recorta el sprite a la SILUETA de SU PROPIA caja — el
+      // hexágono iso [A,B,Bb,Cb,Db,D], el mismo que dibuja ENGINE.box. Así cada pieza pinta EXACTAMENTE su
+      // trozo y queda ordenada por esa misma caja (draw ⊆ caja de orden). Es uniforme y NO depende del centro
+      // del vano ni del espejo del eje y → cada poste se dibuja siempre con el orden de SU propia caja.
       const b = box, A = p(b.x0, b.y0, b.z1), B = p(b.x1, b.y0, b.z1), D = p(b.x0, b.y1, b.z1),
             Bb = p(b.x1, b.y0, b.z0), Cb = p(b.x1, b.y1, b.z0), Db = p(b.x0, b.y1, b.z0);
       ctx.beginPath(); ctx.moveTo(A.x, A.y);
       for (const q of [B, Bb, Cb, Db, D]) ctx.lineTo(q.x, q.y);
       ctx.closePath(); ctx.clip();
-    } else if (half) {   // POSTE: recorta el sprite por el CENTRO DEL VANO (transparente) → cada poste por separado.
-      // Xc = centro del vano en pantalla. Igual en ambos ejes: en el eje y el espejo recoloca el −SPAN a +SPAN.
-      // REDONDEADO a píxel entero (defensivo): si el corte cayera a mitad de píxel, esa columna recibiría
-      // cobertura parcial en CADA mitad (clip antialiased) → costura de 1px al pintar el mismo sprite dos
-      // veces. Hoy Xc ya cae entero en todas las salas; el redondeo lo GARANTIZA si cambian tamaños/origen.
-      const Xc = Math.round(ref.x + DOOR.SPAN_HALF * p.TW / 2);
-      ctx.beginPath();
-      if (half === "L") ctx.rect(0, 0, Xc, ctx.canvas.height);                    // poste a0 (≤ centro)
-      else ctx.rect(Xc, 0, ctx.canvas.width - Xc, ctx.canvas.height);            // poste a1 (≥ centro)
-      ctx.clip();
     }
     if (axis === "x") ctx.drawImage(tex, dx, dy);
     else { ctx.translate(2 * ref.x, 0); ctx.scale(-1, 1); ctx.drawImage(tex, dx, dy); }
@@ -172,10 +164,9 @@ export const AP = (() => {
     }
   }
 
-  // VACÍO negro del vano de una puerta de FONDO (lo que se ve "a través"). Lo pinta render como
-  // PRE-PASE de fondo (junto al suelo, antes de las cajas con altura) para que NO tape al robot al
-  // cruzar: si fuese parte de la caja-puerta, su mayor altura ganaría el desempate del painter y su
-  // negro borraría al robot. El marco se compone después como caja normal.
+  // VACÍO negro del vano de una puerta de FONDO (lo que se ve "a través"). Entra al painter como una
+  // PIEZA NORMAL de la cáscara (roomShell, half:"hole"): su caja, inset en y<0/x<0, se ordena por x+y
+  // SIEMPRE detrás del robot (que está en y>0). No es sólido (es aire).
   function doorHole(ctx, p, axis, fixed, a0, a1, H) {
     const w = DOOR.POST_W, l = H - DOOR.LINTEL_H;
     if (axis === "x") poly(ctx, [p(a0 + w, fixed, l), p(a1 - w, fixed, l), p(a1 - w, fixed, 0), p(a0 + w, fixed, 0)], BLACK, null);
@@ -184,6 +175,7 @@ export const AP = (() => {
   // PUERTA: desde fichero (PNG si existe, si no SVG). "front" = marco con vano transparente;
   // "back" = marco del fondo + hueco negro detrás (lo añade drawDoorSprite).
   function door(ctx, p, axis, fixed, a0, a1, H, col, hole, half, box) {
+    if (half === "hole") { doorHole(ctx, p, axis, fixed, a0, a1, H); return; }  // vacío negro del vano (pieza del painter)
     drawDoorSprite(ctx, p, axis, fixed, a0, a1, H, hole, col, half, box);
   }
 

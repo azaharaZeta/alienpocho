@@ -1,7 +1,11 @@
 # Assessment — Motor isométrico
 
+> **SUPERSEDED (2026-06-28) — registro histórico.** El rediseño se implementó como motor genérico (sin
+> excepciones por tipo); la verdad viva está en [ARQUITECTURA.md](../../ARQUITECTURA.md) y el "cómo" completo
+> en [refactor-motor-iso.md](refactor-motor-iso.md). Este documento queda como el análisis original.
+
 Estado del motor iso (proyección + orden de pintado) y **ruta de mejora** sin parches.
-Complementa [ARQUITECTURA.md](../ARQUITECTURA.md) (cómo está montado) y el GDD (qué se quiere).
+Complementa [ARQUITECTURA.md](../../ARQUITECTURA.md) (cómo está montado) y el GDD (qué se quiere).
 
 ## Veredicto
 
@@ -113,7 +117,7 @@ La proyección 2:1, la SSOT de assets, el **pipeline único** cáscara+objetos+e
 - **Paso 2/5 — HECHO (lean)**: medido todo el mapa, la huella ya acota el sprite (≤0.85px) → #2 no se
   manifiesta. En vez del refactor se añadió el **guardarraíl anti-#2** (`test/assets.mjs`, ≤2px) y se dio
   huella honesta al dron (único divergente). El refactor completo (`bounds` visual ≠ huella) queda
-  documentado como idea: [idea-motor-bounds-visuales.md](idea-motor-bounds-visuales.md).
+  documentado como idea: [idea-motor-bounds-visuales.md](../idea-motor-bounds-visuales.md).
 - **Paso 3 (pared slab) y Paso 4 (doorHole) — APLAZADOS**: hoy son benignos (las paredes van siempre
   estrictamente detrás → sin ciclos). Recogidos en la idea de `bounds`.
 - **Paso 7 (cachear `roomSolids` por frame) — HECHO**: la cáscara (invariante en partida) se memoiza por sala

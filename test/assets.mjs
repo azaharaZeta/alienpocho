@@ -180,9 +180,10 @@ test("tools/tool-assets.html no contiene mapas de geometría hardcodeada (GU/BOX
 
 test("GUARDARRAÍL: render.js dibuja TODO (objetos Y cáscara) por el motor genérico, no por nombre", () => {
   const src = readFileSync(new URL("../src/render.js", import.meta.url), "utf8");
-  // La cáscara (paredes/puertas) ahora va por roomShell + AP.drawAsset, IGUAL que los objetos. Solo se
-  // permiten por nombre los PRE-PASES de fondo z=0 (AP.floor, AP.doorHole) y AP.drawSprite (icono del HUD).
-  for (const bad of ["AP.cube", "AP.spikes", "AP.socket", "AP.prop(", "AP.pillar", "AP.drone", "AP.flatWall", "AP.door("])
+  // La cáscara (paredes/puertas, incl. el vacío del vano) va por roomShell + AP.drawAsset, IGUAL que los
+  // objetos. Solo se permite por nombre el ÚNICO pre-pase de fondo z=0 (AP.floor) + AP.drawSprite (icono HUD).
+  // AP.doorHole ya NO se llama desde render (es una pieza del painter, vía el drawer de la puerta).
+  for (const bad of ["AP.cube", "AP.spikes", "AP.socket", "AP.prop(", "AP.pillar", "AP.drone", "AP.flatWall", "AP.door(", "AP.doorHole"])
     assert.ok(!src.includes(bad), `render.js menciona ${bad} → debe dibujar TODO lo que tiene altura vía AP.drawAsset (roomShell/roomThings)`);
   for (const bucket of ["room.blocks", "room.sockets", "room.hazards"])
     assert.ok(!src.includes(bucket), `render.js itera ${bucket} → debe usar roomThings/roomShell`);

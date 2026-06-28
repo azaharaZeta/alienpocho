@@ -2,9 +2,11 @@
    ALIEN POCHO — CONFIG (config.js)
    -----------------------------------------------------------------------------
    Parámetros del juego (estética + geometría iso + física + controles).
-   Módulo HOJA: no importa nada; lo importan los demás.
+   Casi hoja: solo lee la geometría de assets.js (la SSOT) — que la re-exporta más abajo.
    ============================================================================= */
 "use strict";
+
+import { ROBOT } from "./data/assets.js";   // geometría del robot (la huella = el ancho dibujado)
 
 /* Constantes globales (estética + geometría isométrica + física). */
 export const CFG = {
@@ -13,7 +15,9 @@ export const CFG = {
   TILE_H: 17,               // alto de tesela
   BLOCK_H: 17,
   WALK: 3.0,                // velocidad de avance (celdas/seg)
-  PRAD: 0.32,               // radio de colisión del jugador
+  PRAD: ROBOT.WID,          // semihuella del robot = SU ANCHO DIBUJADO (colisión Y orden del painter usan la
+                            //   MISMA caja, = la silueta): así no sobresale del cuerpo → el painter lo ordena
+                            //   como a cualquier objeto, sin overhang ni casos especiales. Ver refactor-motor-iso.md
   STEP: 0.25,               // altura máx. (en bloques) que el robot salva andando sin saltar;
                             //   se sube solo a superficies bajas (peana del zócalo), no a un bloque entero
   TURN_TIME: 0.12,          // duración del giro de 90° (anim/cooldown)

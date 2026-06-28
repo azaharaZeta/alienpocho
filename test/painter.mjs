@@ -173,7 +173,7 @@ test("determinismo: permutar la entrada NO cambia el orden visual (casos de cicl
 // arista espuria A→B que, junto a las reales A·C y B·C, cierra un ciclo FALSO. El gate AABB cae en el
 // rompe-ciclos y pinta "B antes que C" (B está DELANTE de C → la tapa mal). Por silueta hexagonal el
 // par A·B no se toca → es ACÍCLICA y el painter da el orden correcto atrás→adelante: A, C, B.
-// Red→green del paso 1: con el gate viejo este test cae (violación); con el hexagonal pasa.
+// Con el gate AABB (laxo) este test caería (violación); con el hexagonal pasa.
 test("gate hexagonal: lo que el AABB ve cíclico es acíclico y se pinta sin violar oclusión", () => {
   const esc = [box(2, 0, 3, 5, 2, 4, "A"), box(3, 1, 1, 5, 4, 2, "B"), box(1, 2, 1, 3, 5, 4, "C")];
   assert.ok(hasCycle(buildGraphAABB(esc)), "el gate AABB (laxo) ve un ciclo falso");

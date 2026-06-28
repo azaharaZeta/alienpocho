@@ -16,7 +16,7 @@ import { MISSION } from "../src/data/mission.js";
 import { game, room, interact, checkExits, resetGame } from "../src/game.js";
 import { player } from "../src/player.js";
 import { updateObjects, blocksHoriz, supportHeight, roomSolids, socketTop } from "../src/physics.js";
-import { CFG, SOCKET, DOOR } from "../src/config.js";
+import { CFG, SOCKET, DOOR, WALL_TILE } from "../src/config.js";
 import { ASSETS, assetHas, WALL_H } from "../src/data/assets.js";
 
 /* ---- mini-runner sin dependencias ---- */
@@ -68,13 +68,24 @@ test("roomShell = paredes (tramos) + postes de cada puerta (cajas del painter, t
                                           : [{ ...f, y1: f.y0 + W }, { ...f, y0: f.y1 - W }];
   const lintel = (f) => ({ ...f, z0: WALL_H - DOOR.LINTEL_H });   // dintel: misma huella, solo la banda alta
   const doorBoxes = (axis, f) => [...posts(axis, f), lintel(f)];
-  // Cáscara esperada: paredes (tramos enteros, sin recorte) + por puerta 2 postes + 1 dintel (fondo inset / frente protruido).
+  // VACÍO del vano (solo puertas de FONDO): hueco bajo el dintel, en el vano pasable (sin postes). NO sólido.
+  const holeBox = (axis, f) => axis === "x" ? { ...f, x0: f.x0 + W, x1: f.x1 - W, z1: WALL_H - DOOR.LINTEL_H }
+                                            : { ...f, y0: f.y0 + W, y1: f.y1 - W, z1: WALL_H - DOOR.LINTEL_H };
+  // Pared TROCEADA por tile (N celdas): cada tramo del muro se parte en cajas locales (no un slab de toda la
+  // fila). Mismo troceado que world.roomShell. N = ancho del tile de pared por defecto.
+  const N = (ASSETS[WALL_TILE] && ASSETS[WALL_TILE].tile && ASSETS[WALL_TILE].tile.N) || 1;
+  const wallTiles = (axis, c0, c1) => { const out = [];
+    for (let i = c0; i + N <= c1 + 1e-6; i += N)
+      out.push(axis === "x" ? { x0: i, y0: 0, z0: 0, x1: i + N, y1: 0, z1: WALL_H }
+                            : { x0: 0, y0: i, z0: 0, x1: 0, y1: i + N, z1: WALL_H });
+    return out; };
+  // Cáscara esperada: paredes troceadas por tile + por puerta 2 postes + 1 dintel (fondo inset / frente protruido).
   const oldShell = (r) => {
     const b = [];
-    for (const [c0, c1] of segs(r.w, r.exits.ym ? span(r.w) : null)) if (c1 > c0) b.push({ x0: c0, y0: 0, z0: 0, x1: c1, y1: 0, z1: WALL_H });
-    if (r.exits.ym) { const [s0, s1] = span(r.w); b.push(...doorBoxes("x", { x0: s0, y0: -T, z0: 0, x1: s1, y1: 0, z1: WALL_H })); }
-    for (const [c0, c1] of segs(r.h, r.exits.xm ? span(r.h) : null)) if (c1 > c0) b.push({ x0: 0, y0: c0, z0: 0, x1: 0, y1: c1, z1: WALL_H });
-    if (r.exits.xm) { const [s0, s1] = span(r.h); b.push(...doorBoxes("y", { x0: -T, y0: s0, z0: 0, x1: 0, y1: s1, z1: WALL_H })); }
+    for (const [c0, c1] of segs(r.w, r.exits.ym ? span(r.w) : null)) if (c1 > c0) b.push(...wallTiles("x", c0, c1));
+    if (r.exits.ym) { const [s0, s1] = span(r.w); const f = { x0: s0, y0: -T, z0: 0, x1: s1, y1: 0, z1: WALL_H }; b.push(...doorBoxes("x", f), holeBox("x", f)); }
+    for (const [c0, c1] of segs(r.h, r.exits.xm ? span(r.h) : null)) if (c1 > c0) b.push(...wallTiles("y", c0, c1));
+    if (r.exits.xm) { const [s0, s1] = span(r.h); const f = { x0: -T, y0: s0, z0: 0, x1: 0, y1: s1, z1: WALL_H }; b.push(...doorBoxes("y", f), holeBox("y", f)); }
     if (r.exits.yp) { const [s0, s1] = span(r.w); b.push(...doorBoxes("x", { x0: s0, y0: r.h, z0: 0, x1: s1, y1: r.h + T, z1: WALL_H })); }
     if (r.exits.xp) { const [s0, s1] = span(r.h); b.push(...doorBoxes("y", { x0: r.w, y0: s0, z0: 0, x1: r.w + T, y1: s1, z1: WALL_H })); }
     return b;
@@ -125,8 +136,8 @@ test("depthSort: la caja de detrás se pinta primero y no pierde cajas", () => {
 test("painter por HUELLA: el robot pegado por detrás de un objeto sub-celda queda DETRÁS", () => {
   // REGRESIÓN: el painter ordena por la MISMA huella (aabb) que la colisión. Como el robot choca con la huella
   // del objeto (no con una caja visual más ancha), al pegarse por detrás sus cajas se tocan en el MISMO borde →
-  // separación por ejes limpia → el robot (detrás) se pinta antes. (Con una vbox más ancha que la huella esto
-  // era ambiguo y el robot, más alto, se dibujaba ENCIMA de circuitos/zócalos.)
+  // separación por ejes limpia → el robot (detrás) se pinta antes. (Si la caja de orden fuese más ancha que
+  // la huella, el par sería ambiguo y el robot —más alto— se dibujaría ENCIMA de circuitos/zócalos.)
   const p = ENGINE.projector(0, 0, { TILE_W: 34, TILE_H: 17, BLOCK_H: 17 });
   const circ  = { x0: 3.17, y0: 4.17, z0: 1, x1: 3.83, y1: 4.83, z1: 1.66, tag: "circ" };   // circuito (huella sub-celda)
   const robot = { x0: 2.53, y0: 4.18, z0: 1, x1: 3.17, y1: 4.82, z1: 2.50, tag: "robot" };  // pegado por −x (x1 = circ.x0), más alto

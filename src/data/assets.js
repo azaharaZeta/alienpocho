@@ -25,8 +25,10 @@
 /* ---------- Geometría primitiva compartida (hogar canónico) ---------- */
 // Circuito transportable: semilado en planta y alto. Cubo de bounding box 0.66³.
 export const PROP = { HALF: 0.33, H: 0.66 };
-// Robot Pocho: semianchos del cuerpo (ancho/profundidad) y alto total.
-export const ROBOT = { WID: 0.50, DEP: 0.33, H: 1.50 };
+// Robot Pocho: semianchos del cuerpo (ancho/profundidad) y alto total. WID = semiancho de hombros: define a la
+// vez el DIBUJO, la COLISIÓN (CFG.PRAD = WID) y la caja de ORDEN del painter → robot tratado como un objeto
+// más (sin overhang). Ajustado a 0.35: cabe holgado por las puertas (vano pasable ±0.60) sin retoque de arte.
+export const ROBOT = { WID: 0.35, DEP: 0.33, H: 1.50 };
 // Puerta: grosor del marco (T), ancho de poste (POST_W), alto del dintel (LINTEL_H) y
 // semiancho del vano visual (SPAN_HALF). El hueco físico se deriva: SPAN_HALF − POST_W.
 // SPAN_HALF = 1 → la puerta ocupa EXACTAMENTE 2 celdas: la pared se dibuja como módulos SVG

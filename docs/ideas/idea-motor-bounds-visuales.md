@@ -1,9 +1,10 @@
 # Idea — `bounds` visual ≠ huella de colisión (motor iso)
 
-**Estado: PENDIENTE** (no urgente). Mitigación lean ya implementada; este refactor se activa cuando un
-asset NECESITE que su silueta de dibujo difiera de verdad de su caja de colisión.
+**Estado: LATENTE** (sin trabajo pendiente). Las motivaciones originales (robot, slab de pared, doorHole) ya
+se resolvieron por el refactor del motor (2026-06-28, ver sección "Relación con otros pendientes"); esta idea
+solo se reactiva si aparece un asset cuya silueta de dibujo difiera **de verdad** de su caja de colisión.
 
-Contexto: [assessment-motor-iso.md](assessment-motor-iso.md) (hallazgo #2).
+Contexto: [assessment-motor-iso.md](archivo/assessment-motor-iso.md) (hallazgo #2).
 
 ## Problema
 Hoy hay **UNA caja por asset** (`foot` → `assetBox` → `aabb`) que sirve a la vez para:
@@ -35,19 +36,20 @@ Separar las dos cajas, ambas derivadas del registro, **default iguales** (cero c
    (sigue recibiendo cajas; ciego a los assets).
 4. Guardarraíl: pasar a exigir `bounds ⊇ sprite` (en vez de `foot ⊇ sprite`).
 
-## Relación con otros pendientes
-Misma raíz "caja de render ≠ caja de colisión":
-- **#3 — pared como slab largo**: trocear la cáscara por celda para ORDENAR (ya se dibuja por tiras).
-- **doorHole** (pre-pase del vano de fondo): hoy es un parche para que el negro no gane el desempate del
-  painter; con `sort` propio podría formalizarse.
-- **robot (entidad)**: su caja de orden = el cuadrado de colisión (±PRAD, 0.64), más ESTRECHO que sus hombros
-  dibujados (hasta 1.0) → los hombros sobresalen ~0.18 celdas de la caja que los ordena (análogo del #2 para el
-  robot; el guardarraíl, que solo mira sprites del registro, NO lo cubre). Y con carga, `player.addDraws`
-  estira la caja a mano hasta `z+2.2`. Ambos serían un `sort`/bounds natural de la entidad. (El debug ya pinta
-  las dos cajas del robot: roja = dibujo, verde = colisión/orden, para verlo.) Relacionado:
-  [idea-robot-huella-cuadrada.md](idea-robot-huella-cuadrada.md) (tensión: aquella propone unificar la huella a
-  `PRAD`; esto sugiere lo contrario para el ORDEN — que ordene por la huella ancha y deje `PRAD` solo a colisión).
+## Relación con otros pendientes (TODOS resueltos por el refactor del motor, 2026-06-28)
+Misma raíz "caja de render ≠ caja de colisión". Lo que motivaba esta idea YA se resolvió, por otra vía:
+- **#3 — pared como slab largo**: ✅ HECHO. `world.roomShell` trocea el muro por celda (cada tramo su caja),
+  no un slab de toda la fila.
+- **doorHole** (vano de fondo): ✅ HECHO. Ya no es pre-pase: entra al painter como pieza de la cáscara
+  (`half:"hole"`, no sólida) y el desempate x+y lo ordena detrás del robot.
+- **robot (entidad)**: ✅ RESUELTO, pero **NO** con dos cajas (`sort` ≠ `collision`) como planteaba esta idea,
+  sino **unificando** colisión = orden = dibujo en UNA sola caja `±PRAD = ROBOT.WID` (se afinó `WID` para que
+  el robot quepa por las puertas). El "overhang" se eliminó haciendo que el sprite NO sea más ancho que su
+  huella, en vez de darle una caja de orden aparte. Ver [refactor-motor-iso.md](archivo/refactor-motor-iso.md)
+  §7 y [idea-robot-huella-cuadrada.md](archivo/idea-robot-huella-cuadrada.md) (RESUELTA, archivada).
 
 ## Cuándo activarlo
-Cuando aparezca el primer asset con colisión ≠ silueta irreconciliable, o al abordar #3/doorHole. Mientras
-tanto, el guardarraíl mantiene el invariante con una sola caja.
+Solo si aparece un asset con colisión ≠ silueta **irreconciliable de verdad** (p. ej. un **dron sólido** bajo
+el que quieras pasar andando: colisión arriba, silueta hasta el suelo). Para ese caso, separar `sort`/`bounds`
+de `collision` sigue siendo la solución correcta. Mientras tanto, con una sola caja honesta (guardarraíl
+anti-#2) basta: esta idea queda **latente**, sin trabajo pendiente salvo que surja ese asset.

@@ -1,6 +1,8 @@
 # Idea — Lógica de posicionamiento única para todos los objetos + bloques movibles
 
-> **Estado: PROBABLEMENTE RESUELTA — verificar y archivar.** Origen: usuaria, procesado 2026-06-27.
+> **Estado: RESUELTA (implementada) — archivada 2026-06-28.** Origen: usuaria, procesado 2026-06-27.
+> Anclaje unificado (`footMode:"center"` para todos) + empuje genérico por trait `movable` ya en el código.
+> Reabrir solo si aparece un bloque que se ancle distinto o no se pueda empujar.
 
 ## Qué pedía
 Que **todos** los objetos usen la misma lógica de posicionamiento, sean movibles o no (la usuaria sospechaba
@@ -11,7 +13,7 @@ que los objetos van al **centro** del tile y los **bloques** a un **extremo**, c
 Ambas partes parecen **ya resueltas**:
 - **Anclaje unificado:** `cube` y los props (`prop_cube`, `prop_pyramid`, `prop_dome`, `prop_cylinder`),
   socket, etc. usan **todos** `footMode: "center"` + `offset: { x: 0.5, y: 0.5 }`
-  ([assets.js:98-139](../../src/data/assets.js)). No hay ya bloques anclados "a un extremo": la huella se
+  ([assets.js:98-139](../../../src/data/assets.js)). No hay ya bloques anclados "a un extremo": la huella se
   deriva igual para todos (`assetBox`/`assetRef`). Coincide con [[alien-pocho-assets-modularity]] (anclaje
   unificado, objetos `center`).
 - **Bloques movibles:** el GDD §2 marca "Empujar bloques ✅ Implementado por trait `movable` de **instancia**;

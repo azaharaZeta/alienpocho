@@ -121,15 +121,17 @@ export const ENGINE = (() => {
       if (o < 0) { adj[i].push(j); indeg[j]++; }       // i antes que j
       else if (o > 0) { adj[j].push(i); indeg[i]++; }  // j antes que i
     }
-    // Clave canónica de desempate (orden total por geometría) que usa Kahn entre las cajas
-    // listas. cmp(a,b)<0 ⇒ a va antes (más al fondo). Manda primero el CENTRO-Z: la caja más
-    // baja se pinta antes y la más alta queda delante (el robot tapa al zócalo/objeto bajo de
-    // su misma celda). Tras el centro-z, profundidad de suelo y demás coords solo para que el
-    // orden sea TOTAL y determinista.
+    // Clave canónica de desempate (orden total por geometría) que usa Kahn entre las cajas listas y para
+    // romper ciclos. cmp(a,b)<0 ⇒ a va antes (más al fondo). Es el desempate ESTÁNDAR isométrico: primero
+    // PROFUNDIDAD atrás→adelante (x+y); en la MISMA celda (igual x+y) desempata la ALTURA z (la más alta
+    // queda delante → el robot tapa al zócalo/objeto bajo de su celda). El resto de coords solo para que el
+    // orden sea TOTAL y determinista. cmp SOLO decide pares SIN arista (no se solapan en pantalla, o
+    // interpenetran) → nunca contradice una oclusión inequívoca (esas las fija el orden topológico).
     const cmp = (a, b) => {
       const A = boxes[a], B = boxes[b];
-      return (A.z0 + A.z1) - (B.z0 + B.z1) || (A.x0 + A.y0) - (B.x0 + B.y0)
-           || A.z0 - B.z0 || A.x0 - B.x0 || A.y0 - B.y0 || A.x1 - B.x1 || A.y1 - B.y1;
+      return (A.x0 + A.y0 + A.x1 + A.y1) - (B.x0 + B.y0 + B.x1 + B.y1)   // profundidad x+y (atrás→adelante)
+           || (A.z0 + A.z1) - (B.z0 + B.z1)                              // misma celda → altura (apilado)
+           || A.x0 - B.x0 || A.y0 - B.y0 || A.z0 - B.z0 || A.x1 - B.x1 || A.y1 - B.y1;
     };
     // Orden topológico determinista (Kahn): cada paso emite la caja de grado 0 (sin nadie
     // detrás) más al fondo según la clave. Si ninguna tiene grado 0 hay un ciclo de oclusión

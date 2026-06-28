@@ -161,10 +161,10 @@ player.update = function (room, dt) {
   if (pressed("use")) interact(room);
 };
 
-/* player.addDraws() — inserta la caja de profundidad del jugador en la lista de
-   pintado. La caja de ORDEN usa la huella de colisión (±PRAD), no el ancho visual de
-   los hombros, para que la separación por ejes del painter sea limpia. Dibuja sombra
-   + robot + carga. */
+/* player.addDraws() — inserta la caja de profundidad del jugador en la lista de pintado. La caja de
+   ORDEN es la huella de colisión (±PRAD = ROBOT.WID = el ancho dibujado del robot): colisión, orden y dibujo
+   coinciden, así el sprite no sobresale de su caja y el painter ordena al robot como a un objeto más, sin
+   overhang ni caso especial. Dibuja sombra + robot + carga. */
 player.addDraws = function (draws, room) {
   const pr = CFG.PRAD, ink = room.ink;
   // El circuito cargado se dibuja en z+1.6 (por encima de ROBOT.H); extendemos el techo
@@ -184,10 +184,11 @@ player.addDraws = function (draws, room) {
 };
 
 /* player.debugInfo() — para los overlays de depuración (j/k/l) de render.js. Devuelve DOS cajas:
-   - `box`   : huella VISUAL del cuerpo (hombros + alto) = lo que se DIBUJA.
-   - `solid` : caja de COLISIÓN/ORDEN (cuadrado ±PRAD) = la que usan física y painter (player.addDraws).
-   Son distintas a propósito (los hombros son más anchos que la caja de colisión); verlas juntas explica por
-   qué la región/huella "invade" celdas vecinas sin que el robot las atraviese. Cada entidad expone el suyo. */
+   - `box`   : huella del REGISTRO, ORIENTADA con el facing (axisX/axisY); solo debug/tool.
+   - `solid` : caja real de COLISIÓN/ORDEN/dibujo (cuadrado ±PRAD = ROBOT.WID) que usan física y painter.
+   Difieren porque la del registro rota e intercambia ancho/largo (WID≠DEP) y la real es un cuadrado
+   simétrico; verlas juntas explica por qué la huella roja "invade" celdas que el robot no pisa. Cada
+   entidad expone el suyo. */
 player.debugInfo = function () {
   // Huella del REGISTRO según la orientación (variantes axisX/axisY: intercambian ancho/largo, robot más ANCHO
   // que profundo). facing 0/2 = mira en x → axisX; 1/3 = mira en y → axisY. Centrada en el jugador (footMode center).

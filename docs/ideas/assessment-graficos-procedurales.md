@@ -30,7 +30,7 @@ Cualquier asset con `draw:"sprite"` + su `.svg` se dibuja por ahí **sin tocar
 - **`wall1`/`wall2`**: módulos SVG teselados celda a celda, **sin recorte** (`draw.flatWall`). ✅
 - **`door`**: UN solo SVG (`door.svg`) generado por `tools/gen-doors.mjs` (3 cajas iso: postes + dintel;
   front y back = mismo dibujo, distinto ancla). El render lo parte en 2 piezas (postes) por el centro del
-  vano. El vacío negro del vano lo pinta el render como **pre-pase de fondo** (`doorHole`), no es del SVG. ✅
+  vano. El vacío negro del vano lo emite `world.roomShell` como **una pieza más del painter** (`half:"hole"`, no sólida), no es del SVG. ✅
 
 ### Todavía procedural (primitivas canvas)
 | Qué | Dónde | Naturaleza | Por qué sigue procedural |
@@ -38,7 +38,7 @@ Cualquier asset con `draw:"sprite"` + su `.svg` se dibuja por ahí **sin tocar
 | **`robot` (Pocho)** | [draw.js:227-280](../../src/draw.js) | `box()`/`poly()` por pieza: pies, brazos, torso, cabeza, visor, ojos, pecho, antena | **Animado** (bob al andar, balanceo de brazos opuesto a piernas) + **4 vistas** + orden de pintado de brazos según cara. Es el caso difícil. |
 | **`floor`** | [draw.js:151-154](../../src/draw.js) | quad negro + rejilla alterna por celda | Paramétrico por celda; se repite `w×h` veces/sala. Declara `files.svg:"example.svg"` pero **nunca se usa** (inconsistencia). |
 | **`shadow`** | [draw.js:282-286](../../src/draw.js) | elipse | Trivial, bajo cada entidad. |
-| **`doorHole`** | `draw.js` | polígono negro | Vacío del vano de la puerta de fondo; el render lo pinta como **pre-pase de fondo** (antes de las cajas con altura) para que el robot no quede tapado al cruzar. |
+| **`doorHole`** | `draw.js` | polígono negro | Vacío del vano de la puerta de fondo; entra al painter como pieza de la cáscara (`half:"hole"`, no sólida); el orden x+y lo deja detrás del robot al cruzar. |
 | **HUD** | [render.js:192-224](../../src/render.js)+ | barras segmentadas, "V" del marco, título "ALIEN POCHO" (strokeText+glow), casilla de carga, mini-robot de vidas | Overlay 2D en píxeles de pantalla. |
 | **Minimapa** | [render.js:144-188](../../src/render.js) | rects (salas/puertas) + marco + nombre | Derivado del `world` en runtime; geometría dinámica. |
 | **Banner victoria** | [render.js:89-100](../../src/render.js) | overlay + fillText | Texto. |

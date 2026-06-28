@@ -8,10 +8,10 @@
    ============================================================================= */
 "use strict";
 
-import { CFG, WALL_H } from "./config.js";
+import { CFG } from "./config.js";
 import { ENGINE } from "./engine.js";
 import { AP } from "./draw.js";
-import { roomThings, roomShell, doorSpan } from "./world.js";   // listas uniformes (objetos + cáscara) + vano de puerta
+import { roomThings, roomShell } from "./world.js";   // listas uniformes de la escena (objetos + cáscara)
 import { assetTint, propAsset } from "./data/assets.js";   // tinte por asset; mapeo forma→asset del icono HUD
 import { ctx, P, setProjector, applyRoomTheme } from "./view.js";
 import { entities } from "./player.js";
@@ -54,7 +54,7 @@ function drawDebug(room) {
   for (const e of entities) {                                              // entidades: huella visual (J/K/L) + su caja de COLISIÓN/ORDEN
     const d = e.debugInfo && e.debugInfo(); if (!d) continue;
     dbgOne(d.box, d.ref);                                                   // huella VISUAL (lo que se dibuja)
-    if (d.solid && DBG.box) wireBox(d.solid, DBG_COL.order);                // caja de colisión/orden (la que usa el painter): más estrecha que los hombros
+    if (d.solid && DBG.box) wireBox(d.solid, DBG_COL.order);                // caja de colisión/orden = la que usan física y painter (±PRAD = ROBOT.WID = ancho dibujado)
   }
   // indicador de qué overlays están activos (esquina sup-izq)
   const on = [DBG.box && "J:caja", DBG.region && "K:región", DBG.anchor && "L:ancla"].filter(Boolean).join("  ");
@@ -72,18 +72,13 @@ export function render(room) {
   ctx.fillStyle = CFG.COL.bg;
   ctx.fillRect(0, 0, CFG.W, CFG.H);
 
-  const ink = room.ink, ink2 = room.ink2 || ink, WH = WALL_H;   // WH: altura de pared (registro)
+  const ink = room.ink, ink2 = room.ink2 || ink;
 
-  // 1) Suelo (plano en z=0; nunca ocluye, se pinta al fondo)
+  // 1) Suelo (plano en z=0; nunca ocluye, se pinta al fondo). ÚNICO pre-pase: el resto (incl. el vacío negro
+  //    del vano de las puertas de fondo) entra al painter como una pieza más de la cáscara (roomShell).
   for (let y = 0; y < room.h; y++)
     for (let x = 0; x < room.w; x++)
       AP.floor(ctx, P, x, y, ink);
-
-  // 1b) VACÍO de las puertas de FONDO: el negro que se ve por el vano va AL FONDO (como el suelo,
-  //     antes de cualquier caja con altura) para que el robot se pinte ENCIMA al cruzar. El marco se
-  //     compone luego como caja normal (su vano es transparente). Ver AP.doorHole.
-  if (room.exits.ym) { const [s0, s1] = doorSpan(room.w); AP.doorHole(ctx, P, "x", 0, s0, s1, WH); }
-  if (room.exits.xm) { const [s0, s1] = doorSpan(room.h); AP.doorHole(ctx, P, "y", 0, s0, s1, WH); }
 
   // 2) Lo que tiene altura va como CAJAS al painter; depthSort decide el orden atrás→adelante.
   const draws = [];

@@ -125,10 +125,17 @@ const _shellCache = new WeakMap();
 export function roomShell(room) {
   const hit = _shellCache.get(room); if (hit) return hit;
   const t = [], { exits, w, h } = room, wallId = room.wallTile || WALL_TILE;
+  const wallN = (ASSETS[wallId] && ASSETS[wallId].tile && ASSETS[wallId].tile.N) || 1;   // ancho del tile (celdas)
   // Ancla de la pieza = esquina de inicio del tramo en el plano del borde (a0, fixed) → mismo punto que el blit.
   const anchor = (axis, fixed, a0) => axis === "x" ? { x: a0, y: fixed, z: 0 } : { x: fixed, y: a0, z: 0 };
-  const wall = (axis, fixed, a0, a1) =>
-    t.push({ asset: wallId, axis, fixed, a0, a1, tile: wallId, src: "shell", ...anchor(axis, fixed, a0), aabb: placeShellAabb(axis, fixed, a0, a1) });
+  // Pared TROCEADA por tile (N celdas): cada trozo es una caja LOCAL del painter, no un "slab" que abarca toda
+  // la fila. (Un slab da una clave de profundidad falsa —su caja se extiende a toda la pared— → el robot en la
+  // mitad alejada se ordena mal contra él. Troceado, cada celda ordena por su posición real, como un bloque.)
+  const wall = (axis, fixed, a0, a1) => {
+    for (let i = a0; i + wallN <= a1 + 1e-6; i += wallN)
+      t.push({ asset: wallId, axis, fixed, a0: i, a1: i + wallN, tile: wallId, src: "shell",
+               ...anchor(axis, fixed, i), aabb: placeShellAabb(axis, fixed, i, i + wallN) });
+  };
   // La puerta se emite como DOS piezas (poste a0 / poste a1): cada una su caja = el poste (para que el painter
   // intercale al robot — delante del cercano, detrás del lejano) + un sólido. El drawer dibuja el MISMO sprite
   // recortado por el centro del vano (transparente) → unión = la puerta intacta, pero ordenada por poste.
@@ -138,13 +145,21 @@ export function roomShell(room) {
     // DINTEL: banda superior del vano (alto DOOR.LINTEL_H). Es a la vez:
     //  · SÓLIDO → frena el salto alto que se colaría por encima del paso (deja libre el hueco bajo); y
     //  · PIEZA PROPIA del painter, ordenada por SU caja (alta, ancho completo) → depthSort la pinta DELANTE
-    //    de la cabeza del robot al saltar bajo la puerta (la ocluye), en vez de que el sprite la tape. Antes
-    //    la viga la pintaban los postes (caja baja, al extremo) → mal orden con el robot en el centro del vano.
+    //    de la cabeza del robot al saltar bajo la puerta (la ocluye), en vez de que el sprite la tape.
     const lintel = { ...aabb, z0: aabb.z1 - DOOR.LINTEL_H };
     const base = { asset: "door", axis, fixed, a0, a1, hole, src: "shell", ...anchor(axis, fixed, a0) };
     t.push({ ...base, half: "L", aabb: pL, solids: [pL] });
     t.push({ ...base, half: "R", aabb: pR, solids: [pR] });
     t.push({ ...base, half: "lintel", aabb: lintel, solids: [lintel] });
+    // VACÍO negro del vano (solo puertas de FONDO `hole`): el hueco bajo el dintel, en el vano pasable.
+    // Entra al painter como PIEZA NORMAL (su caja, inset en y<0/x<0, se ordena por x+y → SIEMPRE detrás del
+    // robot, que está en y>0). NO es sólido (es aire) → solids vacío.
+    if (hole) {
+      const W = DOOR.POST_W, z1 = aabb.z1 - DOOR.LINTEL_H;
+      const vh = axis === "x" ? { ...aabb, x0: aabb.x0 + W, x1: aabb.x1 - W, z1 }
+                              : { ...aabb, y0: aabb.y0 + W, y1: aabb.y1 - W, z1 };
+      t.push({ ...base, half: "hole", aabb: vh, solids: [] });
+    }
   };
   // borde y=0 (atrás-dcha, eje x): pared partida por su vano + puerta de fondo ym
   const sy = exits.ym ? doorSpan(w) : null;

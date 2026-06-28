@@ -1,6 +1,12 @@
 # idea — Robot con huella CUADRADA (quitar la orientación de su huella)
 
-> Estado: **DIFERIDA / sin implementar.** Origen: sesión 2026-06-25, al arreglar el bug de oclusión
+> **Estado: RESUELTA (2026-06-28).** El robot usa ahora **UNA sola caja cuadrada ±`CFG.PRAD` (= `ROBOT.WID`)**
+> para COLISIÓN, ORDEN del painter Y dibujo (su silueta) — sin orientación, sin overhang, tratado como un
+> objeto más. Ver [refactor-motor-iso.md](refactor-motor-iso.md) §7. Queda solo limpieza cosmética opcional:
+> las variantes `axisX`/`axisY` del registro ya solo las usan tool/debug (el juego no). **Archivada (2026-06-28).**
+>
+> ---
+> (Histórico) Estado original: **DIFERIDA / sin implementar.** Origen: sesión 2026-06-25, al arreglar el bug de oclusión
 > robot↔circuito. La usuaria propuso hacer el robot "mismo ancho que largo"; se aparcó porque NO era la
 > causa del bug (lo era la `vbox` de los objetos, resuelta con "painter = huella"). Esto es limpieza de
 > registro/debug, no un cambio de jugabilidad. Relacionado: [[alien-pocho-assets-modularity]].
@@ -9,11 +15,20 @@
 > El debug ahora pinta DOS cajas del robot —**roja** = huella del registro (orientable, ≈ lo que se dibuja),
 > **verde** = colisión/orden (±`PRAD`)— para verlo de un vistazo (`player.debugInfo` / `render.drawDebug`). La
 > doble definición SIGUE sin unificar. **Matiz importante:** el análisis del motor iso
-> ([idea-motor-bounds-visuales.md](idea-motor-bounds-visuales.md)) sugiere que la huella orientable NO es solo
+> ([idea-motor-bounds-visuales.md](../idea-motor-bounds-visuales.md)) sugiere que la huella orientable NO es solo
 > cosmética: es la base natural de la caja de **ORDEN** del painter, que hoy usa `PRAD` —demasiado estrecha
 > para el dibujo (los hombros se salen ~0.18 celdas)—. O sea, antes de ELIMINAR las variantes, decidir si más
 > bien el painter debería **ORDENAR por esa huella** (≈ dibujo) dejando `PRAD` solo para colisión. Reconsiderar
 > las dos ideas juntas.
+>
+> **Actualización 2026-06-28 (absorbido por el refactor del motor):** el bug que esto predecía (robot elevado
+> sobre el cubo de CRUCE, tras la puerta, dibujado DELANTE del poste) se intentó arreglar parcheando la caja
+> de orden del robot (cuadrado ±WID, ±`(WID+DEP)/2`, huella orientada) y **todos los intentos se
+> revirtieron**: parchear la caja del robot como excepción rompe otras oclusiones (interpenetra vecinos) — es
+> justo el tipo de excepción por-tipo que hay que evitar. La huella del robot (colisión ±PRAD vs orden visual
+> vs variantes `axisX`/`axisY`) y este síntoma quedan **subsumidos en el rediseño general** del motor:
+> **[refactor-motor-iso.md](refactor-motor-iso.md)** (modelo único de drawable, `sort` visual ≠ `collision`,
+> sin vía especial del robot). Esta idea (unificar la huella) se resolverá ahí, no como parche suelto.
 
 ## El problema
 
