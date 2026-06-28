@@ -1,0 +1,22 @@
+<svg viewBox="-10.5 -25.5 21 28.5" xmlns="http://www.w3.org/2000/svg">
+  <!-- Flor (tiesto): iso monocromo neutro (el juego lo tiñe por sala). Borrador para refinar a mano.
+       Anclaje centro-base. Generado por gen_assets.mjs. -->
+  <path d="M-4.76 -4.08 L0 -1.7 L0 2.38 L-4.76 0 Z" fill="rgb(120,120,120)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M4.76 -4.08 L0 -1.7 L0 2.38 L4.76 0 Z" fill="rgb(95,95,95)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M0 -6.46 L4.76 -4.08 L0 -1.7 L-4.76 -4.08 Z" fill="rgb(95,95,95)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M-5.78 -5.1 L0 -2.21 L0 -1.19 L-5.78 -4.08 Z" fill="rgb(120,120,120)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M5.78 -5.1 L0 -2.21 L0 -1.19 L5.78 -4.08 Z" fill="rgb(95,95,95)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M0 -7.99 L5.78 -5.1 L0 -2.21 L-5.78 -5.1 Z" fill="rgb(120,120,120)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M-0.51 -13.6 L0 -13.34 L0 -4.84 L-0.51 -5.1 Z" fill="rgb(95,95,95)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M0.51 -13.6 L0 -13.34 L0 -4.84 L0.51 -5.1 Z" fill="rgb(60,60,60)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M0 -13.86 L0.51 -13.6 L0 -13.34 L-0.51 -13.6 Z" fill="rgb(95,95,95)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <ellipse cx="-0.85" cy="-9.77" rx="4" ry="2.4" fill="rgb(209,209,209)" stroke="#000000" stroke-width="0.6"/>
+  <ellipse cx="0.85" cy="-8.25" rx="4" ry="2.4" fill="rgb(158,158,158)" stroke="#000000" stroke-width="0.6"/>
+  <ellipse cx="0" cy="-20.85" rx="3.9" ry="3.9" fill="rgb(209,209,209)" stroke="#000000" stroke-width="0.6"/>
+  <ellipse cx="5.8" cy="-17.65" rx="3.9" ry="3.9" fill="rgb(209,209,209)" stroke="#000000" stroke-width="0.6"/>
+  <ellipse cx="5.8" cy="-11.25" rx="3.9" ry="3.9" fill="rgb(209,209,209)" stroke="#000000" stroke-width="0.6"/>
+  <ellipse cx="0" cy="-8.05" rx="3.9" ry="3.9" fill="rgb(209,209,209)" stroke="#000000" stroke-width="0.6"/>
+  <ellipse cx="-5.8" cy="-11.25" rx="3.9" ry="3.9" fill="rgb(209,209,209)" stroke="#000000" stroke-width="0.6"/>
+  <ellipse cx="-5.8" cy="-17.65" rx="3.9" ry="3.9" fill="rgb(209,209,209)" stroke="#000000" stroke-width="0.6"/>
+  <ellipse cx="0" cy="-14.45" rx="3.9" ry="3.9" fill="rgb(60,60,60)" stroke="#000000" stroke-width="0.6"/>
+</svg>

@@ -144,8 +144,12 @@ desde cualquier sitio que llame a su `AP.*`.
 
 - ✅ Tool unificada `tools/tool-assets.html` (catálogo + visor/editor SVG). Es lo único en `tools/`.
 - ✅ **Migrados** (sprite SVG; `draw:"sprite"`): `cube` (+`cube.png` editado a mano), `prop_cube`,
-  `prop_pyramid`, `prop_dome`, `prop_cylinder`, `spikes`, `plant`, `computer`, `drone`. Al migrarlos
-  se borró su dibujo procedural (`drone()`, el router `prop()` y `circuit()`).
+  `prop_pyramid`, `prop_dome`, `prop_cylinder`, `spikes`, `plant` (mata frondosa en tiesto), `flower`
+  (tiesto con flor enorme), `computer` (torre de PC, sin pantalla), `monitor` (pantalla sobre peana),
+  `drone`, y el **mobiliario/objetos de estación**: `desk`, `chair`, `bed`, `kitchen`, `locker`, `shelf`,
+  `console`, `desk_lamp`, `bin`, `papers`, `canister`, `toolbox`, `crate`. Al migrar los originales se borró
+  su dibujo procedural (`drone()`, el router `prop()` y `circuit()`). Los SVG de estación se generan por
+  composición de cajas iso (borrador `scratchpad/gen_assets.mjs`); refinar el PNG a mano.
 - ✅ **Zócalo** (`socket`, 2026-06-24): la peana+indentación migrada a `socket.svg`; mantiene drawer propio
   (`draw:"socket"`) porque COMPONE varios sprites según estado (peana teñida vacío/lleno + circuito o
   fantasma). Sin `box`/`poly`. Patrón para assets CON ESTADO: la forma en SVG, el código solo la composición.

@@ -32,9 +32,9 @@ const OPP = { xp: "xm", xm: "xp", yp: "ym", ym: "yp" };
 console.log("ALIEN POCHO — smoke tests\n");
 
 /* ----------------------------------------------------------------- MUNDO --- */
-test("buildWorld arma 17 salas con la inicial presente", () => {
+test("buildWorld arma 9 salas con la inicial presente", () => {
   const w = buildWorld();
-  assert.equal(Object.keys(w.rooms).length, 17);
+  assert.equal(Object.keys(w.rooms).length, 9);
   assert.ok(w.rooms[MISSION.start.room], "existe la sala inicial");
   assert.equal(w.start, MISSION.start.room);
 });
@@ -160,15 +160,15 @@ test("painter por HUELLA: el robot pegado por detrás de un objeto sub-celda que
 
 /* ---------------------------------------------------------------- FÍSICA --- */
 test("colisión: se choca con un bloque y se anda por celda libre", () => {
-  const r = buildWorld().rooms["0,0"];        // ENTRADA, bloque de la plataforma en (2,4)
-  assert.equal(blocksHoriz(r, 2.5, 4.5, 0), true, "la celda del bloque bloquea");
-  assert.equal(blocksHoriz(r, 0.5, 0.5, 0), false, "una celda libre no bloquea");
+  const r = buildWorld().rooms["0,0"];        // ESCLUSA, taquilla sólida en (1.5,1.5)
+  assert.equal(blocksHoriz(r, 1.5, 1.5, 0), true, "la celda de la taquilla bloquea");
+  assert.equal(blocksHoriz(r, 4.5, 2.5, 0), false, "una celda libre no bloquea");
 });
 
 test("apoyo: el suelo es 0 y la cima de un bloque es su altura", () => {
-  const r = buildWorld().rooms["0,0"];
+  const r = buildWorld().rooms["0,0"];        // ESCLUSA
   assert.equal(supportHeight(r, 0.5, 0.5, 0), 0, "suelo a z=0");
-  assert.equal(supportHeight(r, 2.5, 4.5, 1), 1, "cima del bloque de 1 capa = 1");
+  assert.equal(supportHeight(r, 1.5, 6.5, 1), ASSETS.crate.foot.h, "cima del contenedor = su altura");
 });
 
 test("STEP permite subir a superficies bajas (peana del zócalo ≤ STEP)", () => {
@@ -212,7 +212,7 @@ test("cáscara: paredes de fondo/esquina/borde frontal bloquean; el hueco de la 
 });
 
 test("cáscara: el hueco de una puerta de FONDO también pasa (eje y)", () => {
-  const r = buildWorld().rooms["2,0"];   // NUDO 6×6: puerta de fondo ym (y=0), vano centrado en x=w/2=3
+  const r = buildWorld().rooms["1,1"];   // CAMAROTES 8×6: puerta de fondo ym (y=0), vano centrado en x=w/2=4
   assert.equal(blocksHoriz(r, r.w / 2, 0.05, 0), false, "el centro del vano (puerta ym) pasa");
   assert.equal(blocksHoriz(r, 1.0, 0.05, 0), true, "la pared de fondo y=0 fuera del vano bloquea");
 });
@@ -220,22 +220,22 @@ test("cáscara: el hueco de una puerta de FONDO también pasa (eje y)", () => {
 /* ------------------------------------------------- TRANSICIÓN ENTRE SALAS --- */
 test("checkExits: cruzar el borde con salida cambia de sala (flip-screen)", () => {
   resetGame();
-  assert.equal(room.name, "ENTRADA");
-  player.x = room.w + 0.1;                     // pasa el borde +x (exit xp → GALERIA)
+  assert.equal(room.name, "ESCLUSA");
+  player.x = room.w + 0.1;                     // pasa el borde +x (exit xp → CRUCE)
   checkExits();
-  assert.equal(room.name, "GALERIA", "aparece en la sala vecina");
+  assert.equal(room.name, "CRUCE", "aparece en la sala vecina");
   assert.equal(player.x, 0.2, "reaparece pegado al borde opuesto");
 });
 
 /* --------------------------------------------- OBJETOS: COGER + ACTIVAR -------- */
 test("coger un circuito lo retira de la sala y lo pone en la mano", () => {
   resetGame();
-  const entrada = room;
-  assert.equal(entrada.objects.length, 3, "ENTRADA arranca con 3 (2 bloques de la plataforma + circuito)");
-  player.x = 3.5; player.y = 4.5; player.z = 1.66; game.carried = null;   // subido sobre el circuito de la plataforma
-  interact(entrada);
+  const esclusa = room;
+  assert.equal(esclusa.objects.length, 5, "ESCLUSA arranca con 5 (4 muebles/objetos + circuito cubo)");
+  player.x = 2.5; player.y = 4.7; player.z = 0; game.carried = null;   // pegado al circuito cubo por el lado libre (lejos del contenedor)
+  interact(esclusa);
   assert.equal(game.carried, "prop_cube", "lleva el circuito cubo (carried = asset id)");
-  assert.equal(entrada.objects.length, 2, "el circuito ya no está suelto (quedan los 2 bloques)");
+  assert.equal(esclusa.objects.length, 4, "el circuito ya no está suelto");
 });
 
 test("colocar la forma correcta en su zócalo lo activa y suma circuito", () => {
@@ -270,7 +270,7 @@ test("un objeto en el aire cae hasta su apoyo", () => {
 test("empuje EN EL AIRE: choca con un movable a la altura del pie y lo empuja; por encima NO", () => {
   // A SU ALTURA: robot en el aire, bajo, avanzando contra un movable → lo empuja.
   resetGame();
-  room.objects.push({ asset: "computer", x: 2.5, y: 2.5, z: 0 });   // movable de prueba en suelo despejado
+  room.objects.push({ asset: "bin", x: 2.5, y: 2.5, z: 0 });        // movable BAJO de prueba (papelera, cima 0.85) en suelo despejado
   const comp = room.objects[room.objects.length - 1];
   Object.assign(player, { x: 1.9, y: 2.5, z: 0.3, vx: 2.2, vy: 0, vz: 1.0,
     onGround: false, facing: 0, jdx: 1, jdy: 0, jumpPending: false, turnTimer: 0 });
@@ -278,9 +278,9 @@ test("empuje EN EL AIRE: choca con un movable a la altura del pie y lo empuja; p
   for (let i = 0; i < 5; i++) player.update(room, 1 / 60);
   assert.ok(comp.x > cx0 + 1e-3, "el movable se empuja en mitad del salto");
 
-  // POR ENCIMA (cima del movable 0.7 < pies+STEP): salta por encima, NO lo empuja.
+  // POR ENCIMA (cima del movable 0.85 < pies+STEP): salta por encima, NO lo empuja.
   resetGame();
-  room.objects.push({ asset: "computer", x: 2.5, y: 2.5, z: 0 });
+  room.objects.push({ asset: "bin", x: 2.5, y: 2.5, z: 0 });
   const comp2 = room.objects[room.objects.length - 1];
   Object.assign(player, { x: 1.9, y: 2.5, z: 1.0, vx: 2.2, vy: 0, vz: 0.5,
     onGround: false, facing: 0, jdx: 1, jdy: 0, jumpPending: false, turnTimer: 0 });
@@ -300,9 +300,9 @@ test("resetGame reconstruye el mundo sin arrastrar estado mutado", () => {
   assert.equal(game.circuits, 0, "circuitos a 0");
   assert.equal(game.carried, null, "manos vacías");
   assert.equal(game.won, false, "no ganado");
-  assert.equal(room.name, "ENTRADA", "vuelve a la entrada");
+  assert.equal(room.name, "ESCLUSA", "vuelve a la esclusa");
   assert.equal(player.x, MISSION.start.x); assert.equal(player.y, MISSION.start.y);
-  assert.equal(room.objects.length, 3, "los objetos de ENTRADA vuelven (2 bloques + circuito, clones frescos)");
+  assert.equal(room.objects.length, 5, "los objetos de ESCLUSA vuelven (clones frescos)");
   assert.equal(room.sockets[0].filled, null, "el zócalo vuelve a estar vacío");
 });
 

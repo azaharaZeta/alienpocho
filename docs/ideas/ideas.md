@@ -49,4 +49,4 @@ Convenio de nombres: usar minúsculas y guiones en lugar de espacios para `<titu
 <!-- vacío de bugs SIN procesar. Bug abierto con análisis propio: docs/ideas/bug-empuje-revalida-robot.md.
      (Resueltos en 2026-06-28 y retirados de aquí: floor fantasma, números mágicos del HUD, "pegote" del vano
      de puertas, y bug-reactor-bloque-sin-z → absorbido por coordenadas unificadas, archivado.) -->
-
+- La tool de assets no parece estar dibujando bien los cubos de referencia, region estandar y punto de anclaje de la puerta.

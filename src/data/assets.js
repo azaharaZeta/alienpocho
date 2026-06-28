@@ -51,7 +51,7 @@ const P2 = PROP.HALF * 2, R = ROBOT, D = DOOR, SH2 = SOCKET.HALF * 2;
 
 /* Orden en que la tool muestra los grupos (los assets se agrupan por su campo `group`). */
 export const GROUP_ORDER = [
-  "Estructura", "Bloques", "Transportables", "Receptáculos", "Peligros", "Decoración", "Personajes",
+  "Estructura", "Bloques", "Transportables", "Receptáculos", "Peligros", "Decoración", "Mobiliario", "Objetos", "Personajes",
 ];
 
 /* ===================== EL REGISTRO =====================
@@ -131,20 +131,62 @@ export const ASSETS = {
             sprite: { w: 14, h: 11, minX: -7, minY: -10 } },
 
   // --- Decoración (objetos sin más rol; la "decoración" es un object SIN traits especiales) ---
-  plant:  { label: "Planta", kind: "object", group: "Decoración", traits: {},
-            draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.32, l: 0.32, h: 0.5 },
-            sprite: { w: 8, h: 13, minX: -4, minY: -11 } },
+  plant:  { label: "Planta", kind: "object", group: "Decoración", traits: { solid: true, movable: true, carriable: true, falls: true },
+            tint: "primary",
+            draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.48, l: 0.48, h: 0.72 },
+            sprite: { w: 18, h: 18.5, minX: -9, minY: -15.5 } },
+  flower: { label: "Flor (tiesto)", kind: "object", group: "Decoración", traits: { solid: true, movable: true, carriable: true, falls: true },
+            tint: "primary",
+            draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.62, l: 0.62, h: 1.1 },
+            sprite: { w: 21, h: 28.5, minX: -10.5, minY: -25.5 } },
   drone:  { label: "Dron", kind: "object", group: "Decoración", traits: {},
             // huella ELEVADA que ENVUELVE el sprite flotante: el painter ordena por esta caja, así que debe
             // acotar los píxeles dibujados (lo fija el guardarraíl anti-#2 de test/assets.mjs). No es sólido.
             draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.4, l: 0.4, h: 0.7, z: 0.45 },
             sprite: { w: 12, h: 16, minX: -6, minY: -22 } },
-  // Ordenador: sólido + empujable + cae + RECOGIBLE (como los circuitos, pero no encaja en zócalos).
+  // Ordenador: TORRE de PC. Sólido + empujable + cae + RECOGIBLE (como los circuitos, pero no encaja en zócalos).
   // tint:"primary" → se pinta en la tinta primaria de la sala (NO en secundario, aunque sea carriable).
   computer: { label: "Ordenador", kind: "object", group: "Decoración", traits: { solid: true, movable: true, carriable: true, falls: true },
             tint: "primary",
-            draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.5, l: 0.5, h: 0.7 },
-            sprite: { w: 18, h: 22, minX: -9, minY: -17 } },
+            draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.9, l: 0.9, h: 1.5 },
+            sprite: { w: 32, h: 42.5, minX: -16, minY: -34 } },
+  // Monitor: pantalla sobre peana (pareja del ordenador). Mismos traits que el ordenador (sólido/empujable/
+  // recogible/cae) + tint primario → se comporta y se tiñe igual.
+  monitor: { label: "Monitor", kind: "object", group: "Decoración", traits: { solid: true, movable: true, carriable: true, falls: true },
+            tint: "primary",
+            draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.9, l: 0.6, h: 1.6 },
+            sprite: { w: 20.5, h: 36.5, minX: -8, minY: -33 } },
+
+  // --- Mobiliario (estación espacial): todos sólidos + empujables + recogibles + caen (como el ordenador),
+  //     tint primario. Geometría generada por tools (scratchpad gen_assets.mjs); refinar PNG a mano. ---
+  desk:      { label: "Mesa de trabajo", kind: "object", group: "Mobiliario", traits: { solid: true, movable: true, carriable: true, falls: true }, tint: "primary",
+               draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 1.68, l: 1.2, h: 1 }, sprite: { w: 50, h: 41.5, minX: -25, minY: -30 } },
+  chair:     { label: "Silla de trabajo", kind: "object", group: "Mobiliario", traits: { solid: true, movable: true, carriable: true, falls: true }, tint: "primary",
+               draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 1, l: 1, h: 1.9 }, sprite: { w: 34, h: 43, minX: -17, minY: -40 } },
+  bed:       { label: "Cama", kind: "object", group: "Mobiliario", traits: { solid: true, movable: true, carriable: true, falls: true }, tint: "primary",
+               draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 1.6, l: 1.24, h: 0.88 }, sprite: { w: 50, h: 40, minX: -25, minY: -27 } },
+  kitchen:   { label: "Cocina", kind: "object", group: "Mobiliario", traits: { solid: true, movable: true, carriable: true, falls: true }, tint: "primary",
+               draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 1.68, l: 1.12, h: 1.4 }, sprite: { w: 49, h: 48.5, minX: -24.5, minY: -36.5 } },
+  locker:    { label: "Taquilla", kind: "object", group: "Mobiliario", traits: { solid: true, movable: true, carriable: true, falls: true }, tint: "primary",
+               draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 1, l: 0.84, h: 2.7 }, sprite: { w: 33, h: 63, minX: -16.5, minY: -54.5 } },
+  shelf:     { label: "Estantería", kind: "object", group: "Mobiliario", traits: { solid: true, movable: true, carriable: true, falls: true }, tint: "primary",
+               draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 1.6, l: 0.72, h: 2.6 }, sprite: { w: 41, h: 65.5, minX: -20.5, minY: -55 } },
+  console:   { label: "Consola de control", kind: "object", group: "Mobiliario", traits: { solid: true, movable: true, carriable: true, falls: true }, tint: "primary",
+               draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 1.4, l: 0.88, h: 1.7 }, sprite: { w: 39, h: 47.5, minX: -19.5, minY: -37.5 } },
+  desk_lamp: { label: "Lámpara de mesa", kind: "object", group: "Mobiliario", traits: { solid: true, movable: true, carriable: true, falls: true }, tint: "primary",
+               draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.64, l: 0.64, h: 1.32 }, sprite: { w: 18, h: 30, minX: -9, minY: -26 } },
+
+  // --- Objetos sueltos (recogibles) ---
+  bin:       { label: "Papelera", kind: "object", group: "Objetos", traits: { solid: true, movable: true, carriable: true, falls: true }, tint: "primary",
+               draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.7, l: 0.7, h: 0.85 }, sprite: { w: 25, h: 27, minX: -12.5, minY: -21 } },
+  papers:    { label: "Papeles", kind: "object", group: "Objetos", traits: { solid: true, movable: true, carriable: true, falls: true }, tint: "primary",
+               draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.52, l: 0.52, h: 0.16 }, sprite: { w: 17.5, h: 11, minX: -8.5, minY: -6.5 } },
+  canister:  { label: "Bidón", kind: "object", group: "Objetos", traits: { solid: true, movable: true, carriable: true, falls: true }, tint: "primary",
+               draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.7, l: 0.7, h: 1.2 }, sprite: { w: 23, h: 30, minX: -11.5, minY: -24 } },
+  toolbox:   { label: "Caja de herramientas", kind: "object", group: "Objetos", traits: { solid: true, movable: true, carriable: true, falls: true }, tint: "primary",
+               draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.58, l: 0.42, h: 0.42 }, sprite: { w: 18, h: 15, minX: -9, minY: -10 } },
+  crate:     { label: "Contenedor", kind: "object", group: "Objetos", traits: { solid: true, movable: true, carriable: true, falls: true }, tint: "primary",
+               draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 1, l: 1, h: 0.95 }, sprite: { w: 33, h: 32.5, minX: -16.5, minY: -24 } },
 
   // --- Personajes (individuos): huella VISUAL que rota con la orientación (eje x ↔ eje y). ---
   // (La colisión del robot es otra cosa: cuadrado simétrico CFG.PRAD; no se modela aquí.)

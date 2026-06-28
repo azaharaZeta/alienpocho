@@ -99,8 +99,12 @@ test("ORÁCULO DE PÍXEL: el blit del sprite respecto a la esquina (0,0,0) es ES
   const FROZEN = {
     floor: [-17, 0],
     cube: [-17, -17], prop_cube: [-11, -7.5], prop_pyramid: [-11, -2.5], prop_dome: [-9, -0.5],
-    prop_cylinder: [-8, -6.5], socket: [-16, -3.5], spikes: [-7, -1.5], plant: [-4, -2.5],
-    drone: [-6, -13.5], computer: [-9, -8.5],
+    prop_cylinder: [-8, -6.5], socket: [-16, -3.5], spikes: [-7, -1.5], plant: [-9, -7],
+    drone: [-6, -13.5], computer: [-16, -25.5], monitor: [-8, -24.5],
+    desk: [-25, -21.5], chair: [-17, -31.5], bed: [-25, -18.5], kitchen: [-24.5, -28],
+    locker: [-16.5, -46], shelf: [-20.5, -46.5], console: [-19.5, -29], desk_lamp: [-9, -17.5],
+    bin: [-12.5, -12.5], papers: [-8.5, 2], canister: [-11.5, -15.5], toolbox: [-9, -1.5],
+    crate: [-16.5, -15.5], flower: [-10.5, -17],
   };
   for (const [id, a] of Object.entries(ASSETS)) {
     if (!a.sprite) continue;

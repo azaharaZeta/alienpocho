@@ -1,0 +1,11 @@
+<svg viewBox="-9 -10 18 15" xmlns="http://www.w3.org/2000/svg">
+  <!-- Caja de herramientas: iso monocromo neutro (el juego lo tiñe por sala). Borrador para refinar a mano.
+       Anclaje centro-base. Generado por gen_assets.mjs. -->
+  <path d="M-8.5 -5.78 L1.36 -0.85 L1.36 4.25 L-8.5 -0.68 Z" fill="rgb(209,209,209)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M8.5 -4.42 L1.36 -0.85 L1.36 4.25 L8.5 0.68 Z" fill="rgb(158,158,158)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M-1.36 -9.35 L8.5 -4.42 L1.36 -0.85 L-8.5 -5.78 Z" fill="rgb(120,120,120)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M-7.32 -2.38 L0.18 1.36 L0.18 1.72 L-7.32 -2.03 Z" fill="rgb(60,60,60)" stroke="#000000" stroke-width="0.3" stroke-linejoin="round"/>
+  <path d="M-2.89 -7.39 L0.51 -5.69 L0.51 -3.65 L-2.89 -5.35 Z" fill="rgb(95,95,95)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M2.89 -6.88 L0.51 -5.69 L0.51 -3.65 L2.89 -4.84 Z" fill="rgb(60,60,60)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M-0.51 -8.58 L2.89 -6.88 L0.51 -5.69 L-2.89 -7.39 Z" fill="rgb(95,95,95)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+</svg>

@@ -1,0 +1,12 @@
+<svg viewBox="-16.5 -54.5 33 63" xmlns="http://www.w3.org/2000/svg">
+  <!-- Taquilla: iso monocromo neutro (el juego lo tiñe por sala). Borrador para refinar a mano.
+       Anclaje centro-base. Generado por gen_assets.mjs. -->
+  <path d="M-15.64 -46.58 L1.36 -38.08 L1.36 7.82 L-15.64 -0.68 Z" fill="rgb(209,209,209)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M15.64 -45.22 L1.36 -38.08 L1.36 7.82 L15.64 0.68 Z" fill="rgb(158,158,158)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M-1.36 -53.72 L15.64 -45.22 L1.36 -38.08 L-15.64 -46.58 Z" fill="rgb(120,120,120)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M-13.6 -42.81 L-0.68 -36.35 L-0.68 4.05 L-13.6 -2.41 Z" fill="rgb(95,95,95)" stroke="#000000" stroke-width="0.5" stroke-linejoin="round"/>
+  <path d="M-10.54 -39.44 L-3.74 -36.04 L-3.74 -34.66 L-10.54 -38.06 Z" fill="rgb(40,40,40)" stroke="#000000" stroke-width="0.5" stroke-linejoin="round"/>
+  <path d="M-10.54 -36.69 L-3.74 -33.29 L-3.74 -31.91 L-10.54 -35.31 Z" fill="rgb(40,40,40)" stroke="#000000" stroke-width="0.5" stroke-linejoin="round"/>
+  <path d="M-10.54 -33.93 L-3.74 -30.53 L-3.74 -29.16 L-10.54 -32.56 Z" fill="rgb(40,40,40)" stroke="#000000" stroke-width="0.5" stroke-linejoin="round"/>
+  <path d="M-3.06 -17.34 L-1.7 -16.66 L-1.7 -12.99 L-3.06 -13.67 Z" fill="#ffffff" stroke="#000000" stroke-width="0.5" stroke-linejoin="round"/>
+</svg>

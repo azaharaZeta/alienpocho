@@ -62,7 +62,8 @@ export const CONTROLS = {
   // DEBUG — overlays de desarrollo (los pinta render.js sobre la escena): conmutan por flanco
   dbgBox:    ["KeyJ"],            // cubo de referencia (AABB de cada asset)
   dbgRegion: ["KeyK"],            // región estándar (AABB redondeada a celdas)
-  dbgAnchor: ["KeyL"]             // punto de anclaje (ancla = esquina + offset)
+  dbgAnchor: ["KeyL"],            // punto de anclaje (ancla = esquina + offset)
+  dbgDoors:  ["KeyO"]             // zonas PROHIBIDAS por oclusión de puertas (occlusion.doorBlockedCells)
 };
 
 // Origen iso en pantalla: deja una banda arriba para el título y abajo el marco.

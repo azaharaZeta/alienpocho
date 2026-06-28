@@ -20,8 +20,9 @@ import assert from "node:assert/strict";
 
 import { ROOMS } from "../src/data/rooms.js";
 import { MISSION, missionTotal } from "../src/data/mission.js";
-import { objAsset } from "../src/world.js";
+import { objAsset, buildWorld } from "../src/world.js";
 import { assetHas } from "../src/data/assets.js";
+import { isBehindDoor, doorBlockedCells } from "../src/occlusion.js";
 
 let passed = 0, failed = 0;
 function test(name, fn) {
@@ -99,6 +100,24 @@ test("MISSION.start apunta a una sala válida y (x,y) cae dentro", () => {
   assert.ok(r, `MISSION.start.room "${MISSION.start.room}" no existe en data/rooms.js`);
   assert.ok(MISSION.start.x >= 0 && MISSION.start.x <= r.w, `start.x ${MISSION.start.x} fuera de [0,${r.w}]`);
   assert.ok(MISSION.start.y >= 0 && MISSION.start.y <= r.h, `start.y ${MISSION.start.y} fuera de [0,${r.h}]`);
+});
+
+/* ---------- 7) Ningún asset cae FLAGRANTEMENTE detrás del marco de una puerta frontal ----------
+   El marco de las puertas xp/yp (alto, protruido) se pinta delante y tapa lo que haya en su columna
+   iso. Un asset ahí se ve a medias o no se ve. La zona la calcula src/occlusion.js (reutilizable por
+   el generador de mapas del roguelike). Pilla colocaciones a ciegas al editar data/rooms.js. */
+test("ningún objeto/zócalo/peligro queda detrás del marco de una puerta (occlusion.js)", () => {
+  for (const [key, room] of Object.entries(buildWorld().rooms)) {
+    const items = [
+      ...room.objects.map(o => [objAsset(o), o.x, o.y]),
+      ...room.sockets.map(s => ["socket:" + s.id, s.x, s.y]),
+      ...room.hazards.map(h => ["spikes", h.x, h.y]),
+    ];
+    for (const [name, x, y] of items)
+      assert.ok(!isBehindDoor(room, x, y),
+        `sala ${key}: "${name}" en (${x},${y}) cae detrás de una puerta frontal (celdas bloqueadas: ` +
+        doorBlockedCells(room).map(c => c.cx + "," + c.cy).join(" ") + ")");
+  }
 });
 
 /* --------------------------------------------------------------- RESUMEN --- */

@@ -1,0 +1,19 @@
+<svg viewBox="-25 -30 50 41.5" xmlns="http://www.w3.org/2000/svg">
+  <!-- Mesa de trabajo: iso monocromo neutro (el juego lo tiñe por sala). Borrador para refinar a mano.
+       Anclaje centro-base. Generado por gen_assets.mjs. -->
+  <path d="M-6.8 -23.8 L-4.08 -22.44 L-4.08 -8.16 L-6.8 -9.52 Z" fill="rgb(95,95,95)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M-1.36 -23.8 L-4.08 -22.44 L-4.08 -8.16 L-1.36 -9.52 Z" fill="rgb(60,60,60)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M-4.08 -25.16 L-1.36 -23.8 L-4.08 -22.44 L-6.8 -23.8 Z" fill="rgb(120,120,120)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M16.32 -12.24 L19.04 -10.88 L19.04 3.4 L16.32 2.04 Z" fill="rgb(95,95,95)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M21.76 -12.24 L19.04 -10.88 L19.04 3.4 L21.76 2.04 Z" fill="rgb(60,60,60)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M19.04 -13.6 L21.76 -12.24 L19.04 -10.88 L16.32 -12.24 Z" fill="rgb(120,120,120)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M-21.76 -16.32 L-19.04 -14.96 L-19.04 -0.68 L-21.76 -2.04 Z" fill="rgb(95,95,95)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M-16.32 -16.32 L-19.04 -14.96 L-19.04 -0.68 L-16.32 -2.04 Z" fill="rgb(60,60,60)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M-19.04 -17.68 L-16.32 -16.32 L-19.04 -14.96 L-21.76 -16.32 Z" fill="rgb(120,120,120)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M1.36 -4.76 L4.08 -3.4 L4.08 10.88 L1.36 9.52 Z" fill="rgb(95,95,95)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M6.8 -4.76 L4.08 -3.4 L4.08 10.88 L6.8 9.52 Z" fill="rgb(60,60,60)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M4.08 -6.12 L6.8 -4.76 L4.08 -3.4 L1.36 -4.76 Z" fill="rgb(120,120,120)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M-24.48 -19.04 L4.08 -4.76 L4.08 -2.04 L-24.48 -16.32 Z" fill="rgb(209,209,209)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M24.48 -14.96 L4.08 -4.76 L4.08 -2.04 L24.48 -12.24 Z" fill="rgb(158,158,158)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M-4.08 -29.24 L24.48 -14.96 L4.08 -4.76 L-24.48 -19.04 Z" fill="#ffffff" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+</svg>

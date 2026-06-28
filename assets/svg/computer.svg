@@ -1,9 +1,15 @@
-<svg viewBox="-9 -17 18 22" xmlns="http://www.w3.org/2000/svg">
-  <!-- Ordenador/terminal: caja iso monocroma (silueta neutra; el juego la tiñe por sala).
-       Borrador para refinar a mano. Anclaje centro-base = píxel (9,17) del viewBox. -->
-  <path d="M0 -16.15 L8.5 -11.9 L0 -7.65 L-8.5 -11.9 Z" fill="#e0e0e0" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
-  <path d="M-8.5 0 L0 4.25 L0 -7.65 L-8.5 -11.9 Z" fill="#b4b4b4" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
-  <path d="M8.5 0 L0 4.25 L0 -7.65 L8.5 -11.9 Z" fill="#8a8a8a" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
-  <!-- pantalla (cara frontal izquierda) -->
-  <path d="M-6.8 -1.53 L-1.7 1.02 L-1.7 -6.12 L-6.8 -8.67 Z" fill="#2a2a2a" stroke="#000000" stroke-width="0.6" stroke-linejoin="round"/>
+<svg viewBox="-16 -34 32 42.5" xmlns="http://www.w3.org/2000/svg">
+  <!-- Ordenador: iso monocromo neutro (el juego lo tiñe por sala). Borrador para refinar a mano.
+       Anclaje centro-base. Generado por gen_assets.mjs. -->
+  <path d="M-15.3 -25.5 L0 -17.85 L0 7.65 L-15.3 0 Z" fill="rgb(209,209,209)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M15.3 -25.5 L0 -17.85 L0 7.65 L15.3 0 Z" fill="rgb(158,158,158)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M0 -33.15 L15.3 -25.5 L0 -17.85 L-15.3 -25.5 Z" fill="#ffffff" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M-12.55 -21.57 L-2.75 -16.68 L-2.75 -14.89 L-12.55 -19.79 Z" fill="rgb(60,60,60)" stroke="#000000" stroke-width="0.5" stroke-linejoin="round"/>
+  <path d="M-12.55 -18.51 L-2.75 -13.62 L-2.75 -11.83 L-12.55 -16.73 Z" fill="rgb(60,60,60)" stroke="#000000" stroke-width="0.5" stroke-linejoin="round"/>
+  <path d="M-6.12 -8.67 L-3.98 -7.6 L-3.98 -4.54 L-6.12 -5.61 Z" fill="rgb(60,60,60)" stroke="#000000" stroke-width="0.5" stroke-linejoin="round"/>
+  <path d="M-11.63 -10.91 L-10.4 -10.3 L-10.4 -8.26 L-11.63 -8.87 Z" fill="#ffffff" stroke="#000000" stroke-width="0.4" stroke-linejoin="round"/>
+  <path d="M-9.49 -10.35 L-8.26 -9.74 L-8.26 -7.7 L-9.49 -8.31 Z" fill="#ffffff" stroke="#000000" stroke-width="0.4" stroke-linejoin="round"/>
+  <path d="M11.02 -17.24 L4.28 -13.87 L4.28 -12.34 L11.02 -15.71 Z" fill="rgb(95,95,95)" stroke="#000000" stroke-width="0.5" stroke-linejoin="round"/>
+  <path d="M11.02 -13.16 L4.28 -9.79 L4.28 -8.26 L11.02 -11.63 Z" fill="rgb(95,95,95)" stroke="#000000" stroke-width="0.5" stroke-linejoin="round"/>
+  <path d="M11.02 -9.08 L4.28 -5.71 L4.28 -4.18 L11.02 -7.55 Z" fill="rgb(95,95,95)" stroke="#000000" stroke-width="0.5" stroke-linejoin="round"/>
 </svg>

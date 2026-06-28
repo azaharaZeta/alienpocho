@@ -12,6 +12,7 @@ import { CFG } from "./config.js";
 import { ENGINE } from "./engine.js";
 import { AP } from "./draw.js";
 import { roomThings, roomShell } from "./world.js";   // listas uniformes de la escena (objetos + cáscara)
+import { doorBlockedCells } from "./occlusion.js";   // MISMA función que el cálculo: zonas detrás de puertas (sin duplicar lógica)
 import { assetTint, assetName } from "./data/assets.js";   // tinte por asset (primario/secundario) + nombre legible (HUD)
 import { ctx, P, setProjector, applyRoomTheme } from "./view.js";
 import { entities } from "./player.js";
@@ -27,8 +28,8 @@ const UI_MARGIN = 14;
 /* ── OVERLAYS DE DEPURACIÓN (teclas j/k/l): cubo de referencia / región estándar / punto de anclaje,
    sobre los objetos colocables y las entidades (no el suelo ni la cáscara). Mismos overlays que
    tools/tool-assets.html. Conmutables e independientes; se pintan SOBRE la escena. ── */
-const DBG = { box: false, region: false, anchor: false };
-const DBG_COL = { box: "#ff5a5a", region: "#ffd23d", anchor: "#5affd2", order: "#8aff5a" };   // colores de debug; order = caja de colisión/orden (entidades)
+const DBG = { box: false, region: false, anchor: false, doors: false };
+const DBG_COL = { box: "#ff5a5a", region: "#ffd23d", anchor: "#5affd2", order: "#8aff5a", doors: "#ff3df0" };   // colores de debug; order = caja de colisión/orden (entidades); doors = zona prohibida
 const aabbBox = (a) => ({ x: a.x0, y: a.y0, z: a.z0, w: a.x1 - a.x0, l: a.y1 - a.y0, h: a.z1 - a.z0 });
 // Región estándar: AABB redondeada a celdas (ceil, mín. 1 en cada eje) — igual que assetRegion / la tool.
 const regionOf = (b) => { const x0 = Math.floor(b.x), y0 = Math.floor(b.y), z0 = Math.floor(b.z);
@@ -49,9 +50,26 @@ function dbgOne(box, ref) {
   if (DBG.anchor) { const p = P(ref.x, ref.y, ref.z); ctx.fillStyle = DBG_COL.anchor;
     ctx.beginPath(); ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2); ctx.fill(); }
 }
+// Zonas PROHIBIDAS por oclusión de puertas: pinta cada celda que devuelve occlusion.doorBlockedCells
+// (la MISMA función que usan el guardarraíl/auditoría → un solo cálculo, sin paralelos). Rombo del suelo.
+function drawForbiddenZones(room) {
+  ctx.save();
+  ctx.strokeStyle = DBG_COL.doors; ctx.fillStyle = DBG_COL.doors; ctx.lineWidth = 1;
+  for (const { cx, cy } of doorBlockedCells(room)) {                      // ← misma fn que el cálculo
+    const v = [P(cx, cy, 0), P(cx + 1, cy, 0), P(cx + 1, cy + 1, 0), P(cx, cy + 1, 0)];
+    ctx.beginPath(); ctx.moveTo(v[0].x, v[0].y);
+    for (let i = 1; i < 4; i++) ctx.lineTo(v[i].x, v[i].y);
+    ctx.closePath();
+    ctx.globalAlpha = 0.3; ctx.fill();
+    ctx.globalAlpha = 0.85; ctx.stroke();
+  }
+  ctx.restore();
+}
+
 // Pasada de depuración: recorre los objetos colocables y las entidades con su caja/ancla.
 function drawDebug(room) {
-  if (!(DBG.box || DBG.region || DBG.anchor)) return;
+  if (!(DBG.box || DBG.region || DBG.anchor || DBG.doors)) return;
+  if (DBG.doors) drawForbiddenZones(room);             // zonas detrás de puertas (occlusion.doorBlockedCells)
   // El SUELO y la cáscara (paredes/puertas) se excepciona a propósito (es la rejilla de referencia; ensucia y tapa lo demás).
   for (const t of roomThings(room))                    // objetos colocables (suelo y cáscara omitidos)
     dbgOne(aabbBox(t.aabb), { x: t.x, y: t.y, z: t.z });
@@ -61,7 +79,7 @@ function drawDebug(room) {
     if (d.solid && DBG.box) wireBox(d.solid, DBG_COL.order);                // caja de colisión/orden = la que usan física y painter (±PRAD = ROBOT.WID = ancho dibujado)
   }
   // indicador de qué overlays están activos: DEBAJO del bloque título+objetivo de arriba-izq (no lo pisa)
-  const on = [DBG.box && "J:caja", DBG.region && "K:región", DBG.anchor && "L:ancla"].filter(Boolean).join("  ");
+  const on = [DBG.box && "J:caja", DBG.region && "K:región", DBG.anchor && "L:ancla", DBG.doors && "O:puertas"].filter(Boolean).join("  ");
   ctx.fillStyle = "#ffffff"; ctx.font = "8px 'Courier New', monospace"; ctx.textBaseline = "top"; ctx.textAlign = "left";
   ctx.fillText("DEBUG  " + on, UI_MARGIN, 26);
   if (DBG.box) ctx.fillText("caja  rojo=dibujo  verde=colision/orden", UI_MARGIN, 36);   // entidades: las dos cajas (difieren a propósito)
@@ -70,9 +88,10 @@ function drawDebug(room) {
 export function render(room) {
   if (room !== _themeRoom) { applyRoomTheme(room); _themeRoom = room; }
   setProjector(room);                     // proyector centrado para esta sala
-  if (pressed("dbgBox")) DBG.box = !DBG.box;            // overlays de depuración: conmutar por flanco (j/k/l)
+  if (pressed("dbgBox")) DBG.box = !DBG.box;            // overlays de depuración: conmutar por flanco (j/k/l/o)
   if (pressed("dbgRegion")) DBG.region = !DBG.region;
   if (pressed("dbgAnchor")) DBG.anchor = !DBG.anchor;
+  if (pressed("dbgDoors")) DBG.doors = !DBG.doors;     // zonas prohibidas por oclusión de puertas
   ctx.fillStyle = CFG.COL.bg;
   ctx.fillRect(0, 0, CFG.W, CFG.H);
 

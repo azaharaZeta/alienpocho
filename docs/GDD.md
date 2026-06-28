@@ -30,7 +30,7 @@ colocar todos → victoria. Sin reloj: el jugador explora a su ritmo.
 | Movimiento 4 diagonales | ✅ Replicar | |
 | Salto (eje Z) | ✅ Replicar | |
 | Recoger/colocar circuitos por forma | ✅ Replicar | Formas: cubo, pirámide, domo, cilindro |
-| Flip-screen entre salas | ✅ Replicar | mapa laberíntico (~17 salas hoy) |
+| Flip-screen entre salas | ✅ Replicar | estación espacial por zonas (9 salas hoy) |
 | Peligros estáticos (pinchos) | ✅ Replicar | |
 | Enemigos móviles | ✅ Adaptar | Patrullas simples |
 | Reloj "años luz" | ❌ Descartado | **Sin límite de tiempo** (decisión de diseño: cero presión) |

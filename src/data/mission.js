@@ -23,10 +23,12 @@
    (raíz del minimapa = `start.room`) y player.js / game.resetGame (posición). */
 export const MISSION = {
   goal: "fill-all-sockets",
-  start: { room: "0,0", x: 3.5, y: 2.5, facing: 0 },   // room = sala inicial · x,y = centro de celda · facing 0:+x 1:+y 2:-x 3:-y
+  start: { room: "0,0", x: 4.5, y: 2.5, facing: 0 },   // ESCLUSA · x,y = centro de celda · facing 0:+x 1:+y 2:-x 3:-y
   // QUÉ circuito pide cada zócalo (por su `id` en data/rooms.js). El total se deriva del nº de zócalos.
   // Equilibrio: tantos circuitos de cada forma como zócalos de esa forma (aquí: 2 cube, 2 pyramid, 1 dome, 1 cylinder).
-  requires: { e1: "cube", a4: "cube", gal: "cylinder", nudo: "dome", cond: "pyramid", d3: "pyramid" },
+  //   esc(ESCLUSA)=cube · lab(LABORATORIO)=cube · coc(COCINA)=pyramid · inv(INVERNADERO)=pyramid
+  //   alm(ALMACEN)=dome · pue(PUENTE)=cylinder
+  requires: { esc: "cube", lab: "cube", coc: "pyramid", inv: "pyramid", alm: "dome", pue: "cylinder" },
 };
 
 /* Nº de objetivos del puzzle = zócalos colocables en TODO el mundo. Fuente única del total de
