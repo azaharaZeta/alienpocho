@@ -17,6 +17,22 @@ const KEYNAME = { ArrowLeft: "←", ArrowRight: "→", ArrowUp: "↑", ArrowDown
 const keyGlyph = (code) => KEYNAME[code] || (code.startsWith("Key") ? code.slice(3) : code);
 const keysOf = (action) => CONTROLS[action].map(keyGlyph).join(" / ");   // "↑ / W", "E / INTRO"…
 
+/* Texto con look NEÓN (glow del primario + núcleo aclarado), centrado en (cx,cy). Reutilizado por el
+   título y la pantalla de victoria. */
+function neonText(txt, cx, cy, size, pal) {
+  const ink = pal.ink, core = ENGINE.lighten(ink, 0.6);
+  ctx.save();
+  ctx.font = "bold " + size + "px 'Courier New', monospace";
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.letterSpacing = "3px"; ctx.lineJoin = "round";
+  ctx.shadowColor = ink; ctx.shadowBlur = 8;
+  ctx.lineWidth = 4; ctx.strokeStyle = ink; ctx.fillStyle = ink;
+  ctx.strokeText(txt, cx, cy); ctx.fillText(txt, cx, cy);
+  ctx.shadowBlur = 0; ctx.lineWidth = 2; ctx.strokeStyle = ink; ctx.fillStyle = core;
+  ctx.strokeText(txt, cx, cy); ctx.fillText(txt, cx, cy);
+  ctx.letterSpacing = "0px"; ctx.restore();
+}
+
 // Marco grande estilo panel de nave: doble borde, línea segmentada, corchetes de
 // esquina y remaches. Todo a base de rectángulos → look pixel-art al escalar.
 function drawSciFiFrame(x, y, w, h, pal) {
@@ -49,20 +65,8 @@ export function drawTitleScreen(now, pal) {
   drawSciFiFrame(m, m, W - 2 * m, H - 2 * m, pal);
 
   // Logo "ALIEN POCHO" en dos líneas, estilo neón (glow primario + núcleo aclarado)
-  const neon = (txt, cy, size) => {
-    ctx.save();
-    ctx.font = "bold " + size + "px 'Courier New', monospace";
-    ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.letterSpacing = "3px"; ctx.lineJoin = "round";
-    ctx.shadowColor = ink; ctx.shadowBlur = 8;
-    ctx.lineWidth = 4; ctx.strokeStyle = ink; ctx.fillStyle = ink;
-    ctx.strokeText(txt, W / 2, cy); ctx.fillText(txt, W / 2, cy);
-    ctx.shadowBlur = 0; ctx.lineWidth = 2; ctx.strokeStyle = ink; ctx.fillStyle = core;
-    ctx.strokeText(txt, W / 2, cy); ctx.fillText(txt, W / 2, cy);
-    ctx.letterSpacing = "0px"; ctx.restore();
-  };
-  neon("ALIEN", 50, 32);
-  neon("POCHO", 84, 32);
+  neonText("ALIEN", W / 2, 50, 32, pal);
+  neonText("POCHO", W / 2, 84, 32, pal);
 
   // Mascota robot (abajo-izquierda; deja sitio a la lista de controles a la derecha)
   const pm = AP.projector(80, 178);
@@ -95,6 +99,37 @@ export function drawTitleScreen(now, pal) {
   if (Math.floor(now / 500) % 2 === 0) {
     ctx.fillStyle = ink2; ctx.font = "bold 11px 'Courier New', monospace";
     ctx.fillText("PULSA UN BOTON PARA EMPEZAR", W / 2, 214);
+  }
+  ctx.textAlign = "left"; ctx.textBaseline = "top";
+}
+
+/* PANTALLA DE VICTORIA — mismo estilo que el título (marco sci-fi + neón + mascota). Al pulsar, el bucle
+   (main.js) vuelve al MENÚ principal. Recibe la paleta de la sala donde se ganó. */
+export function drawVictoryScreen(now, pal) {
+  const W = CFG.W, H = CFG.H, ink = pal.ink, ink2 = pal.ink2;
+  const core = ENGINE.lighten(ink, 0.6);
+  ctx.fillStyle = CFG.COL.bg; ctx.fillRect(0, 0, W, H);
+
+  const m = 12;
+  ctx.fillStyle = "rgba(0,0,0,0.55)"; ctx.fillRect(m, m, W - 2 * m, H - 2 * m);
+  drawSciFiFrame(m, m, W - 2 * m, H - 2 * m, pal);
+
+  // Rótulo neón en dos líneas
+  neonText("MISION", W / 2, 70, 30, pal);
+  neonText("COMPLETA", W / 2, 104, 30, pal);
+
+  // Mascota robot centrada
+  const pm = AP.projector(W / 2, 162);
+  AP.shadow(ctx, pm, 0, 0, 0);
+  AP.robot(ctx, pm, 0, 0, 0, 0, ink, {});
+
+  // Subtítulo + prompt parpadeante (vuelve al menú)
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = core; ctx.font = "9px 'Courier New', monospace";
+  ctx.fillText("Todos los circuitos activados", W / 2, 188);
+  if (Math.floor(now / 500) % 2 === 0) {
+    ctx.fillStyle = ink2; ctx.font = "bold 11px 'Courier New', monospace";
+    ctx.fillText("PULSA UN BOTON — MENU", W / 2, 206);
   }
   ctx.textAlign = "left"; ctx.textBaseline = "top";
 }

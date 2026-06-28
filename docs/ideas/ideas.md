@@ -24,10 +24,9 @@ Cuando una idea ya documentada en `docs/ideas/idea-<titulo-idea>.md` haya termin
 
 - Si son directos de resolver, no es necesario crear ningún fichero: se resuelven y se eliminan de este listado.
 - Si son complejos y requieren análisis, proceder igual que con las ideas, creando el fichero `docs/ideas/bug-<titulo-bug>.md`.
-
 Convenio de nombres: usar minúsculas y guiones en lugar de espacios para `<titulo-idea>` y `<titulo-bug>`.
 
-
+- Hueco puertas pegote: en las puertas de la pared, se ha dibujado un rectángulo negro más grande (en 2d) que el agujero de la puerta (en 2d), porque se ha hecho sobre el espacio 3d ,  no se ha tenido en cuenta que en 2d hay marco de la puerta, y arco. Quizá la solución es no dibujar ese negro encima de la puerta, sino antes de dibujar la puerta? O mejor aún,  en lugar de ñapas: simplemente no dibujar la pared en esos 2 tiles. porque la puerta ocupa exactamente 2 tiles. 
 
 
 ## IDEAS IA

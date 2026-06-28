@@ -17,7 +17,7 @@ import { ctx, P } from "./view.js";
 import { blocksHoriz, supportHeight, ceilingHeight, objBox, overlapsBox, objBlocked, objAsset, thingHas } from "./physics.js";
 import { assetFoot, assetTint } from "./data/assets.js";   // huella del robot por orientación + tinte del objeto en brazos
 import { MISSION } from "./data/mission.js";    // posición inicial del robot (MISSION.start)
-import { game, interact, resetGame } from "./game.js";
+import { game, interact } from "./game.js";
 
 export const player = {
   x: MISSION.start.x, y: MISSION.start.y, z: 0,   // posición inicial: la define data/mission.js (MISSION.start)
@@ -67,11 +67,7 @@ function tryPush(room, dir, step, feetZ) {
    - avanzar recto en la dirección que se mira
    - saltar en la dirección que se mira; dos tipos: corto/bajo y largo/alto */
 player.update = function (room, dt) {
-  // Tras la victoria, el juego se detiene: cualquier acción reinicia la partida.
-  if (game.won) {
-    if (pressed("jump") || pressed("use") || pressed("forward")) resetGame();
-    return;
-  }
+  // (La victoria la gestiona main.js: al ganar muestra la pantalla de victoria y no llama a player.update.)
   const turnLeft  = pressed("turnLeft");
   const turnRight = pressed("turnRight");
   const forward   = held("forward");

@@ -16,7 +16,7 @@ import { game, world, room, checkExits, resetGame } from "./game.js";
 import { player, entities } from "./player.js";
 import { updateObjects } from "./physics.js";
 import { render } from "./render.js";
-import { drawTitleScreen } from "./screens.js";
+import { drawTitleScreen, drawVictoryScreen } from "./screens.js";
 import { AP } from "./draw.js";   // para precargar las imágenes al arrancar
 
 /* PALETA DEL MENÚ: aleatoria en cada carga (una de las parejas primario/secundario). */
@@ -44,6 +44,12 @@ function loop(now) {
     if (pressed("jump") || pressed("use") || pressed("forward")) wantStart = true;
     if (wantStart && assetsReady) { resetGame(); game.state = "playing"; wantStart = false; }
     drawTitleScreen(now, menuPalette);
+  } else if (game.won) {
+    // VICTORIA: pantalla propia (estilo menú) con la paleta de la sala; al pulsar, vuelve al MENÚ principal.
+    const pal = { ink: room.ink, ink2: room.ink2 || room.ink };
+    applyRoomTheme(pal);
+    if (pressed("jump") || pressed("use") || pressed("forward")) { game.won = false; game.state = "title"; }
+    drawVictoryScreen(now, pal);
   } else {
     for (const e of entities) e.update(room, dt);
     updateObjects(room, dt);   // gravedad de los objetos

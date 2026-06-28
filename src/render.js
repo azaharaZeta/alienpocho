@@ -108,21 +108,8 @@ export function render(room) {
   drawDebug(room);   // overlays de depuración (j/k/l) SOBRE la escena (bajo el HUD)
   drawHUD();
   drawMinimap();
-  if (game.won) drawWinBanner();
-}
-
-/* Banner de victoria */
-function drawWinBanner() {
-  const ink = room.ink, ink2 = room.ink2 || ink;
-  ctx.fillStyle = "rgba(0,0,0,0.55)";
-  ctx.fillRect(0, CFG.H / 2 - 22, CFG.W, 44);
-  ctx.fillStyle = ink2;   // título en secundario
-  ctx.font = "14px 'Courier New', monospace";
-  ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText("¡MISION COMPLETA!", CFG.W / 2, CFG.H / 2 - 4);
-  ctx.fillStyle = ink; ctx.font = "8px 'Courier New', monospace";   // subtítulo en primario
-  ctx.fillText("pulsa un boton para volver a jugar", CFG.W / 2, CFG.H / 2 + 12);
-  ctx.textAlign = "left"; ctx.textBaseline = "top";
+  // La victoria ya NO es un banner aquí: tiene pantalla propia (screens.drawVictoryScreen), que muestra
+  // main.js cuando game.won (en vez de render()).
 }
 
 /* --- Helpers de HUD --- */
