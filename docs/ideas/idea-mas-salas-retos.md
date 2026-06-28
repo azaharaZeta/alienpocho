@@ -14,7 +14,9 @@ sin comportamiento).
 - **Plataformas móviles:** mecánica **nueva** (un sólido que se mueve y arrastra lo que tiene encima) → toca
   física/painter (orden de algo en movimiento) → coste medio-alto, **`npm test`**. Es media-idea aparte.
 - **Dron con comportamiento:** hoy es solo sprite; darle patrulla lo emparenta con los enemigos
-  ([[idea-enemigos-peligros-vidas]], aparcados).
+  ([[idea-enemigos-peligros-vidas]], aparcados). **Aviso al colocarlo por primera vez:** el `drone` arrastra
+  una huella ELEVADA (anti-#2) que solo se ha ejercitado en tool/tests; verificar su oclusión/orden en escena
+  real con `j`/`k`/`l` (ver el caveat en [[idea-motor-bounds-visuales]]).
 
 ## Conveniencia
 Media para lo barato (más puzzles con lo que ya hay = más juego por poco coste). Las plataformas móviles y

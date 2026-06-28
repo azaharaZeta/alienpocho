@@ -72,10 +72,10 @@
     "h": 71
   },
   {
-    "name": "Ejemplo (marca de suelo)",
-    "file": "example.svg",
+    "name": "Suelo (tesela rómbica)",
+    "file": "floor.svg",
     "w": 34,
-    "h": 34
+    "h": 17
   },
   {
     "name": "Ordenador",

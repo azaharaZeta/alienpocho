@@ -19,8 +19,8 @@ Cada asset declara `files: { svg, png }` ([assets.js:72-139](../../src/data/asse
 - **Riesgo:** medio. **Toca el registro de assets** → **`npm test`** (assets.mjs). Punto fino: "buscar si
   existe el PNG" en runtime implica un **probe** (intentar cargar y caer al SVG) o un manifiesto; decidir
   cuál para no meter I/O frágil ni 404 en consola.
-- **Matiz `floor`:** hoy declara `files.svg:"example.svg"` fantasma → ver bug relacionado; conviene resolver
-  esa inconsistencia **antes o a la vez** (un `filename` sin uso real sería igual de fantasma).
+- **Matiz `floor`:** ✅ resuelto (2026-06-28) — ya no hay `example.svg` fantasma; `floor` declara
+  `files.svg:"floor.svg"` y se dibuja desde fichero como el resto. Deja de ser un caso especial para esta idea.
 
 ## Conveniencia
 Media. Es **limpieza** (menos ruido por asset, menos formas de declarar mal), no contenido jugable. Buen ROI

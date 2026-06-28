@@ -71,7 +71,7 @@ export const ASSETS = {
   // --- Estructura (cáscara paramétrica de sala) ---
   floor:  { label: "Suelo", kind: "structure", group: "Estructura", traits: {},
             draw: "floor", offset: { x: 0, y: 0 }, footMode: "corner", foot: { w: 1, l: 1, h: 0 },
-            files: { svg: "example.svg", png: null } },
+            files: { svg: "floor.svg", png: null }, sprite: { w: 34, h: 17, minX: -17, minY: 0 } },
   // Paredes: se dibujan por TILE (no por drawSprite), por eso no llevan `sprite`.
   // tile = tamaño del .svg del tile.
   wall1:  { label: "Pared (wall1)", kind: "structure", group: "Estructura", traits: { solid: true },

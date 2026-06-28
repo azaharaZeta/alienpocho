@@ -36,8 +36,7 @@ export const AP = (() => {
   );
   /* REGISTRO ÚNICO de rasters teñidos. Cubre los TRES tipos de imagen externa (sprite de objeto, tile de
      pared y sprite de puerta): el flujo es EL MISMO — lazy-load PNG→SVG, rasterizar a w×h, teñir por color
-     y cachear. Clave = fichero base (sin extensión): { neutral, tints }. (Antes eran tres copias casi
-     idénticas: _spr/_wallTex/_doorTex con su propio cargador.) null = imagen aún cargando. */
+     y cachear. Clave = fichero base (sin extensión): { neutral, tints }. null = imagen aún cargando. */
   const _raster = {};
   function _rasterTo(def, img) {
     const c = document.createElement("canvas"); c.width = def.w; c.height = def.h;
@@ -125,10 +124,10 @@ export const AP = (() => {
 
   /* =====================  ASSETS  ===================== */
 
-  // Suelo: negro con rejilla tenue de la tinta de la sala
+  // Suelo: tesela rómbica desde fichero (floor.svg, PNG→SVG), teñida por la tinta de la sala. El gris del
+  // SVG está calibrado para que el multiply reproduzca el suelo anterior: relleno ink×0.10 + rejilla ink×0.30.
   function floor(ctx, p, cx, cy, col) {
-    const a = p(cx, cy, 0), b = p(cx + 1, cy, 0), c = p(cx + 1, cy + 1, 0), d = p(cx, cy + 1, 0);
-    poly(ctx, [a, b, c, d], ((cx + cy) & 1) ? darken(col, 0.10) : "#020303", darken(col, 0.30));
+    drawSprite("floor", ctx, p(cx, cy, 0), col);
   }
 
   // Bloque: desde fichero (PNG si existe, si no SVG).

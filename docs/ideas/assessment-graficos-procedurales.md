@@ -5,8 +5,13 @@
 
 > **Actualización 2026-06-25:** las **paredes** ya se dibujan como módulos SVG tira a tira (sin recorte;
 > `draw.flatWall`) y la **puerta** como UN solo SVG (`door.svg`) generado por `tools/gen-doors.mjs` (el
-> render la parte en 2 piezas-poste para la oclusión). Queda pendiente lo de siempre: **robot** (animado) y
-> **suelo** (paramétrico, con el `files.svg:"example.svg"` fantasma a resolver), más el chrome 2D (fuera de alcance).
+> render la parte en 2 piezas-poste para la oclusión).
+>
+> **Actualización 2026-06-28:** el **suelo** ya se dibuja desde fichero (`assets/svg/floor.svg`), teñido por
+> sala como el resto de sprites (opción B del §4); borrado el `example.svg` fantasma. El gris del SVG está
+> calibrado para reproducir el suelo anterior (relleno ink×0.10 + rejilla ink×0.30); la única pérdida es la
+> alternancia de relleno par/impar (dos tonos casi-negros), imperceptible. Queda solo el **robot** (animado)
+> y el chrome 2D (fuera de alcance).
 
 ## 1. Situación actual
 
@@ -36,7 +41,7 @@ Cualquier asset con `draw:"sprite"` + su `.svg` se dibuja por ahí **sin tocar
 | Qué | Dónde | Naturaleza | Por qué sigue procedural |
 |-----|-------|-----------|--------------------------|
 | **`robot` (Pocho)** | [draw.js:227-280](../../src/draw.js) | `box()`/`poly()` por pieza: pies, brazos, torso, cabeza, visor, ojos, pecho, antena | **Animado** (bob al andar, balanceo de brazos opuesto a piernas) + **4 vistas** + orden de pintado de brazos según cara. Es el caso difícil. |
-| **`floor`** | [draw.js:151-154](../../src/draw.js) | quad negro + rejilla alterna por celda | Paramétrico por celda; se repite `w×h` veces/sala. Declara `files.svg:"example.svg"` pero **nunca se usa** (inconsistencia). |
+| ~~**`floor`**~~ | — | — | ✅ **Migrado (2026-06-28)**: `floor.svg` teñido por sala, dibujado por celda (`draw.floor`→`drawSprite`). |
 | **`shadow`** | [draw.js:282-286](../../src/draw.js) | elipse | Trivial, bajo cada entidad. |
 | **`doorHole`** | `draw.js` | polígono negro | Vacío del vano de la puerta de fondo; entra al painter como pieza de la cáscara (`half:"hole"`, no sólida); el orden x+y lo deja detrás del robot al cruzar. |
 | **HUD** | [render.js:192-224](../../src/render.js)+ | barras segmentadas, "V" del marco, título "ALIEN POCHO" (strokeText+glow), casilla de carga, mini-robot de vidas | Overlay 2D en píxeles de pantalla. |
@@ -93,9 +98,8 @@ El objetivo "todo SVG/PNG" **ya está cumplido para los assets del mundo**. Lo
 sensato es **acotar el objetivo** a "todo asset de contenido es fichero" y tratar
 aparte robot (animación) y chrome (UI):
 
-1. **Cerrar el suelo** (quick win): decidir sprite-de-celda vs. procedural oficial,
-   y eliminar el `files.svg:"example.svg"` fantasma de `floor`. — *bajo riesgo,
-   correr `npm test` (toca registro de assets).*
+1. ~~**Cerrar el suelo**~~ ✅ **HECHO (2026-06-28)**: sprite-de-celda (`floor.svg`), tinte por sala,
+   `example.svg` fantasma borrado. `npm test` verde.
 2. **Aparcar el robot** salvo decisión de rediseño: si se hace, sprite-sheet +
    drawer `spritesheet` nuevo, sin tocar `render.js`.
 3. **Excluir explícitamente** del objetivo: sombra, doorHole y todo el chrome 2D

@@ -53,3 +53,12 @@ Solo si aparece un asset con colisión ≠ silueta **irreconciliable de verdad**
 el que quieras pasar andando: colisión arriba, silueta hasta el suelo). Para ese caso, separar `sort`/`bounds`
 de `collision` sigue siendo la solución correcta. Mientras tanto, con una sola caja honesta (guardarraíl
 anti-#2) basta: esta idea queda **latente**, sin trabajo pendiente salvo que surja ese asset.
+
+## Caveat del `drone` (absorbido del listado de BUGS, 2026-06-28)
+El asset `drone` ([assets.js:133-137](../../src/data/assets.js)) ya arrastra el manejo especial de **huella
+ELEVADA** (`foot.z=0.45`) que envuelve su sprite flotante — la mitigación anti-#2 descrita arriba. Hoy ese
+caso **solo se ejercita en tool/tests**: el `drone` no se coloca en ninguna sala, así que **no es un defecto
+activo**. Cuando se coloque por primera vez (ligado a [[idea-mas-salas-retos]] — "dron activo"), **verificar
+en escena real** su oclusión/orden con los overlays `j`/`k`/`l` antes de darlo por bueno; si su silueta y su
+huella divergen de verdad (dron sólido bajo el que pasar), es justamente el disparador para activar este
+refactor. Se retira del listado de BUGS y queda registrado aquí como caveat.

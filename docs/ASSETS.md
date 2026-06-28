@@ -19,8 +19,9 @@ migran a **PNG editado a mano** caso por caso, cuando merece la pena.
 - **Los assets-sprite ya NO tienen fallback procedural.** Cada uno se dibuja SOLO desde su fichero
   (PNG→SVG) por la vía única `AP.drawSprite`; mientras la imagen carga, no se pinta (de ahí la idea de
   **precargar**, ver [`docs/ideas/ideas.md`](ideas/ideas.md)).
-- **El dibujo procedural (`AP.*` en `src/draw.js`) queda solo para**: el **robot** (animado), el **suelo**
-  (rejilla por celda) y el chrome 2D (HUD/minimapa/banner). Las **paredes** (tiras de panal `wall1/2.svg`)
+- **El dibujo procedural (`AP.*` en `src/draw.js`) queda solo para**: el **robot** (animado) y el chrome 2D
+  (HUD/minimapa/banner). El **suelo** ya es SVG en fichero (`floor.svg`, tesela rómbica teñida por sala,
+  dibujada por celda). Las **paredes** (tiras de panal `wall1/2.svg`)
   y la **puerta** (`door.svg`, un solo dibujo) ya son SVG en fichero; el código solo las **tesela/coloca**
   paramétricamente por tamaño de sala (`flatWall`/`door`). Objetivo a futuro: reducir el procedural al
   mínimo (lo animado: robot; ver [assessment](ideas/assessment-graficos-procedurales.md)). El **zócalo** ya
@@ -154,5 +155,7 @@ desde cualquier sitio que llame a su `AP.*`.
   sin recorte) y `door.svg` (UN solo dibujo, generado por `gen-doors.mjs`; front/back = mismo arte, distinto
   ancla). El render parte la puerta en **2 piezas** (recorte por el centro del vano, transparente) para que el
   robot se intercale entre los postes al cruzar. El código solo las coloca/tesela.
-- ⬜ **Sigue procedural**: **robot** (animado) y **suelo** (rejilla por celda). Ver
+- ✅ **Suelo en SVG**: `floor.svg` (tesela rómbica de 1 celda, teñida por sala, dibujada por celda por
+  `AP.floor`→`drawSprite`). Migrado 2026-06-28.
+- ⬜ **Sigue procedural**: **robot** (animado). Ver
   [assessment](ideas/assessment-graficos-procedurales.md) sobre viabilidad.

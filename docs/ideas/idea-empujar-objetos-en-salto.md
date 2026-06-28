@@ -29,3 +29,6 @@ Media. Coherencia de mecánica (si empujo andando, ¿por qué no rozando en salt
 ## Sugerencia
 **Mantener.** Implementar reusando `tryPush` en la rama aérea, y **afinar jugando** si el empuje en salto
 debe ser más débil o condicionado. Verificar en preview los casos límite.
+
+> **Relacionado:** [[bug-empuje-revalida-robot]] — `tryPush` no revalida la posición destino del robot contra
+> otros sólidos. Si se aborda este empuje en el aire, conviene revalidar también ahí (mismo helper).

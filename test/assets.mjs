@@ -90,6 +90,7 @@ test("ORÁCULO DE PÍXEL: el blit del sprite respecto a la esquina (0,0,0) es ES
   const blit = (id) => { const r = assetRef(id), s = ASSETS[id].sprite;
     return [ (r.x - r.y) * TW / 2 + s.minX, (r.x + r.y) * TH / 2 - r.z * BH + s.minY ]; };
   const FROZEN = {
+    floor: [-17, 0],
     cube: [-17, -17], prop_cube: [-11, -7.5], prop_pyramid: [-11, -2.5], prop_dome: [-9, -0.5],
     prop_cylinder: [-8, -6.5], socket: [-16, -3.5], spikes: [-7, -1.5], plant: [-4, -2.5],
     drone: [-6, -13.5], computer: [-9, -8.5],
@@ -182,7 +183,7 @@ test("GUARDARRAÍL: render.js dibuja TODO (objetos Y cáscara) por el motor gen�
   const src = readFileSync(new URL("../src/render.js", import.meta.url), "utf8");
   // La cáscara (paredes/puertas, incl. el vacío del vano) va por roomShell + AP.drawAsset, IGUAL que los
   // objetos. Solo se permite por nombre el ÚNICO pre-pase de fondo z=0 (AP.floor) + AP.drawSprite (icono HUD).
-  // AP.doorHole ya NO se llama desde render (es una pieza del painter, vía el drawer de la puerta).
+  // AP.doorHole tampoco se llama desde render: es una pieza del painter, vía el drawer de la puerta.
   for (const bad of ["AP.cube", "AP.spikes", "AP.socket", "AP.prop(", "AP.pillar", "AP.drone", "AP.flatWall", "AP.door(", "AP.doorHole"])
     assert.ok(!src.includes(bad), `render.js menciona ${bad} → debe dibujar TODO lo que tiene altura vía AP.drawAsset (roomShell/roomThings)`);
   for (const bucket of ["room.blocks", "room.sockets", "room.hazards"])

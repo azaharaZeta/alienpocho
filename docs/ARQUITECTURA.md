@@ -43,7 +43,7 @@ Cada asset se describe a sí mismo:
   · **`offset`+`footMode`/`foot`** (ancla = esquina (0,0) + `offset`; `footMode` center/corner sitúa la huella) ·
   **`tile`/`tiles`** (encuadre de pared/puerta, en el registro) · **`variants`** (orientación: puerta eje x/y, robot ±x/±y).
 - Helpers: `assetBox`/`assetRef`/`assetFoot`/`assetRegion` · `assetKind`/`assetHas`/`assetTraits`/`assetTint` ·
-  `assetsByGroup`/`assetViews`/`assetLabel` · `socketTop`.
+  `assetsByGroup`/`assetViews` · `socketTop`.
 
 **Render y física son GENÉRICOS (no enumeran tipos):**
 - `draw.js` tiene `DRAWERS` (uno por clave `draw`, con un `sprite` genérico que vale para cualquier asset de imagen)
@@ -86,4 +86,4 @@ ni una línea a `draw.js`; uno procedural añade solo su `drawer`. No se toca re
 - `view.js`/`input.js` no tocan el DOM al importar (solo en `init*()`).
 - `makeRoom` **clona** los arrays mutables → `resetGame` no arrastra estado.
 - Datos de assets SOLO en `data/assets.js`; datos del mapa SOLO en `data/rooms.js`. Cero geometría hardcodeada.
-- `npm test` (smoke + painter + assets) antes de tocar física / painter / interacción de objetos.
+- `npm test` (smoke + painter + assets + mission) antes de tocar física / painter / interacción de objetos.

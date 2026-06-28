@@ -31,25 +31,16 @@ Convenio de nombres: usar minúsculas y guiones en lugar de espacios para `<titu
 
 
 ## IDEAS IA
-<!-- vacío: todas las ideas listadas se procesaron a docs/ideas/idea-*.md (2026-06-27). -->
+<!-- vacío: las ideas IA se procesaron a docs/ideas/idea-*.md (2026-06-28: minimapa-pistas-puzzle, pantalla-pausa). -->
 
 
 
 
 ## IDEAS USUARIA
-<!-- vacío: las ideas listadas se procesaron a docs/ideas/idea-*.md (2026-06-27). Esta sección la rellena solo la usuaria. -->
-- Ya no permitimos salas con largo o ancho >8. Y todas se centran con el pico más cercano al usuario en el centro de la pantalla. Ya no es necesario que la UI se adapte, siempre será fija en su sitio. Revisar si hay código obsoleto de resize de la UI. Y:
-  - Colocar el texto "Alien Pocho" arriba a la izda de la pantalla. Ojo que no colisione con la info de debug, mira si se puede poner la info de debug debajo del título, o donde no moleste.
-  - Las vidas: colocalas en la zona derecha
-  - Ojo, no solo se podrán recoger circuitos, también eventualmente otros objetos. Marca el actual objeto computer como recogible.
-  - Ahora que se pueden recoger otros objetos además de circuitos, desliga el contador de circuitos colocados del visor del objeto colocado. Llévalo a otra zona del UI y ponle un label tipo "Circuitos activados" o algo así.
-  - El objeto recogido: a la izqiuerda.  Y añádele un label con el nombre de ese objeto. Todos los objetos recogibles tienen que tener un nombre :)
-
-- En menú principal, listar los controles de teclado.
+<!-- vacío: las ideas listadas se procesaron a docs/ideas/idea-*.md (2026-06-28: rediseno-hud, objetos-recogibles-genericos, controles-en-menu). Esta sección la rellena solo la usuaria. -->
 
 
 ## 🐞 BUGS CONOCIDOS
-- `floor` declara `files.svg: "example.svg"` pero se dibuja procedural (`draw:"floor"`) → es un SVG declarado que no se usa. Decidir: quitar la declaración, o dibujar el suelo desde fichero como el resto de sprites. (Directo de resolver; pendiente de decisión.)
-- La representación del objeto recogido en la UI no cabe en su cuadro
-- `tryPush` (`player.js`) mueve al robot junto al objeto sin revalidar su nueva posición (±PRAD) contra OTROS sólidos; solo valida el destino del objeto (`objBlocked`). Riesgo teórico de borde (empujar pegado a una esquina con otro sólido al costado); no reproducido. Verificar antes de abordar.
-- El asset `drone` arrastra el manejo especial de huella ELEVADA (anti-#2, `data/assets.js`) que solo se ejercita en tool/tests: nunca se coloca en una sala. No es defecto activo; al colocarlo por primera vez, verificar oclusión/orden en escena real (j/k/l).
+<!-- vacío. (2026-06-28) Resuelto el del `floor`: opción B — el suelo se dibuja desde assets/svg/floor.svg
+     como el resto (sprite teñido por sala); borrado el example.svg fantasma. -->
+

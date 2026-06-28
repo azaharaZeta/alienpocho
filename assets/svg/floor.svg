@@ -1,0 +1,6 @@
+<svg viewBox="-17 0 34 17" width="34" height="17" xmlns="http://www.w3.org/2000/svg">
+  <!-- Tesela de suelo (rombo iso de 1 celda, z=0). Anclada al pico trasero P(cx,cy,0) = origen (0,0).
+       En grises para que el juego la tiña por sala (multiply): el relleno #1a1a1a → ink×0.10 y la rejilla
+       #4d4d4d → ink×0.30, reproduciendo el suelo procedural anterior. Se dibuja una por celda. -->
+  <path d="M0 0 L17 8.5 L0 17 L-17 8.5 Z" fill="#1a1a1a" stroke="#4d4d4d" stroke-width="1"/>
+</svg>
