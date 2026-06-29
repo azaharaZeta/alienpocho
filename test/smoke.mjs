@@ -257,6 +257,20 @@ test("colocar el último circuito gana la partida", () => {
   assert.equal(game.won, true, "game.won al completar todos");
 });
 
+test("soltar comprueba que el objeto CABE (no lo mete en un muro)", () => {
+  resetGame();                                  // ESCLUSA 8×8
+  const n = room.objects.length;
+  game.carried = "crate";                       // huella 1.0 (más ancha que el robot, PRAD 0.35)
+  player.x = 0.45; player.y = 3.5; player.z = 0; player.onGround = true;   // pegado al muro x=0
+  interact(room);
+  assert.equal(game.carried, "crate", "no suelta el crate dentro del muro");
+  assert.equal(room.objects.length, n, "no se añade ningún objeto");
+  player.x = 4.5; player.y = 2.5; player.z = 0; player.onGround = true;    // suelo despejado
+  interact(room);
+  assert.equal(game.carried, null, "en hueco libre SÍ suelta");
+  assert.equal(room.objects.length, n + 1, "se añadió el objeto");
+});
+
 /* ---------------------------------------------- GRAVEDAD DE OBJETOS -------- */
 test("un objeto en el aire cae hasta su apoyo", () => {
   resetGame();

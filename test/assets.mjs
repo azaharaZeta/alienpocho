@@ -57,6 +57,18 @@ test("cada asset CARRIABLE tiene nombre (label) para mostrar en el HUD", () => {
       assert.ok(typeof a.label === "string" && a.label.length > 0, `${id}: carriable sin label/nombre`);
 });
 
+test("GUARDARRAÍL: ningún asset > 1×1×1 (huella) es carriable (muebles/grandes NO se cogen)", () => {
+  // Un objeto que no cabe en una celda no debería poder llevarse en la mano. Se marca en el registro
+  // quitándole el trait `carriable`; este test lo fija (y avisa si un asset grande nuevo lo reintroduce).
+  const big = [];
+  for (const [id, a] of Object.entries(ASSETS)) {
+    const f = assetFoot(id); if (!f) continue;
+    if ((f.w > 1 + 1e-9 || f.l > 1 + 1e-9 || f.h > 1 + 1e-9) && a.traits && a.traits.carriable)
+      big.push(`${id}(${f.w}×${f.l}×${f.h})`);
+  }
+  assert.equal(big.length, 0, `assets > 1×1×1 marcados carriable (no deberían serlo): ${big.join(", ")}`);
+});
+
 test("assetsByGroup agrupa TODOS los assets y respeta GROUP_ORDER", () => {
   const groups = assetsByGroup();
   const total = groups.reduce((n, g) => n + g.ids.length, 0);

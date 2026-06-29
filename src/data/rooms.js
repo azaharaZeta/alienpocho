@@ -93,9 +93,9 @@ export const ROOMS = {
   // ===== ALMACÉN 6×6 — estanterías/cajas/contenedores. Circuito CUBO #2; zócalo del DOMO =====
   "0,2": { name: "ALMACEN", paletteIndex: 0, w: 6, h: 6,
     exits: { ym: "0,1", xp: "1,2" },
-    objects: [{ asset: "shelf", x: 1.5, y: 1.5 }, { asset: "shelf", x: 1.5, y: 3.5 },
-              { asset: "crate", x: 1.5, y: 5.5 }, { asset: "canister", x: 4.5, y: 4.5 },
-              { x: 3.5, y: 2.5, shape: "cube" }],                     // circuito CUBO #2
+    objects: [{ asset: "shelf", x: 1.5, y: 1.5 }, { asset: "canister", x: 4.5, y: 4.5 },
+              { asset: "crate", x: 4.5, y: 5.5 },
+              { x: 3.5, y: 4.5, shape: "cube" }],                     // circuito CUBO #2
     sockets: [{ x: 2.5, y: 2.5, id: "alm", filled: null }] },         // pide DOMO
 
   // ===== TALLER 6×6 — estantería/mesa/herramientas/contenedor. Circuito PIRÁMIDE #2 =====

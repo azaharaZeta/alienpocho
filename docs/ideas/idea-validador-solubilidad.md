@@ -1,6 +1,12 @@
 # Idea — Validador de solubilidad de la misión (test)
 
-> **Estado: PENDIENTE — Prioridad MEDIA (guardarraíl de diseño).** Origen: IA, procesado 2026-06-28.
+> **Estado: HECHA — 2026-06-29.** Origen: IA, procesado 2026-06-28.
+> Implementado en `test/solve.mjs` (en `npm test`): flood-fill de alcanzabilidad multi-sala reutilizando la
+> FÍSICA real (`canStandOn`/`supportHeight`) y la geometría de puerta (`doorSpan`) — sin modelo paralelo.
+> Comprueba que cada zócalo es alcanzable a pie y que hay ≥ tantos circuitos ALCANZABLES de cada forma como
+> zócalos la piden. Modelo acotado (no saltos/empuje/transmutación; el mapa actual es ground-only). **Ya pilló
+> un bug real**: un zócalo de ALMACÉN tapiado por estanterías → reubicado. Ampliar el modelo si futuras
+> mecánicas entran en el camino crítico.
 
 ## Qué es
 Un test que **demuestre que la misión tiene solución**: una búsqueda (BFS/DFS sobre estados del puzzle) que

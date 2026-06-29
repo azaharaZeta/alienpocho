@@ -11,7 +11,7 @@
 "use strict";
 
 import { CFG } from "./config.js";
-import { canStandOn, socketTop, overlapsBox, objBox } from "./physics.js";
+import { canStandOn, socketTop, overlapsBox, objBox, objBlocked } from "./physics.js";
 import { player } from "./player.js";
 import { buildWorld, roomThings, objAsset } from "./world.js";
 import { assetHas, assetFoot, propAsset } from "./data/assets.js";   // traits + huella(alto) + forma→asset del zócalo
@@ -42,15 +42,18 @@ export function interact(room) {
         return;
       }
     }
-    // 2) soltar bajo los pies y subirse encima — solo si hay sitio arriba
+    // 2) soltar bajo los pies y subirse encima — solo si el OBJETO CABE ahí (su huella no choca con
+    //    paredes/otros sólidos ni se sale) Y hay sitio arriba para subirse. Antes se soltaba "tal cual",
+    //    metiéndolo dentro de un muro u otro objeto si la huella era más ancha que el robot.
     const ch = assetFoot(game.carried).h;   // alto del objeto que dejo = lo que subo al ponerme encima
-    if (player.onGround && canStandOn(room, player.x, player.y, player.z + ch)) {
-      room.objects.push({ x: player.x, y: player.y, z: player.z, asset: game.carried });   // carried = asset id (circuito o cualquier recogible)
+    const dropped = { x: player.x, y: player.y, z: player.z, asset: game.carried };   // carried = asset id (circuito o recogible)
+    if (player.onGround && !objBlocked(room, dropped, player.x, player.y) && canStandOn(room, player.x, player.y, player.z + ch)) {
+      room.objects.push(dropped);
       game.carried = null;
       player.z += ch;                     // subir encima
       player.vz = 0; player.onGround = true;
     }
-    return;                                  // sin hueco → no suelta
+    return;                                  // no cabe / sin hueco → no suelta
   }
 
   // Manos libres: coger un carriable si estás subido encima (huella lo pisa y pies a su
