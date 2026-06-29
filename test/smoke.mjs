@@ -16,7 +16,7 @@ import { buildWorld, roomThings, roomShell } from "../src/world.js";
 import { MISSION } from "../src/data/mission.js";
 import { game, room, interact, checkExits, resetGame } from "../src/game.js";
 import { player } from "../src/player.js";
-import { updateObjects, blocksHoriz, supportHeight, roomSolids, socketTop } from "../src/physics.js";
+import { updateObjects, blocksHoriz, supportHeight, roomSolids, socketTop, pushBlocked } from "../src/physics.js";
 import { CFG, SOCKET, DOOR, WALL_TILE } from "../src/config.js";
 import { ASSETS, assetHas, WALL_H } from "../src/data/assets.js";
 
@@ -160,9 +160,18 @@ test("painter por HUELLA: el robot pegado por detrás de un objeto sub-celda que
 
 /* ---------------------------------------------------------------- FÍSICA --- */
 test("colisión: se choca con un bloque y se anda por celda libre", () => {
-  const r = buildWorld().rooms["0,0"];        // ESCLUSA, taquilla sólida en (1.5,1.5)
-  assert.equal(blocksHoriz(r, 1.5, 1.5, 0), true, "la celda de la taquilla bloquea");
+  const r = buildWorld().rooms["0,0"];        // ESCLUSA, taquilla sólida en (1.5,0.42) (pegada a la pared y=0)
+  assert.equal(blocksHoriz(r, 1.5, 0.5, 0), true, "la celda de la taquilla bloquea");
   assert.equal(blocksHoriz(r, 4.5, 2.5, 0), false, "una celda libre no bloquea");
+});
+
+test("empuje: un objeto que SOLAPA un sólido NO se queda pegado (puede salir, no hundirse)", () => {
+  const r = buildWorld().rooms["0,0"];        // ESCLUSA: taquilla sólida en (1.5,0.42) → x[1,2] y[0,0.84]
+  const crate = r.objects.find(o => o.asset === "crate");
+  crate.x = 1.5; crate.y = 1.0; crate.z = 0;  // metido SOLAPANDO la taquilla por el sur
+  assert.equal(pushBlocked(r, crate, crate.x, crate.y - 0.1, null), true,  "hundirse MÁS en el sólido se bloquea");
+  assert.equal(pushBlocked(r, crate, crate.x, crate.y + 0.1, null), false, "SALIR del sólido se permite (no se queda pegado)");
+  assert.equal(pushBlocked(r, crate, crate.x + 0.1, crate.y, null), false, "DESLIZAR a lo largo del contacto se permite");
 });
 
 test("apoyo: el suelo es 0 y la cima de un bloque es su altura", () => {
@@ -215,6 +224,15 @@ test("cáscara: el hueco de una puerta de FONDO también pasa (eje y)", () => {
   const r = buildWorld().rooms["1,1"];   // CAMAROTES 8×6: puerta de fondo ym (y=0), vano centrado en x=w/2=4
   assert.equal(blocksHoriz(r, r.w / 2, 0.05, 0), false, "el centro del vano (puerta ym) pasa");
   assert.equal(blocksHoriz(r, 1.0, 0.05, 0), true, "la pared de fondo y=0 fuera del vano bloquea");
+});
+
+test("borde del mundo: el muro de fondo bloquea a CUALQUIER altura (no se salta desde un mueble alto)", () => {
+  const r = buildWorld().rooms["0,0"];   // ESCLUSA: sin puertas xm/ym → muros de fondo = borde DURO
+  const highZ = 5;                       // subido a una taquilla (~2.7) + salto: por encima de la pared sólida
+  assert.equal(blocksHoriz(r, 2.5, 0.05, highZ), true, "no se cruza el muro de fondo y=0 estando alto");
+  assert.equal(blocksHoriz(r, 0.05, 4.5, highZ), true, "no se cruza el muro de fondo x=0 estando alto");
+  const c = buildWorld().rooms["1,1"];   // pero el VANO de una puerta de fondo sigue pasando
+  assert.equal(blocksHoriz(c, c.w / 2, 0.05, 0), false, "el vano de la puerta de fondo no se rompió");
 });
 
 /* ------------------------------------------------- TRANSICIÓN ENTRE SALAS --- */

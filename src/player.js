@@ -14,7 +14,7 @@ import { CFG, ROBOT } from "./config.js";
 import { AP } from "./draw.js";
 import { pressed, held } from "./input.js";
 import { ctx, P } from "./view.js";
-import { blocksHoriz, supportHeight, ceilingHeight, objBox, overlapsBox, objBlocked, objAsset, thingHas } from "./physics.js";
+import { blocksHoriz, supportHeight, ceilingHeight, objBox, overlapsBox, pushBlocked, ridersOf, objAsset, thingHas } from "./physics.js";
 import { assetFoot, assetTint } from "./data/assets.js";   // huella del robot por orientación + tinte del objeto en brazos
 import { MISSION } from "./data/mission.js";    // posición inicial del robot (MISSION.start)
 import { game, interact } from "./game.js";
@@ -55,9 +55,12 @@ function tryPush(room, dir, step, feetZ) {
     if (b.z0 <= feetZ + CFG.STEP && b.top > feetZ + CFG.STEP && overlapsBox(b, probeX, probeY)) { target = o; break; }
   }
   if (!target) return false;
-  const nx = target.x + dir.dx * step, ny = target.y + dir.dy * step;
-  if (objBlocked(room, target, nx, ny)) return false;
-  target.x = nx; target.y = ny;
+  // La PILA viaja con el objeto: lo que descansa encima (monitor sobre la mesa, etc.) se empuja con él y NO
+  // cuenta como obstáculo. El destino debe estar libre para el objeto Y para cada rider (ignorando al grupo).
+  const group = new Set([target, ...ridersOf(room, target)]);
+  for (const o of group)
+    if (pushBlocked(room, o, o.x + dir.dx * step, o.y + dir.dy * step, group)) return false;
+  for (const o of group) { o.x += dir.dx * step; o.y += dir.dy * step; }
   player.x += dir.dx * step; player.y += dir.dy * step;
   return true;
 }

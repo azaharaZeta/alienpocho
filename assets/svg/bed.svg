@@ -1,14 +1,14 @@
-<svg viewBox="-25 -27 50 40" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="-23 -24.5 46 36.5" xmlns="http://www.w3.org/2000/svg">
   <!-- Cama: iso monocromo neutro (el juego lo tiñe por sala). Borrador para refinar a mano.
        Anclaje centro-base. Generado por gen_assets.mjs. -->
-  <path d="M-24.14 -8.33 L3.06 5.27 L3.06 12.07 L-24.14 -1.53 Z" fill="rgb(95,95,95)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
-  <path d="M24.14 -5.27 L3.06 5.27 L3.06 12.07 L24.14 1.53 Z" fill="rgb(60,60,60)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
-  <path d="M-3.06 -18.87 L24.14 -5.27 L3.06 5.27 L-24.14 -8.33 Z" fill="rgb(95,95,95)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
-  <path d="M-24.14 -13.09 L3.06 0.51 L3.06 5.27 L-24.14 -8.33 Z" fill="rgb(209,209,209)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
-  <path d="M24.14 -10.03 L3.06 0.51 L3.06 5.27 L24.14 -5.27 Z" fill="rgb(158,158,158)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
-  <path d="M-3.06 -23.63 L24.14 -10.03 L3.06 0.51 L-24.14 -13.09 Z" fill="#ffffff" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
-  <path d="M-21.42 -9.11 L0.34 1.77 L0.34 3.53 L-21.42 -7.35 Z" fill="rgb(120,120,120)" stroke="#000000" stroke-width="0.5" stroke-linejoin="round"/>
-  <path d="M-22.1 -16.83 L-12.58 -12.07 L-12.58 -8.67 L-22.1 -13.43 Z" fill="rgb(225,225,225)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
-  <path d="M5.78 -21.25 L-12.58 -12.07 L-12.58 -8.67 L5.78 -17.85 Z" fill="rgb(120,120,120)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
-  <path d="M-3.74 -26.01 L5.78 -21.25 L-12.58 -12.07 L-22.1 -16.83 Z" fill="#ffffff" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M-22.1 -6.63 L5.1 6.97 L5.1 11.05 L-22.1 -2.55 Z" fill="rgb(95,95,95)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M22.1 -1.53 L5.1 6.97 L5.1 11.05 L22.1 2.55 Z" fill="rgb(60,60,60)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M-5.1 -15.13 L22.1 -1.53 L5.1 6.97 L-22.1 -6.63 Z" fill="rgb(95,95,95)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M-22.1 -12.75 L5.1 0.85 L5.1 6.97 L-22.1 -6.63 Z" fill="rgb(209,209,209)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M22.1 -7.65 L5.1 0.85 L5.1 6.97 L22.1 -1.53 Z" fill="rgb(158,158,158)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M-5.1 -21.25 L22.1 -7.65 L5.1 0.85 L-22.1 -12.75 Z" fill="#ffffff" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M-19.38 -8.33 L2.38 2.55 L2.38 5.12 L-19.38 -5.76 Z" fill="rgb(120,120,120)" stroke="#000000" stroke-width="0.5" stroke-linejoin="round"/>
+  <path d="M-20.06 -16.49 L-10.54 -11.73 L-10.54 -8.33 L-20.06 -13.09 Z" fill="rgb(225,225,225)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M3.74 -18.87 L-10.54 -11.73 L-10.54 -8.33 L3.74 -15.47 Z" fill="rgb(120,120,120)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M-5.78 -23.63 L3.74 -18.87 L-10.54 -11.73 L-20.06 -16.49 Z" fill="#ffffff" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
 </svg>

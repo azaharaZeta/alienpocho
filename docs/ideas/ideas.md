@@ -43,10 +43,15 @@ Convenio de nombres: usar minúsculas y guiones en lugar de espacios para `<titu
 <!-- "Coordenadas UNIFICADAS para TODOS los assets" → HECHA 2026-06-28: docs/ideas/archivo/idea-coordenadas-unificadas.md
      (convención continua única x,y + z normalizado en makeRoom; resolvió de paso bug-reactor-bloque-sin-z). -->
 - Distintos assets de suelo
+<!-- "Mover objetos con otros encima (mesa con monitor)" → HECHA 2026-06-29:
+     docs/ideas/archivo/idea-empujar-pila-objetos.md (ridersOf + objBlocked(exclude); el empuje arrastra la pila). -->
 
 
 ## 🐞 BUGS CONOCIDOS
 <!-- vacío de bugs SIN procesar. Bug abierto con análisis propio: docs/ideas/bug-empuje-revalida-robot.md.
      (Resueltos en 2026-06-28 y retirados de aquí: floor fantasma, números mágicos del HUD, "pegote" del vano
      de puertas, y bug-reactor-bloque-sin-z → absorbido por coordenadas unificadas, archivado.) -->
-- La tool de assets no parece estar dibujando bien los cubos de referencia, region estandar y punto de anclaje de la puerta.
+- La tool de assets no parece estar dibujando bien los cubos de referencia, region estandar y punto de anclaje de la puerta. Revisar que se esté usando código real del juego, no un código diferente en la tool. esto es esencial para evitar que la tool muestre algo no real en el juego. Todo lo que muestre la tool tiene que ser usando el código fuente del juego, no una copia o una reconstrucción de la lógica, para evitar desalineamiento y reflejar la realidad.
+<!-- "Objetos movibles que no se mueven (CRUCE silla)" → RESUELTO 2026-06-29: estaba AUTORIZADO solapando la mesa
+     (objBlocked rechaza todo destino que siga solapando → atrapado). Reubicada la silla + guardarraíl en
+     test/mission.mjs (ningún par de sólidos se solapa a la misma altura). En juego no nacen solapes. -->

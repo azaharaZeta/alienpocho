@@ -1,15 +1,11 @@
-<svg viewBox="-8 -33 20.5 36.5" xmlns="http://www.w3.org/2000/svg">
-  <!-- Monitor: iso monocromo neutro (el juego lo tiñe por sala). Borrador para refinar a mano.
+<svg viewBox="-12.5 -22.5 26 29" xmlns="http://www.w3.org/2000/svg">
+  <!-- Monitor (CRT): iso monocromo neutro (el juego lo tiñe por sala). Borrador para refinar a mano.
        Anclaje centro-base. Generado por gen_assets.mjs. -->
-  <path d="M-5.78 -1.87 L0.34 1.19 L0.34 2.89 L-5.78 -0.17 Z" fill="rgb(95,95,95)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
-  <path d="M5.78 -1.53 L0.34 1.19 L0.34 2.89 L5.78 0.17 Z" fill="rgb(60,60,60)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
-  <path d="M-0.34 -4.59 L5.78 -1.53 L0.34 1.19 L-5.78 -1.87 Z" fill="rgb(120,120,120)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
-  <path d="M-2.04 -9.35 L0 -8.33 L0 -0.68 L-2.04 -1.7 Z" fill="rgb(95,95,95)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
-  <path d="M2.04 -9.35 L0 -8.33 L0 -0.68 L2.04 -1.7 Z" fill="rgb(60,60,60)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
-  <path d="M0 -10.37 L2.04 -9.35 L0 -8.33 L-2.04 -9.35 Z" fill="rgb(95,95,95)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
-  <path d="M-7.14 -29.92 L7.14 -22.78 L7.14 -5.78 L-7.14 -12.92 Z" fill="rgb(209,209,209)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
-  <path d="M11.9 -25.16 L7.14 -22.78 L7.14 -5.78 L11.9 -8.16 Z" fill="rgb(158,158,158)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
-  <path d="M-2.38 -32.3 L11.9 -25.16 L7.14 -22.78 L-7.14 -29.92 Z" fill="#ffffff" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
-  <path d="M-5.71 -27.51 L5.71 -21.79 L5.71 -9.55 L-5.71 -15.27 Z" fill="rgb(40,40,40)" stroke="#000000" stroke-width="0.5" stroke-linejoin="round"/>
-  <path d="M4 -9.73 L5.14 -9.16 L5.14 -7.8 L4 -8.37 Z" fill="#ffffff" stroke="#000000" stroke-width="0.4" stroke-linejoin="round"/>
+  <path d="M-11.56 -16.32 L2.04 -9.52 L2.04 5.78 L-11.56 -1.02 Z" fill="rgb(209,209,209)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M12.58 -14.79 L2.04 -9.52 L2.04 5.78 L12.58 0.51 Z" fill="rgb(158,158,158)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M-1.02 -21.59 L12.58 -14.79 L2.04 -9.52 L-11.56 -16.32 Z" fill="#ffffff" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M-10.47 -14.55 L0.95 -8.84 L0.95 3.09 L-10.47 -2.62 Z" fill="rgb(95,95,95)" stroke="#000000" stroke-width="0.5" stroke-linejoin="round"/>
+  <path d="M-9.11 -12.34 L-0.41 -7.99 L-0.41 0.58 L-9.11 -3.77 Z" fill="rgb(40,40,40)" stroke="#000000" stroke-width="0.5" stroke-linejoin="round"/>
+  <ellipse cx="-7.76" cy="-10.16" rx="3" ry="4" fill="rgb(120,120,120)"/>
+  <path d="M-1.5 1.87 L-0.14 2.55 L-0.14 3.93 L-1.5 3.25 Z" fill="#ffffff" stroke="#000000" stroke-width="0.4" stroke-linejoin="round"/>
 </svg>

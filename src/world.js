@@ -52,11 +52,14 @@ export function thingHas(o, trait) { return assetHas(objAsset(o), trait) || !!(o
 /* AABB de mundo {x0,y0,z0,x1,y1,z1} de un asset colocado con su anclaje en (ax,ay,az).
    Deriva de assetBox/assetRef (frame local) + offset del anclaje. `top` opcional sobreescribe
    la cima (zócalo activo). La usan a la vez render (painter) y física (sólidos). */
-function placeAabb(id, ax, ay, az, top) {
-  const b = assetBox(id), r = assetRef(id);
+function placeAabb(id, ax, ay, az, top, variant) {
+  const b = assetBox(id, variant), r = assetRef(id, variant);
   const x0 = b.x + (ax - r.x), y0 = b.y + (ay - r.y), z0 = b.z + (az - r.z);
   return { x0, y0, z0, x1: x0 + b.w, y1: y0 + b.l, z1: top != null ? top : z0 + b.h };
 }
+// Variante de ORIENTACIÓN según la dirección de la instancia: dir 1/3 = eje y (huella w↔l), 0/2/ø = eje x.
+// Un asset sin variante `axisY` ignora esto (assetBox cae a su huella base) → seguro para no-direccionales.
+const dirVariant = (dir) => (dir === 1 || dir === 3) ? "axisY" : "axisX";
 
 /* LISTA UNIFORME de placements de la sala (lo COLOCABLE; suelo/pared/puerta van aparte).
    Fuente única del mapeo "cubetas del mapa → assets", que consumen render y física. Se calcula
@@ -68,7 +71,7 @@ export function roomThings(room) {
     const id = objAsset(o), a = ASSETS[id]; if (!a) continue;    // el comportamiento lo deciden los TRAITS, no la cubeta
     for (let k = 0; k < (o.h || 1); k++) {                       // h = pila de copias (terreno fijo); móviles = 1
       const pz = o.z + k;                                        // x,y,z = ancla continua en el mundo (z normalizado en makeRoom)
-      t.push({ asset: id, x: o.x, y: o.y, z: pz, shape: o.shape, src: o, aabb: placeAabb(id, o.x, o.y, pz) });
+      t.push({ asset: id, x: o.x, y: o.y, z: pz, shape: o.shape, dir: o.dir, src: o, aabb: placeAabb(id, o.x, o.y, pz, null, dirVariant(o.dir)) });
     }
   }
   for (const s of room.sockets)                                  // zócalos (vivos: al llenarse suben)

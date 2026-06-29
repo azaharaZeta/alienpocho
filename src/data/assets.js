@@ -23,6 +23,15 @@
                AABB y ancla se derivan de foot+offset+footMode (assetBox / assetRef).
      variants: huella/posición según la ORIENTACIÓN. Cada variante trae { foot } (override)
                o { box, offset } explícitos (puerta).
+     onTable : true si el asset, POR DEFECTO, se coloca ENCIMA de una mesa (lateral + fondo), no en el
+               suelo (monitor, lámpara de mesa, papeles). En el mapa se coloca con z = cima de la mesa; lo
+               usará el GENERADOR (roguelike) para posarlo solo. Lo fija test/mission.mjs (debe ir sobre superficie).
+     orientación: TODO asset `draw:"sprite"` es ORIENTABLE (sin flag). La instancia trae `dir` ∈ {0:+x, 1:+y,
+               2:−x, 3:−y} (def. 0). El render espeja en dir 1/2(asimétrico)/1·3(simétrico) y la HUELLA gira sola
+               (eje y = ancho↔largo, DERIVADO por assetFoot/assetBox; cuadrada → idéntica). Ver world.dirVariant
+               y docs/ideas/idea-assets-direccionales.md.
+     spriteBack : { w, h, minX, minY }  encuadre de la vista TRASERA (fichero <id>_back.svg). OPT-IN: solo los
+               assets que la declaran (silla; ampliable) muestran cara trasera (dir 2/3); el resto reusa el frontal.
    ============================================================================= */
 "use strict";
 
@@ -127,14 +136,14 @@ export const ASSETS = {
 
   // --- Peligros ---
   spikes: { label: "Pinchos", kind: "object", group: "Peligros", traits: { hazard: true },
-            draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.54, l: 0.54, h: 0.5 },
-            sprite: { w: 14, h: 11, minX: -7, minY: -10 } },
+            draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.6, l: 0.6, h: 0.95 },
+            sprite: { w: 17, h: 17.5, minX: -8.5, minY: -16 } },
 
   // --- Decoración (objetos sin más rol; la "decoración" es un object SIN traits especiales) ---
-  plant:  { label: "Planta", kind: "object", group: "Decoración", traits: { solid: true, movable: true, carriable: true, falls: true },
+  plant:  { label: "Planta", kind: "object", group: "Decoración", traits: { solid: true, movable: true, falls: true },
             tint: "primary",
-            draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.48, l: 0.48, h: 0.72 },
-            sprite: { w: 18, h: 18.5, minX: -9, minY: -15.5 } },
+            draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.66, l: 0.66, h: 1 },
+            sprite: { w: 22, h: 24.5, minX: -11, minY: -21.5 } },
   flower: { label: "Flor (tiesto)", kind: "object", group: "Decoración", traits: { solid: true, movable: true, falls: true },
             tint: "primary",
             draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.62, l: 0.62, h: 1.1 },
@@ -152,19 +161,21 @@ export const ASSETS = {
             sprite: { w: 32, h: 42.5, minX: -16, minY: -34 } },
   // Monitor: pantalla sobre peana (pareja del ordenador). Mismos traits que el ordenador (sólido/empujable/
   // recogible/cae) + tint primario → se comporta y se tiñe igual.
-  monitor: { label: "Monitor", kind: "object", group: "Decoración", traits: { solid: true, movable: true, falls: true },
-            tint: "primary",
-            draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.9, l: 0.6, h: 1.6 },
-            sprite: { w: 20.5, h: 36.5, minX: -8, minY: -33 } },
+  monitor: { label: "Monitor (CRT)", kind: "object", group: "Decoración", traits: { solid: true, movable: true, falls: true },
+            tint: "primary", onTable: true,   // por defecto va ENCIMA de una mesa (lateral + fondo); lo usa el generador
+            draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.8, l: 0.62, h: 0.9 },
+            sprite: { w: 26, h: 29, minX: -12.5, minY: -22.5 } },
 
   // --- Mobiliario (estación espacial): todos sólidos + empujables + recogibles + caen (como el ordenador),
   //     tint primario. Geometría generada por tools (scratchpad gen_assets.mjs); refinar PNG a mano. ---
   desk:      { label: "Mesa de trabajo", kind: "object", group: "Mobiliario", traits: { solid: true, movable: true, falls: true }, tint: "primary",
                draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 1.68, l: 1.2, h: 1 }, sprite: { w: 50, h: 41.5, minX: -25, minY: -30 } },
   chair:     { label: "Silla de trabajo", kind: "object", group: "Mobiliario", traits: { solid: true, movable: true, falls: true }, tint: "primary",
-               draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 1, l: 1, h: 1.9 }, sprite: { w: 34, h: 43, minX: -17, minY: -40 } },
+               draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.88, l: 0.88, h: 1.64 },
+               sprite: { w: 23.5, h: 37.5, minX: -10, minY: -33 },          // vista FRONTAL (dir 0/1)
+               spriteBack: { w: 23.5, h: 30.5, minX: -13.5, minY: -26 } },    // vista TRASERA real (dir 2/3, chair_back.svg): respaldo en el lado cercano, tapando el asiento
   bed:       { label: "Cama", kind: "object", group: "Mobiliario", traits: { solid: true, movable: true, falls: true }, tint: "primary",
-               draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 1.6, l: 1.24, h: 0.88 }, sprite: { w: 50, h: 40, minX: -25, minY: -27 } },
+               draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 1.6, l: 1, h: 0.8 }, sprite: { w: 46, h: 36.5, minX: -23, minY: -24.5 } },
   kitchen:   { label: "Cocina", kind: "object", group: "Mobiliario", traits: { solid: true, movable: true, falls: true }, tint: "primary",
                draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 1.68, l: 1.12, h: 1.4 }, sprite: { w: 49, h: 48.5, minX: -24.5, minY: -36.5 } },
   locker:    { label: "Taquilla", kind: "object", group: "Mobiliario", traits: { solid: true, movable: true, falls: true }, tint: "primary",
@@ -173,19 +184,19 @@ export const ASSETS = {
                draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 1.6, l: 0.72, h: 2.6 }, sprite: { w: 41, h: 65.5, minX: -20.5, minY: -55 } },
   console:   { label: "Consola de control", kind: "object", group: "Mobiliario", traits: { solid: true, movable: true, falls: true }, tint: "primary",
                draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 1.4, l: 0.88, h: 1.7 }, sprite: { w: 39, h: 47.5, minX: -19.5, minY: -37.5 } },
-  desk_lamp: { label: "Lámpara de mesa", kind: "object", group: "Mobiliario", traits: { solid: true, movable: true, falls: true }, tint: "primary",
-               draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.64, l: 0.64, h: 1.32 }, sprite: { w: 18, h: 30, minX: -9, minY: -26 } },
+  desk_lamp: { label: "Lámpara de mesa", kind: "object", group: "Mobiliario", traits: { solid: true, movable: true, falls: true }, tint: "primary", onTable: true,
+               draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.72, l: 0.72, h: 1.12 }, sprite: { w: 22, h: 26.5, minX: -11, minY: -20.5 } },
 
   // --- Objetos sueltos (recogibles) ---
-  bin:       { label: "Papelera", kind: "object", group: "Objetos", traits: { solid: true, movable: true, carriable: true, falls: true }, tint: "primary",
+  bin:       { label: "Papelera", kind: "object", group: "Objetos", traits: { solid: true, movable: true, falls: true }, tint: "primary",
                draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.7, l: 0.7, h: 0.85 }, sprite: { w: 25, h: 27, minX: -12.5, minY: -21 } },
-  papers:    { label: "Papeles", kind: "object", group: "Objetos", traits: { solid: true, movable: true, carriable: true, falls: true }, tint: "primary",
+  papers:    { label: "Papeles", kind: "object", group: "Objetos", traits: { solid: true, movable: true, carriable: true, falls: true }, tint: "primary", onTable: true,
                draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.52, l: 0.52, h: 0.16 }, sprite: { w: 17.5, h: 11, minX: -8.5, minY: -6.5 } },
   canister:  { label: "Bidón", kind: "object", group: "Objetos", traits: { solid: true, movable: true, falls: true }, tint: "primary",
-               draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.7, l: 0.7, h: 1.2 }, sprite: { w: 23, h: 30, minX: -11.5, minY: -24 } },
+               draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.62, l: 0.62, h: 1.25 }, sprite: { w: 16, h: 24, minX: -8, minY: -19.5 } },
   toolbox:   { label: "Caja de herramientas", kind: "object", group: "Objetos", traits: { solid: true, movable: true, carriable: true, falls: true }, tint: "primary",
                draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 0.58, l: 0.42, h: 0.42 }, sprite: { w: 18, h: 15, minX: -9, minY: -10 } },
-  crate:     { label: "Contenedor", kind: "object", group: "Objetos", traits: { solid: true, movable: true, carriable: true, falls: true }, tint: "primary",
+  crate:     { label: "Contenedor", kind: "object", group: "Objetos", traits: { solid: true, movable: true, falls: true }, tint: "primary",
                draw: "sprite", offset: { x: 0.5, y: 0.5 }, footMode: "center", foot: { w: 1, l: 1, h: 0.95 }, sprite: { w: 33, h: 32.5, minX: -16.5, minY: -24 } },
 
   // --- Personajes (individuos): huella VISUAL que rota con la orientación (eje x ↔ eje y). ---
@@ -216,7 +227,11 @@ export function assetFoot(id, variant) {
   const v = pickVariant(a, variant);
   if (v && v.foot) return v.foot;
   if (v && v.box) return { w: v.box.w, l: v.box.l, h: v.box.h };
-  return a.foot || null;
+  const base = a.foot || null;
+  // ORIENTACIÓN DERIVADA: el eje y = la huella base con ancho↔largo (sin declarar variante). Universal:
+  // cualquier asset puede orientarse a eje y; la huella gira sola (cuadrada → idéntica). Ver assetViews/world.dirVariant.
+  if (base && variant === "axisY") return { w: base.l, l: base.w, h: base.h };
+  return base;
 }
 
 // AABB de mundo {x,y,z,w,l,h} en celdas. Derivada de foot + offset/footMode (o box explícita de la variante).
@@ -224,7 +239,7 @@ export function assetBox(id, variant) {
   const a = ASSETS[id]; if (!a) return null;
   const v = pickVariant(a, variant);
   if (v && v.box) return { ...v.box };                      // puerta: caja explícita por eje
-  const f = (v && v.foot) || a.foot; if (!f) return null;
+  const f = assetFoot(id, variant); if (!f) return null;    // huella efectiva (incl. derivación axisY = w↔l)
   const z = f.z || 0, o = a.offset || { x: 0, y: 0 };       // ancla = esquina (0,0) + offset
   if (a.footMode === "center") return { x: o.x - f.w / 2, y: o.y - f.l / 2, z, w: f.w, l: f.l, h: f.h };
   return { x: o.x, y: o.y, z, w: f.w, l: f.l, h: f.h };      // "corner": huella desde el ancla
@@ -264,12 +279,13 @@ export function assetHas(id, trait) { return !!assetTraits(id)[trait]; }
 // Nombre legible para el HUD: el `label` del asset (su nombre humano); un id sin label cae a su id.
 export function assetName(id) { const a = ASSETS[id]; return (a && a.label) || id; }
 
-// Ficheros de un asset de imagen, DERIVADOS del id (el id ES el nombre): { svg:"<id>.svg", png:"<id>.png"|null }.
-// `null` si el asset es procedural (sin sprite/tile/tiles, p. ej. el robot). png solo si el asset trae `png:true`.
+// Ficheros de un asset de imagen, DERIVADOS del id (el id ES el nombre): { svg:"<id>.svg", png:"<id>.png"|null,
+// back:"<id>_back.svg"|null }. `null` si el asset es procedural (sin sprite/tile/tiles, p. ej. el robot).
+// png solo si `png:true`; back solo si el asset tiene `spriteBack` (vista trasera, assets direccionales).
 export function assetFiles(id) {
   const a = ASSETS[id];
   if (!a || !(a.sprite || a.tile || a.tiles)) return null;
-  return { svg: id + ".svg", png: a.png ? id + ".png" : null };
+  return { svg: id + ".svg", png: a.png ? id + ".png" : null, back: a.spriteBack ? id + "_back.svg" : null };
 }
 
 // Tinte de dibujo: "secondary" para transportables/receptáculos, "primary" el resto. El
@@ -284,11 +300,25 @@ export function assetTint(id) {
 // comparten: objeto de sala (world.objAsset), cima de zócalo activo, objeto en brazos e icono del HUD.
 export function propAsset(shape) { return "prop_" + shape; }
 
-// Vistas de preview: una por variante de orientación (puerta/robot) o una sola. Cada
-// vista { key (variante|null), label, state }; state se vuelca en el placement del drawer.
+// Vistas de preview: las orientaciones del asset. Cada vista { key (variante de huella|null), label, state };
+// `state` se vuelca en el placement → el drawer dibuja EXACTAMENTE lo que hará el motor (espejo/cara según `dir`).
+// - SPRITE: eje x / eje y (2 vistas) — y si declara `spriteBack`, 4 facings (frontal/trasera × espejo).
+// - Variantes con estado (robot/puerta): una por variante. - No-sprite (cube/floor/socket): una sola.
 export function assetViews(id) {
   const a = ASSETS[id]; if (!a) return [];
-  if (a.variants) return Object.entries(a.variants).map(([key, v]) => ({ key, label: v.label || key, state: v.state || {} }));
+  if (a.variants) return Object.entries(a.variants).map(([key, v]) => ({ key, label: v.label || key, state: v.state || {} }));   // robot/puerta: variantes con estado/caja propios
+  // TODO SPRITE ES ORIENTABLE: se dibuja en eje x y eje y (huella w↔l DERIVADA + sprite espejado). Sin detectar
+  // simetría: los cuadrados salen iguales, da igual. Frontal/trasera SOLO si el asset declara `spriteBack` (silla;
+  // ampliable a futuro). El resto de assets (cube/floor/socket): una sola vista.
+  if (a.draw === "sprite") {
+    const FACE = ["+x", "+y", "−x", "−y"];                                  // 0:+x 1:+y 2:−x 3:−y (misma convención que el juego)
+    const dirs = a.spriteBack ? [0, 1, 2, 3] : [0, 1];
+    return dirs.map(d => ({
+      key: (d === 1 || d === 3) ? "axisY" : "axisX",                        // huella de eje (derivada por assetFoot/assetBox)
+      label: a.spriteBack ? `${(d === 2 || d === 3) ? "trasera" : "frontal"} ${FACE[d]}` : (d === 0 ? "eje x" : "eje y"),
+      state: { dir: d },
+    }));
+  }
   return [{ key: null, label: a.label || id, state: {} }];
 }
 

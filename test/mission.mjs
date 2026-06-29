@@ -21,7 +21,9 @@ import assert from "node:assert/strict";
 import { ROOMS } from "../src/data/rooms.js";
 import { MISSION, missionTotal } from "../src/data/mission.js";
 import { objAsset, buildWorld } from "../src/world.js";
-import { assetHas } from "../src/data/assets.js";
+import { assetHas, ASSETS } from "../src/data/assets.js";
+import { objSupport } from "../src/physics.js";
+import { roomThings } from "../src/world.js";
 import { isBehindDoor, doorBlockedCells } from "../src/occlusion.js";
 
 let passed = 0, failed = 0;
@@ -117,6 +119,38 @@ test("ningún objeto/zócalo/peligro queda detrás del marco de una puerta (occl
       assert.ok(!isBehindDoor(room, x, y),
         `sala ${key}: "${name}" en (${x},${y}) cae detrás de una puerta frontal (celdas bloqueadas: ` +
         doorBlockedCells(room).map(c => c.cx + "," + c.cy).join(" ") + ")");
+  }
+});
+
+/* ---------- 8) Los assets `onTable` están colocados SOBRE una mesa (no en el suelo) ----------
+   monitor / lámpara / papeles van por defecto encima de una mesa: en el mapa deben llevar z = cima de la
+   mesa y descansar sobre un sólido (no flotando ni en el suelo). Pilla colocaciones olvidadas. */
+test("los assets onTable están colocados sobre una superficie (no en el suelo)", () => {
+  for (const [k, room] of Object.entries(buildWorld().rooms))
+    for (const o of room.objects) {
+      const id = objAsset(o);
+      if (!(ASSETS[id] && ASSETS[id].onTable)) continue;
+      assert.ok(o.z > 0, `${k}: "${id}" en (${o.x},${o.y}) es onTable pero está en el suelo (z=0)`);
+      assert.ok(Math.abs(objSupport(room, o) - o.z) < 1e-6,
+        `${k}: "${id}" (z=${o.z}) no descansa sobre una superficie (apoyo=${objSupport(room, o)})`);
+    }
+});
+
+/* ---------- 9) Ningún par de SÓLIDOS colocados se SOLAPA (en planta + rango z) ----------
+   Dos sólidos solapados a la misma altura ATRAPAN al móvil: objBlocked rechaza todo destino que siga
+   solapando → no se puede empujar para separarlos (bug "se enganchan", CRUCE silla∩mesa). En el juego no
+   pueden nacer solapes (no se empuja DENTRO de un sólido); solo de datos mal puestos. Apilar es legítimo
+   (rangos z ADYACENTES: monitor sobre la mesa, base==cima) → se exige solape z ESTRICTO para no marcarlo. */
+test("ningún par de objetos sólidos se solapa (planta + z) — no atraparía a un móvil", () => {
+  const ovXY = (a, b) => a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
+  const ovZ  = (a, b) => a.z0 < b.z1 - 1e-6 && a.z1 > b.z0 + 1e-6;   // estricto: apilado (base==cima) NO cuenta
+  for (const [key, room] of Object.entries(buildWorld().rooms)) {
+    const solids = roomThings(room).filter(t => assetHas(t.asset, "solid"));
+    for (let i = 0; i < solids.length; i++)
+      for (let j = i + 1; j < solids.length; j++)
+        assert.ok(!(ovXY(solids[i].aabb, solids[j].aabb) && ovZ(solids[i].aabb, solids[j].aabb)),
+          `sala ${key}: "${solids[i].asset}"(${solids[i].x},${solids[i].y}) y "${solids[j].asset}"(${solids[j].x},${solids[j].y}) ` +
+          `se SOLAPAN a la misma altura → el móvil quedaría enganchado. Sepáralos (o apila con z = cima del de abajo).`);
   }
 });
 

@@ -1,13 +1,13 @@
-<svg viewBox="-10 -33 23.5 37.5" xmlns="http://www.w3.org/2000/svg">
-  <!-- Silla de trabajo: iso monocromo neutro (el juego lo tiñe por sala). Borrador para refinar a mano.
+<svg viewBox="-13.5 -26 23.5 30.5" xmlns="http://www.w3.org/2000/svg">
+  <!-- Silla de trabajo (trasera): iso monocromo neutro (el juego lo tiñe por sala). Borrador para refinar a mano.
        Anclaje centro-base. Generado por gen_assets.mjs. -->
   <ellipse cx="0" cy="0" rx="8" ry="4" fill="rgb(95,95,95)" stroke="#000000" stroke-width="0.6"/>
   <path d="M-1.02 -10.2 L0 -9.69 L0 0.51 L-1.02 0 Z" fill="rgb(95,95,95)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
   <path d="M1.02 -10.2 L0 -9.69 L0 0.51 L1.02 0 Z" fill="rgb(60,60,60)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
   <path d="M0 -10.71 L1.02 -10.2 L0 -9.69 L-1.02 -10.2 Z" fill="rgb(95,95,95)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
-  <path d="M0.68 -31.28 L10.88 -26.18 L10.88 -12.24 L0.68 -17.34 Z" fill="rgb(209,209,209)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
-  <path d="M12.58 -27.03 L10.88 -26.18 L10.88 -12.24 L12.58 -13.09 Z" fill="rgb(158,158,158)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
-  <path d="M2.38 -32.13 L12.58 -27.03 L10.88 -26.18 L0.68 -31.28 Z" fill="rgb(120,120,120)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
   <ellipse cx="0" cy="-10.2" rx="9.2" ry="4.6" fill="rgb(158,158,158)" stroke="#000000" stroke-width="0.6"/>
   <ellipse cx="0" cy="-11.9" rx="9.2" ry="4.6" fill="#ffffff" stroke="#000000" stroke-width="0.6"/>
+  <path d="M-12.58 -24.65 L-2.38 -19.55 L-2.38 -5.61 L-12.58 -10.71 Z" fill="rgb(209,209,209)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M-0.68 -20.4 L-2.38 -19.55 L-2.38 -5.61 L-0.68 -6.46 Z" fill="rgb(158,158,158)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M-10.88 -25.5 L-0.68 -20.4 L-2.38 -19.55 L-12.58 -24.65 Z" fill="rgb(120,120,120)" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
 </svg>

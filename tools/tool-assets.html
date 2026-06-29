@@ -187,15 +187,15 @@ const previewCenter = (id, variant) => {                       // centro de la r
 function makeItem(id) {
   const tint = assetTint(id);
   const views = assetViews(id).map(v => ({
-    label: v.label, variant: v.key, center: previewCenter(id, v.key),
+    label: v.label, variant: v.key, state: v.state, center: previewCenter(id, v.key),   // `state` (p.ej. {dir}) → svgForView
     draw: (c, p, ink, ink2) => {
       const col = tint === "secondary" ? ink2 : ink, ref = assetRef(id, v.key);
       AP.drawAsset(c, p, { asset: id, x: ref.x, y: ref.y, z: ref.z, ...v.state }, col);
     },
   }));
   const a = ASSETS[id], traits = Object.keys(assetTraits(id));
-  const ff = assetFiles(id);   // ficheros derivados del id (null si procedural)
-  const allFiles = ff ? [ff.svg, ff.png].filter(Boolean) : [];
+  const ff = assetFiles(id);   // ficheros derivados del id (null si procedural); `back` = 2º SVG (vista trasera)
+  const allFiles = ff ? [ff.svg, ff.back, ff.png].filter(Boolean) : [];
   const svgFiles = allFiles.filter(f => /\.svg$/i.test(f));
   // PNG por EXISTENCIA (no por el flag del registro): candidato = mismo basename que cada SVG (+ los
   // .png que el registro declare). La tool intenta cargarlos y descarta los que no existan (onerror).
@@ -374,6 +374,27 @@ function fillTraits(item) {
 let curItem = null, curMode = "view";   // "view" = asset existente · "create" = SVG nuevo editable
 let showCube = false, showRegion = false, showPoint = false;   // toggles de referencia (cubo exacto · región · anclaje)
 
+/* SELECCIÓN DE DIBUJO: un asset puede tener VARIOS SVG (p.ej. silla = frontal + trasero). Cada columna del
+   bigCanvas (vista/fichero) se asocia a SU svg; pulsar una la SELECCIONA (borde) → el panel muestra ese SVG
+   y «Descargar PNG» lo exporta. bigCols[i] = { svgFile|null, baseName }. selCol = columna seleccionada. */
+let selCol = 0, bigCols = [], bigColW = 0, bigSelH = 0;
+// SVG que usa una VISTA del motor (misma regla que el drawer: cara trasera en dir 2/3 si hay spriteBack).
+function svgForView(item, v) {
+  const a = ASSETS[item.asset], ff = a && assetFiles(item.asset);
+  if (!ff || !ff.svg) return null;
+  const d = (v.state && v.state.dir) || 0;
+  return (a.spriteBack && (d === 2 || d === 3)) ? (ff.back || ff.svg) : ff.svg;
+}
+// Borde sobre la columna seleccionada (solo si hay más de un dibujo) + cursor de "pulsable".
+function drawSelBorder() {
+  const selectable = bigCols.some(c => c && c.svgFile);
+  bigCanvas.style.cursor = (curMode === "view" && bigCols.length > 1 && selectable) ? "pointer" : "default";
+  if (bigCols.length <= 1 || !bigColW) return;
+  const c = bigCanvas.getContext("2d");
+  c.save(); c.lineWidth = 3; c.strokeStyle = "#ffd27a"; c.globalAlpha = 0.95;
+  c.strokeRect(selCol * bigColW + 2, 2, bigColW - 4, bigSelH - 4); c.restore();
+}
+
 /* Teñido (multiply) de una silueta gris a la tinta de sala — para comparar SVG vs PNG. */
 function tintSrc(src, ink) {
   const c = document.createElement("canvas"); c.width = src.width; c.height = src.height;
@@ -422,6 +443,8 @@ function renderFilesToBig(item) {
   if (box) { const bb = boxBBox(regionOf(box), P0); mnx = Math.min(mnx, bb.minx); mny = Math.min(mny, bb.miny); mxx = Math.max(mxx, bb.minx + bb.w); mxy = Math.max(mxy, bb.miny + bb.h); }
   for (const r of rs) { const [vx, vy] = r.vb || [0, 0]; mnx = Math.min(mnx, pr0.x + vx); mny = Math.min(mny, pr0.y + vy); mxx = Math.max(mxx, pr0.x + vx + r.raster.width); mxy = Math.max(mxy, pr0.y + vy + r.raster.height); }
   const cw = Math.ceil(mxx - mnx) + 2 * nm, ch = Math.ceil(mxy - mny) + 2 * nm, colW = cw * ZOOM, H = ch * ZOOM + 24;
+  bigCols = rs.map(r => ({ svgFile: r.kind === "SVG" ? r.file : null, baseName: r.file.replace(/\.[^.]+$/, "") }));
+  bigColW = colW; bigSelH = ch * ZOOM;     // alto del dibujo (sin la franja de etiqueta) para el borde de selección
   bigCanvas.width = rs.length * colW; bigCanvas.height = H;
   const c = bigCanvas.getContext("2d"); c.fillStyle = "#000"; c.fillRect(0, 0, bigCanvas.width, H); c.imageSmoothingEnabled = false;
   const P = AP.projector(-mnx + nm, -mny + nm, { TILE_W: TW, TILE_H: TH, BLOCK_H: BH });
@@ -438,6 +461,7 @@ function renderFilesToBig(item) {
     c.fillStyle = KIND_COL[r.kind]; c.font = "bold 13px 'Courier New', monospace"; c.textAlign = "center"; c.textBaseline = "alphabetic";
     c.fillText(r.kind + " · " + r.file, colW * (i + 0.5), H - 8);
   });
+  drawSelBorder();
 }
 
 /* PROCEDURAL (sin SVG/PNG): render iso del asset (motor genérico), una columna por vista, con overlays.
@@ -453,6 +477,8 @@ function renderEngineToBig(item) {
     cw = Math.ceil(maxW) + 2 * nm; ch = Math.ceil(maxH) + 2 * nm;
   } else { cw = 96; ch = 96; }
   const colW = cw * ZOOM, H = ch * ZOOM + 30;
+  bigCols = views.map(v => { const f = svgForView(item, v); return { svgFile: f, baseName: f ? f.replace(/\.svg$/i, "") : null }; });
+  bigColW = colW; bigSelH = ch * ZOOM;     // alto del dibujo (sin la franja de etiqueta) para el borde de selección
   bigCanvas.width = n * colW; bigCanvas.height = H;
   const c = bigCanvas.getContext("2d"); c.fillStyle = "#000"; c.fillRect(0, 0, bigCanvas.width, H);
   const ink = curInk(), ink2 = curInk2();
@@ -472,16 +498,21 @@ function renderEngineToBig(item) {
     c.fillStyle = ink; c.font = "14px 'Courier New', monospace"; c.textAlign = "center"; c.textBaseline = "alphabetic";
     c.fillText(v.label, colW * (i + 0.5), H - 10);
   });
+  drawSelBorder();
 }
 async function renderBig() {
   if (!curItem || curMode !== "view") return;
   await ensureRasters(curItem);
   if (!(curItem && curMode === "view")) return;
-  if (curItem._rasters.length) renderFilesToBig(curItem);   // con ficheros: SVG/PNG lado a lado + overlays
-  else renderEngineToBig(curItem);                          // procedural: render iso (única forma de verlo)
+  // SPRITE = ORIENTABLE: render iso por ORIENTACIÓN con el motor real (AP.drawAsset lee `dir` → espejo/cara/huella),
+  // única forma de VER las orientaciones (un fichero estático no las muestra). No-sprite con ficheros (cube/puerta/
+  // pared): SVG/PNG lado a lado para comparar el PNG editado.
+  const orientable = curItem.asset && ASSETS[curItem.asset] && ASSETS[curItem.asset].draw === "sprite";
+  if (!orientable && curItem._rasters.length) renderFilesToBig(curItem);
+  else renderEngineToBig(curItem);
 }
 function openOverlay(item) {
-  curMode = "view"; curItem = item;
+  curMode = "view"; curItem = item; selCol = 0;   // arranca en la 1ª columna (= primer SVG)
   showCube = false; showRegion = false; showPoint = false;
   cubeBtn.classList.remove("on"); regionBtn.classList.remove("on"); pointBtn.classList.remove("on");
   cubeBtn.disabled = !item.box; regionBtn.disabled = !item.box; pointBtn.disabled = !item.ref;   // referencias sólo si hay datos
@@ -489,6 +520,14 @@ function openOverlay(item) {
   renderBig(); setupSvgPane(item); overlay.classList.add("open");
   if (item.box) setTimeout(() => { if (curItem === item) renderBig(); }, 350);   // repinta cuando cargue el sprite (async)
 }
+/* Pulsar un dibujo del bigCanvas → selecciona su columna (borde) + muestra su SVG + PNG de ESE svg. */
+bigCanvas.addEventListener("click", (e) => {
+  if (curMode !== "view" || bigCols.length <= 1 || !bigColW) return;
+  const r = bigCanvas.getBoundingClientRect(), cx = (e.clientX - r.left) * (bigCanvas.width / r.width);
+  const col = Math.floor(cx / bigColW);
+  if (col < 0 || col >= bigCols.length || !bigCols[col].svgFile) return;   // columna sin SVG (PNG/procedural) → no seleccionable
+  selCol = col; loadSvgFile(bigCols[col].svgFile); renderBig();            // panel + borde en la nueva columna
+});
 function closeOverlay() { overlay.classList.remove("open"); }
 document.getElementById("closeBtn").addEventListener("click", closeOverlay);
 overlay.addEventListener("click", (e) => { if (e.target === overlay) closeOverlay(); });
@@ -588,30 +627,37 @@ function download(blob, filename) {
   URL.revokeObjectURL(a.href);
 }
 
-// Panel SVG para un asset existente (modo lectura) o aviso si es procedural (sin SVG).
+// Carga UN fichero SVG en el panel (código fuente + tamaño px) y lo deja como el SELECCIONADO para exportar PNG.
+const _svgCache = {};
+async function loadSvgFile(file) {
+  if (!file) return;
+  paneBaseName = file.replace(/\.svg$/i, "");
+  svgSrc.style.display = ""; dlPng.style.display = ""; svgSrc.readOnly = true; dlSvg.hidden = true;
+  let txt = _svgCache[file];
+  if (txt == null) {
+    try { const r = await fetch("/assets/svg/" + file + "?cb=" + Date.now()); if (!r.ok) throw new Error("HTTP " + r.status); txt = _svgCache[file] = await r.text(); }
+    catch (e) { paneSvgText = null; svgSrc.value = ""; infoPX.textContent = "—"; svgMsg.textContent = "⚠ no se pudo cargar " + file + "."; return; }
+  }
+  paneSvgText = txt; svgSrc.value = txt; infoPX.textContent = fmtPX(svgSize(txt));   // tamaño nativo del SVG (px de juego)
+}
+
+// Panel SVG para un asset existente (modo lectura) o aviso si es procedural (sin SVG). El SVG mostrado/exportado
+// es el de la columna SELECCIONADA (selCol); con varios SVG, pulsar un dibujo cambia la selección.
 async function setupSvgPane(item) {
   dlSvg.hidden = true; svgSrc.readOnly = true;
   infoGU.textContent = fmtGU(item.gu);            // dimensiones en celdas (de la geometría del juego)
-  const path = svgPathFor(item);
-  if (!path) {
+  const svgs = item.svgFiles || [];
+  if (!svgs.length) {
     paneSvgText = null; svgSrc.style.display = "none"; dlPng.style.display = "none";
     infoPX.textContent = "— (sin imagen)";
     svgMsg.textContent = "Sin SVG: este asset se dibuja proceduralmente en el juego (no hay fichero que mostrar ni exportar).";
     return;
   }
   svgSrc.style.display = ""; dlPng.style.display = "";
-  svgMsg.textContent = "Código fuente del SVG (solo lectura). «Descargar PNG» exporta la silueta NEUTRA (sin color; el juego la tiñe por sala).";
-  paneBaseName = path.split("/").pop().replace(/\.svg$/, "");
-  try {
-    const r = await fetch(path + "?cb=" + Date.now());
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    paneSvgText = await r.text(); svgSrc.value = paneSvgText;
-    infoPX.textContent = fmtPX(svgSize(paneSvgText));   // tamaño nativo del SVG (px de juego)
-  } catch (e) {
-    paneSvgText = null; svgSrc.style.display = "none"; dlPng.style.display = "none";
-    infoPX.textContent = "—";
-    svgMsg.textContent = "⚠ no hay SVG para este asset (" + path + ").";
-  }
+  svgMsg.textContent = svgs.length > 1
+    ? "Varios dibujos: pulsa uno para SELECCIONARLO (borde). Se muestra SU código (solo lectura); «Descargar PNG» exporta el SVG seleccionado (neutro; el juego lo tiñe por sala)."
+    : "Código fuente del SVG (solo lectura). «Descargar PNG» exporta la silueta NEUTRA (sin color; el juego la tiñe por sala).";
+  await loadSvgFile(svgs[0]);                      // por defecto el 1er SVG (= columna 0, selCol arranca en 0)
 }
 
 // Modo CREAR: popup con el cubo por defecto editable + preview en vivo + descargar svg/png.

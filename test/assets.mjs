@@ -57,16 +57,16 @@ test("cada asset CARRIABLE tiene nombre (label) para mostrar en el HUD", () => {
       assert.ok(typeof a.label === "string" && a.label.length > 0, `${id}: carriable sin label/nombre`);
 });
 
-test("GUARDARRAÍL: ningún asset > 1×1×1 (huella) es carriable (muebles/grandes NO se cogen)", () => {
-  // Un objeto que no cabe en una celda no debería poder llevarse en la mano. Se marca en el registro
-  // quitándole el trait `carriable`; este test lo fija (y avisa si un asset grande nuevo lo reintroduce).
-  const big = [];
+test("GUARDARRAÍL: un asset carriable cabe en la mano (TODAS sus dimensiones < 0.8)", () => {
+  // Criterio: solo se coge lo pequeño (todas las dimensiones de la huella < 0.8). Lo más grande se marca
+  // en el registro quitándole `carriable`; este test lo fija (y avisa si un asset grande lo reintroduce).
+  const bad = [];
   for (const [id, a] of Object.entries(ASSETS)) {
+    if (!(a.traits && a.traits.carriable)) continue;
     const f = assetFoot(id); if (!f) continue;
-    if ((f.w > 1 + 1e-9 || f.l > 1 + 1e-9 || f.h > 1 + 1e-9) && a.traits && a.traits.carriable)
-      big.push(`${id}(${f.w}×${f.l}×${f.h})`);
+    if (f.w >= 0.8 || f.l >= 0.8 || f.h >= 0.8) bad.push(`${id}(${f.w}×${f.l}×${f.h})`);
   }
-  assert.equal(big.length, 0, `assets > 1×1×1 marcados carriable (no deberían serlo): ${big.join(", ")}`);
+  assert.equal(bad.length, 0, `assets carriable con alguna dimensión ≥ 0.8 (no deberían ser carriable): ${bad.join(", ")}`);
 });
 
 test("assetsByGroup agrupa TODOS los assets y respeta GROUP_ORDER", () => {
@@ -106,22 +106,26 @@ test("ORÁCULO DE PÍXEL: el blit del sprite respecto a la esquina (0,0,0) es ES
   //   proyección(assetRef) + (minX,minY).  Compone anclaje + encuadre = lo que el usuario quiere invariante.
   // Congelado con los datos actuales: la reparametrización a offset+footMode NO debe moverlo (mismo píxel).
   const TW = 34, TH = 17, BH = 17;
-  const blit = (id) => { const r = assetRef(id), s = ASSETS[id].sprite;
+  const blit = (id, s) => { const r = assetRef(id); s = s || ASSETS[id].sprite;
     return [ (r.x - r.y) * TW / 2 + s.minX, (r.x + r.y) * TH / 2 - r.z * BH + s.minY ]; };
   const FROZEN = {
     floor: [-17, 0],
     cube: [-17, -17], prop_cube: [-11, -7.5], prop_pyramid: [-11, -2.5], prop_dome: [-9, -0.5],
-    prop_cylinder: [-8, -6.5], socket: [-16, -3.5], spikes: [-7, -1.5], plant: [-9, -7],
-    drone: [-6, -13.5], computer: [-16, -25.5], monitor: [-8, -24.5],
-    desk: [-25, -21.5], chair: [-17, -31.5], bed: [-25, -18.5], kitchen: [-24.5, -28],
-    locker: [-16.5, -46], shelf: [-20.5, -46.5], console: [-19.5, -29], desk_lamp: [-9, -17.5],
-    bin: [-12.5, -12.5], papers: [-8.5, 2], canister: [-11.5, -15.5], toolbox: [-9, -1.5],
+    prop_cylinder: [-8, -6.5], socket: [-16, -3.5], spikes: [-8.5, -7.5], plant: [-11, -13],
+    drone: [-6, -13.5], computer: [-16, -25.5], monitor: [-12.5, -14],
+    desk: [-25, -21.5], chair: [-10, -24.5], chair_back: [-13.5, -17.5], bed: [-23, -16], kitchen: [-24.5, -28],
+    locker: [-16.5, -46], shelf: [-20.5, -46.5], console: [-19.5, -29], desk_lamp: [-11, -12],
+    bin: [-12.5, -12.5], papers: [-8.5, 2], canister: [-8, -11], toolbox: [-9, -1.5],
     crate: [-16.5, -15.5], flower: [-10.5, -17],
   };
   for (const [id, a] of Object.entries(ASSETS)) {
     if (!a.sprite) continue;
     assert.ok(FROZEN[id], `${id}: sprite sin valor congelado en el oráculo (añádelo)`);
     assert.deepEqual(blit(id), FROZEN[id], `${id}: el blit-vs-esquina cambió (¿se movió el anclaje o el sprite?)`);
+    if (a.spriteBack) {   // vista trasera (mismo ancla, su propio encuadre)
+      assert.ok(FROZEN[id + "_back"], `${id}_back: vista trasera sin valor congelado (añádelo)`);
+      assert.deepEqual(blit(id, a.spriteBack), FROZEN[id + "_back"], `${id}_back: el blit de la trasera cambió`);
+    }
   }
 });
 
@@ -135,16 +139,20 @@ test("GUARDARRAÍL anti-#2: la caja de orden (huella) ACOTA el sprite dibujado (
   const P = (x, y, z) => ({ x: (x - y) * TW / 2, y: (x + y) * TH / 2 - z * BH });
   for (const [id, a] of Object.entries(ASSETS)) {
     if (!a.sprite) continue;                                  // solo assets de sprite (pared/puerta/robot van por otra vía)
-    const b = assetBox(id), r = assetRef(id), s = a.sprite;
+    const b = assetBox(id), r = assetRef(id);
     const C = [[b.x, b.y, b.z], [b.x + b.w, b.y, b.z], [b.x + b.w, b.y + b.l, b.z], [b.x, b.y + b.l, b.z],
               [b.x, b.y, b.z + b.h], [b.x + b.w, b.y, b.z + b.h], [b.x + b.w, b.y + b.l, b.z + b.h], [b.x, b.y + b.l, b.z + b.h]]
               .map(c => P(c[0], c[1], c[2]));                 // 8 esquinas de la caja → AABB de pantalla
     const box = { xMin: Math.min(...C.map(p => p.x)), xMax: Math.max(...C.map(p => p.x)),
                   yMin: Math.min(...C.map(p => p.y)), yMax: Math.max(...C.map(p => p.y)) };
     const ref = P(r.x, r.y, r.z);                             // ancla del sprite (igual que el draw)
-    const spr = { xL: ref.x + s.minX, xR: ref.x + s.minX + s.w, yT: ref.y + s.minY, yB: ref.y + s.minY + s.h };
-    const ov = Math.max(box.yMin - spr.yT, spr.yB - box.yMax, box.xMin - spr.xL, spr.xR - box.xMax);  // peor lado
-    assert.ok(ov <= TOL, `${id}: el sprite escapa su caja de orden ${ov.toFixed(1)}px (> ${TOL}) → #2; dale huella honesta o declara bounds visual`);
+    const check = (s, tag) => {                               // mismo test para FRONTAL y TRASERA (espejar no cambia la caja)
+      const spr = { xL: ref.x + s.minX, xR: ref.x + s.minX + s.w, yT: ref.y + s.minY, yB: ref.y + s.minY + s.h };
+      const ov = Math.max(box.yMin - spr.yT, spr.yB - box.yMax, box.xMin - spr.xL, spr.xR - box.xMax);  // peor lado
+      assert.ok(ov <= TOL, `${tag}: el sprite escapa su caja de orden ${ov.toFixed(1)}px (> ${TOL}) → #2; dale huella honesta o declara bounds visual`);
+    };
+    check(a.sprite, id);
+    if (a.spriteBack) check(a.spriteBack, id + "_back");
   }
 });
 
@@ -153,11 +161,17 @@ test("variantes de orientación intercambian ancho/largo (robot) y caja por eje 
   assert.ok(Math.abs(rx.w - ry.l) < 1e-9 && Math.abs(rx.l - ry.w) < 1e-9, "robot: no se intercambian w/l");
   const dx = assetBox("door", "axisX"), dy = assetBox("door", "axisY");
   assert.ok(dx.w !== dy.w && dx.l !== dy.l, "puerta: las cajas por eje deberían diferir");
+  // Mobiliario direccional no-cuadrado (mesa/cama): la variante de eje intercambia w↔l (la huella gira con dir).
+  for (const id of ["desk", "bed"]) {
+    const x = assetBox(id, "axisX"), y = assetBox(id, "axisY");
+    assert.ok(Math.abs(x.w - y.l) < 1e-9 && Math.abs(x.l - y.w) < 1e-9, `${id}: la variante de eje no intercambia w/l`);
+  }
 });
 
 /* ---------- 2) NO-DERIVA contra artefactos ---------- */
 test("AP.SPRITES == los sprites del registro (sin segunda copia)", () => {
   const fromReg = Object.fromEntries(Object.entries(ASSETS).filter(([, a]) => a.sprite).map(([id, a]) => [id, a.sprite]));
+  for (const [id, a] of Object.entries(ASSETS)) if (a.spriteBack) fromReg[id + "_back"] = a.spriteBack;   // vistas traseras
   assert.deepEqual(new Set(Object.keys(AP.SPRITES)), new Set(Object.keys(fromReg)), "claves de SPRITES");
   for (const id of Object.keys(fromReg))
     for (const k of ["w", "h", "minX", "minY"]) assert.equal(AP.SPRITES[id][k], fromReg[id][k], `${id}.${k}`);
@@ -173,6 +187,7 @@ test("manifest.json NO diverge del registro (w/h de sprites, tiles de pared y pu
     const f = assetFiles(id);                                      // fichero DERIVADO del id (<id>.svg)
     const dim = a.sprite || a.tile;                                // sprite (anclado) o tile (pared)
     if (dim && f) check(f.svg, dim, id);
+    if (a.spriteBack && f && f.back) check(f.back, a.spriteBack, `${id}.spriteBack`);   // vista trasera (<id>_back.svg)
     // tiles front/back de la puerta: comparten UN solo fichero (door.svg); ambos offsets contra esa entrada
     if (a.tiles && f) for (const [k, d] of Object.entries(a.tiles)) check(f.svg, d, `${id}.tiles.${k}`);
   }
@@ -184,6 +199,7 @@ test("los ficheros del registro (derivados del id) existen en disco", () => {
     if (!f) continue;   // asset procedural (sin fichero)
     assert.ok(existsSync(root + "assets/svg/" + f.svg), `${id}: falta assets/svg/${f.svg}`);
     if (f.png) assert.ok(existsSync(root + "assets/png/" + f.png), `${id}: falta assets/png/${f.png} (declara png:true)`);
+    if (f.back) assert.ok(existsSync(root + "assets/svg/" + f.back), `${id}: falta assets/svg/${f.back} (vista trasera)`);
   }
 });
 

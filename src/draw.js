@@ -34,6 +34,8 @@ export const AP = (() => {
   const SPRITES = Object.fromEntries(
     Object.entries(ASSETS).filter(([, a]) => a.sprite).map(([id, a]) => [id, a.sprite])
   );
+  // Vista TRASERA de los assets direccionales: sprite extra `<id>_back` (fichero <id>_back.svg).
+  for (const [id, a] of Object.entries(ASSETS)) if (a.spriteBack) SPRITES[id + "_back"] = a.spriteBack;
   /* REGISTRO ÚNICO de rasters teñidos. Cubre los TRES tipos de imagen externa (sprite de objeto, tile de
      pared y sprite de puerta): el flujo es EL MISMO — lazy-load PNG→SVG, rasterizar a w×h, teñir por color
      y cachear. Clave = fichero base (sin extensión): { neutral, tints }. null = imagen aún cargando. */
@@ -81,11 +83,15 @@ export const AP = (() => {
     return s.tints[col] || (s.tints[col] = _tintSprite(n, col));
   }
   // Dibuja el sprite externo de `name` teñido a `col`, anclado en ref+(minX,minY). false = no dibuja.
-  function drawSprite(name, ctx, ref, col) {
+  function drawSprite(name, ctx, ref, col, mirror = false) {
     if (typeof document === "undefined") return false;        // sin DOM (Node/tests)
     const def = SPRITES[name]; if (!def) return false;        // asset sin sprite
     const t = _tinted(name, def, col); if (!t) return false;  // imagen aún cargando
-    ctx.drawImage(t, Math.round(ref.x + def.minX), Math.round(ref.y + def.minY));
+    const dx = Math.round(ref.x + def.minX), dy = Math.round(ref.y + def.minY);
+    if (mirror) {   // espejo horizontal SOBRE el ancla (mismo método que pared/puerta): dir 1/2
+      ctx.save(); ctx.translate(2 * Math.round(ref.x), 0); ctx.scale(-1, 1);
+      ctx.drawImage(t, dx, dy); ctx.restore();
+    } else ctx.drawImage(t, dx, dy);
     return true;
   }
 
@@ -98,8 +104,8 @@ export const AP = (() => {
     const jobs = [];
     for (const [id, a] of Object.entries(ASSETS)) {
       const def = a.sprite || a.tile || (a.tiles && a.tiles.front);   // dimensiones del raster del neutro
-      if (!def) continue;                                             // procedurales (robot…) no tienen fichero
-      jobs.push(new Promise(res => _startLoad(id, def, res)));
+      if (def) jobs.push(new Promise(res => _startLoad(id, def, res)));
+      if (a.spriteBack) jobs.push(new Promise(res => _startLoad(id + "_back", a.spriteBack, res)));   // vista trasera
     }
     return Promise.all(jobs);
   }
@@ -296,8 +302,15 @@ export const AP = (() => {
      cualquier asset sin saber cuál es (ver docs/ARQUITECTURA.md). */
   const DRAWERS = {
     // GENÉRICO: cualquier asset de sprite (PNG→SVG). Uno nuevo se dibuja por aquí sin tocar este
-    // fichero: basta su entrada en ASSETS con `draw:"sprite"` + su .svg.
-    sprite:   (c, P, t, col) => drawSprite(t.asset, c, P(t.x, t.y, t.z), col),
+    // fichero: basta su entrada en ASSETS con `draw:"sprite"` + su .svg. DIRECCIONAL (asset `dir`): la
+    // dirección del placement (`t.dir` 0:+x 1:+y 2:−x 3:−y) elige cara (0/1 frontal, 2/3 trasera si hay
+    // spriteBack) y espejo horizontal (dir 1/2). Sin `dir` → frontal sin espejo (como siempre).
+    sprite:   (c, P, t, col) => { const d = t.dir || 0, a = ASSETS[t.asset];
+                                  // ASIMÉTRICO (tiene spriteBack, p.ej. silla): 4 vistas = frontal/trasera + espejo (dir 1/2).
+                                  // SIMÉTRICO direccional (mesa/cama): 2 vistas por EJE = frontal + espejo (dir 1/3, junto al w↔l de la huella).
+                                  const back = a.spriteBack && (d === 2 || d === 3);
+                                  const mirror = a.spriteBack ? (d === 1 || d === 2) : (d === 1 || d === 3);
+                                  return drawSprite(back ? t.asset + "_back" : t.asset, c, P(t.x, t.y, t.z), col, mirror); },
     // Procedurales / paramétricos (bespoke):
     floor:    (c, P, t, col) => floor(c, P, t.x, t.y, col),
     cube:     (c, P, t, col) => cube(c, P, t.x, t.y, t.z, col),
